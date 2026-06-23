@@ -71,8 +71,16 @@ button { cursor: pointer; font-family: inherit; border: none; }
   border-radius: 50px; transition: transform .15s, box-shadow .15s;
   box-shadow: 0 5px 20px rgba(0,0,0,.18); color: #fff; text-align: center;
 }
-.btn-giant:active { transform: scale(.97); }
+.btn-giant:hover  { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.28); }
+.btn-giant:active { transform: scale(.97); box-shadow: 0 3px 10px rgba(0,0,0,.2); }
 .btn-green  { background: linear-gradient(135deg, var(--green), var(--green2)); }
+.btn-splash {
+  background: linear-gradient(135deg, #FF6B35, #FF8C42);
+  box-shadow: 0 6px 24px rgba(255,107,53,.45);
+  font-size: 1.5rem;
+  letter-spacing: .03em;
+}
+.btn-splash:hover { box-shadow: 0 10px 32px rgba(255,107,53,.55); }
 .btn-orange { background: linear-gradient(135deg, var(--orange), var(--orange2)); }
 .btn-white-on-purple { background: rgba(255,255,255,.2); border: 3px solid rgba(255,255,255,.7); color: #fff; }
 .btn-back { background: none; font-size: 1rem; font-weight: 700; color: var(--blue2); padding: 6px 0; white-space: nowrap; }

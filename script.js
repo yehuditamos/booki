@@ -158,7 +158,7 @@ function showLibrary() {
 
 function filterLibrary(filter) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const map = { all: 'tab-all', 'מוכרים': 'tab-familiar', 'מקוריים': 'tab-original' };
+  const map = { all: 'tab-all', 'מוכרים': 'tab-familiar', 'מקוריים': 'tab-original', 'ארוכים': 'tab-long' };
   const tabEl = document.getElementById(map[filter]);
   if (tabEl) tabEl.classList.add('active');
 
@@ -177,7 +177,7 @@ function filterLibrary(filter) {
           <span class="story-emoji">${story.emoji || '📖'}</span>
           <div class="story-info">
             <span class="story-title">${story.title}</span>
-            <span class="story-meta">${story.category} · ${story.pages.length} עמודים · כ-${Math.round(totalMins)} דק׳</span>
+            <span class="story-meta">${story.category} · ${story.pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
           </div>
         </div>
         ${done

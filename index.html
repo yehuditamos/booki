@@ -25,7 +25,7 @@
     </div>
     <h1 class="splash-title">יַעַר הַקְּרִיאָה<br><span class="splash-sub">שֶׁל מִיתָרִים</span></h1>
     <p class="splash-tagline">חופשת קיץ מהנה עם ספרים! 🌞</p>
-    <button class="btn-giant btn-green" onclick="goToStudents()">🚀 התחל לקרוא</button>
+    <button class="btn-giant btn-splash" onclick="goToStudents()">📖 בואו נקרא!</button>
   </div>
 </section>
 
@@ -53,7 +53,7 @@
   <div class="main-menu">
     <button class="btn-menu btn-blue" onclick="showLibrary()">
       <span class="btn-icon">📚</span>
-      <span class="btn-label">קראתי באפליקציה</span>
+      <span class="btn-label">לקריאה באפליקציה</span>
     </button>
     <button class="btn-menu btn-orange" onclick="startBookReading()">
       <span class="btn-icon">📖</span>
@@ -81,6 +81,7 @@
       <button class="tab-btn active" id="tab-all"       onclick="filterLibrary('all')">הכל</button>
       <button class="tab-btn"        id="tab-familiar"  onclick="filterLibrary('מוכרים')">📚 מוכרים</button>
       <button class="tab-btn"        id="tab-original"  onclick="filterLibrary('מקוריים')">✨ מקוריים</button>
+      <button class="tab-btn"        id="tab-long"      onclick="filterLibrary('ארוכים')">📖 ארוכים</button>
     </div>
   </div>
   <div id="story-list" class="story-list"></div>
