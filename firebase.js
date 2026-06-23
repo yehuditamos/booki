@@ -197,3 +197,63 @@ async function migrateFromLocalStorage() {
   }
   return count;
 }
+
+// ─── איפוס כל תלמידי הכיתה ───────────────────────────────────────────
+// שימוש: הקלד resetAllStudents() בקונסול (F12) לפני השקה
+// מאפס נתוני קריאה — שומר id ושם תלמיד
+
+async function resetAllStudents() {
+  if (!_isReady()) {
+    console.error('[reset] ❌ Firebase לא מחובר — בדוק חיבור');
+    return;
+  }
+
+  const NAMES = [
+    "אדם צור","אופיר לוינזון","אוריה חורש","איה","אלון גושן קוסובסקי",
+    "אמרי","אלה סרוטה","אלכסנדר דוניה","אלמה כהן מגורי","אמה חסקל",
+    "דרור גימון","יאיר היידנפלד","יהלי אור לויכטר","יערה רוטנברג","כרם חייט שיף",
+    "מיכה","נגה צברי","נורי שרשבסקי","נינה אבידן","נעמה קלפץ",
+    "סול בן-ג׳ויה","עומר לבהר","עומרי","עמית ששון","פלג חסקל",
+    "קשת בלה הורוויץ","שילה","שירה דהן","תמר לוי"
+  ];
+
+  console.log('[reset] מתחיל איפוס', NAMES.length, 'תלמידים בכיתה', CLASS_ID, '...');
+
+  const batch = _db.batch();
+
+  for (let i = 0; i < NAMES.length; i++) {
+    const ref = _studentsRef().doc(_studentDocId(i));
+    batch.set(ref, {
+      id:           i,
+      name:         NAMES[i],
+      totalMinutes: 0,
+      appMinutes:   0,
+      bookMinutes:  0,
+      points:       0,
+      storiesRead:  0,
+      history:      []
+    });
+  }
+
+  try {
+    await batch.commit();
+    console.log('[reset] ✅ Firebase — כל', NAMES.length, 'תלמידים אופסו בהצלחה');
+  } catch (e) {
+    console.error('[reset] ❌ שגיאת Firebase:', e.message);
+    return;
+  }
+
+  // איפוס localStorage
+  for (let i = 0; i < NAMES.length; i++) {
+    localStorage.removeItem('booki_s_' + i);
+  }
+  localStorage.removeItem('booki_migrated_fb_v2');
+  console.log('[reset] ✅ localStorage — אופס');
+  console.log('[reset] 🎉 הכיתה', CLASS_ID, 'מוכנה להשקה!');
+}
+
+// ─── חשיפה לקונסול ───────────────────────────────────────────────────
+window.resetAllStudents  = resetAllStudents;
+window.fbLoadStudent     = fbLoadStudent;
+window.fbSaveStudent     = fbSaveStudent;
+console.log('[firebase] window.resetAllStudents מוכן לשימוש מהקונסול');
