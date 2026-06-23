@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>יער הקריאה של מיתרים</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══ מסך פתיחה ══════════════════════════════════════════════════ -->
+<section id="screen-splash" class="screen active">
+  <div class="splash-bg">
+    <div class="splash-tree">
+      <div class="big-tree">🌳</div>
+      <div class="floating-leaves">
+        <span class="leaf l1">🍃</span>
+        <span class="leaf l2">📚</span>
+        <span class="leaf l3">🍃</span>
+        <span class="leaf l4">✨</span>
+        <span class="leaf l5">🍃</span>
+      </div>
+    </div>
+    <h1 class="splash-title">יַעַר הַקְּרִיאָה<br><span class="splash-sub">שֶׁל מִיתָרִים</span></h1>
+    <p class="splash-tagline">חופשת קיץ מהנה עם ספרים! 🌞</p>
+    <button class="btn-giant btn-green" onclick="goToStudents()">🚀 התחל לקרוא</button>
+  </div>
+</section>
+
+<!-- ══ בחירת תלמיד ════════════════════════════════════════════════ -->
+<section id="screen-students" class="screen">
+  <div class="screen-header sticky-header">
+    <h2>מי את/ה?</h2>
+    <p class="header-sub">בחר/י את הכרטיס שלך 👇</p>
+  </div>
+  <div id="student-grid" class="student-grid"></div>
+</section>
+
+<!-- ══ תפריט ראשי ═════════════════════════════════════════════════ -->
+<section id="screen-main" class="screen">
+  <div class="main-top">
+    <div class="greeting-row">
+      <span id="greeting-avatar" class="greeting-avatar">📚</span>
+      <div>
+        <p class="greeting-hi">שלום,</p>
+        <h2 class="greeting-name" id="current-student-name">—</h2>
+      </div>
+    </div>
+    <button class="btn-switch" onclick="logout()">החלף</button>
+  </div>
+  <div class="main-menu">
+    <button class="btn-menu btn-blue" onclick="showLibrary()">
+      <span class="btn-icon">📚</span>
+      <span class="btn-label">קראתי באפליקציה</span>
+    </button>
+    <button class="btn-menu btn-orange" onclick="startBookReading()">
+      <span class="btn-icon">📖</span>
+      <span class="btn-label">קראתי מתוך ספר</span>
+    </button>
+    <button class="btn-menu btn-purple" onclick="showReaderCard()">
+      <span class="btn-icon">👤</span>
+      <span class="btn-label">כרטיס הקורא שלי</span>
+    </button>
+    <button class="btn-menu btn-teal" onclick="showClassView()">
+      <span class="btn-icon">🏆</span>
+      <span class="btn-label">הכיתה שלנו</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
+<section id="screen-library" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>ספריית הסיפורים</h2>
+    </div>
+    <div class="library-tabs">
+      <button class="tab-btn active" id="tab-all"       onclick="filterLibrary('all')">הכל</button>
+      <button class="tab-btn"        id="tab-familiar"  onclick="filterLibrary('מוכרים')">📚 מוכרים</button>
+      <button class="tab-btn"        id="tab-original"  onclick="filterLibrary('מקוריים')">✨ מקוריים</button>
+    </div>
+  </div>
+  <div id="story-list" class="story-list"></div>
+</section>
+
+<!-- ══ קורא סיפורים ════════════════════════════════════════════════ -->
+<section id="screen-reader" class="screen reader-screen">
+  <div class="reader-header sticky-header">
+    <button class="btn-back" onclick="exitReader()">יציאה →</button>
+    <span id="reader-page-counter" class="page-counter">עמוד 1 מתוך 1</span>
+  </div>
+  <h2 id="reader-story-title" class="reader-title"></h2>
+  <div class="reader-content">
+    <div id="reader-text" class="reader-text"></div>
+  </div>
+  <div class="page-dots-wrap">
+    <div id="page-dots" class="page-dots"></div>
+  </div>
+  <div class="reader-nav">
+    <button id="btn-prev" class="btn-nav" onclick="prevPage()">הקודם ➡️</button>
+    <button id="btn-next" class="btn-nav btn-nav-primary" onclick="nextPage()">⬅️ הבא</button>
+  </div>
+  <div id="finish-reading-div" class="finish-reading hidden">
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishAppReading()">🎉 סיימתי להיום!</button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 1 ══════════════════════════════════════════ -->
+<section id="screen-book-step1" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>📖 קראתי מספר</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:33%"></div></div>
+    <p class="step-indicator">שלב 1 מתוך 3 — פרטי הספר</p>
+  </div>
+  <div class="form-card">
+    <label for="book-title">שם הספר <span class="required">*</span></label>
+    <input id="book-title" type="text" class="input-field" placeholder="כתוב/י את שם הספר…" />
+    <label for="book-author">שם המחבר/ת <span class="optional">(לא חובה)</span></label>
+    <input id="book-author" type="text" class="input-field" placeholder="כתוב/י את שם המחבר/ת…" />
+    <button class="btn-giant btn-orange" onclick="bookStep2()">⬅️ המשך</button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 2 ══════════════════════════════════════════ -->
+<section id="screen-book-step2" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-book-step1')">חזרה →</button>
+      <h2>📖 כמה עמודים קראת?</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:66%"></div></div>
+    <p class="step-indicator">שלב 2 מתוך 3 — כמות עמודים</p>
+  </div>
+  <div class="pages-options">
+    <button class="btn-pages" onclick="selectPages(event,'1-5',5)">
+      <span class="pages-count">1–5</span>
+      <span class="pages-mins">כ-5 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'6-10',10)">
+      <span class="pages-count">6–10</span>
+      <span class="pages-mins">כ-10 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'11-20',15)">
+      <span class="pages-count">11–20</span>
+      <span class="pages-mins">כ-15 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'21+',25)">
+      <span class="pages-count">21+</span>
+      <span class="pages-mins">כ-25 דקות</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 3 ══════════════════════════════════════════ -->
+<section id="screen-book-step3" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-book-step2')">חזרה →</button>
+      <h2>📖 שאלות על הספר</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:100%"></div></div>
+    <p class="step-indicator">שלב 3 מתוך 3 — הבנת הנקרא</p>
+  </div>
+  <div class="form-card">
+    <label for="q-character">מי הדמות הראשית בסיפור? <span class="required">*</span></label>
+    <input id="q-character" type="text" class="input-field" placeholder="כתוב/י את שם הדמות…" />
+    <label for="q-story">מה קרה בסיפור? <span class="required">*</span></label>
+    <textarea id="q-story" class="input-field textarea-field" placeholder="ספר/י מה קרה…"></textarea>
+    <label for="q-liked">מה הכי אהבת? <span class="required">*</span></label>
+    <textarea id="q-liked" class="input-field textarea-field" placeholder="מה הכי אהבת בספר?"></textarea>
+    <button class="btn-giant btn-orange" onclick="submitBookReading()">🎉 סיימתי!</button>
+  </div>
+</section>
+
+<!-- ══ מסך סיום ════════════════════════════════════════════════════ -->
+<section id="screen-session-complete" class="screen complete-screen">
+  <div class="complete-content">
+    <div class="confetti-area" id="confetti-area"></div>
+    <div class="complete-star animate-bounce">🌟</div>
+    <h1 class="complete-title">כָּל הַכָּבוֹד!</h1>
+    <p class="complete-sub">היום קראת:</p>
+    <div class="complete-stats">
+      <div class="stat-card stat-blue">
+        <span class="stat-icon">⏱️</span>
+        <span class="stat-number" id="complete-minutes">0</span>
+        <span class="stat-label">דקות קריאה</span>
+      </div>
+      <div class="stat-card stat-yellow">
+        <span class="stat-icon">⭐</span>
+        <span class="stat-number" id="complete-points">0</span>
+        <span class="stat-label">נקודות חדשות!</span>
+      </div>
+    </div>
+    <p class="complete-msg">הדקות והנקודות נוספו לכרטיס הקורא שלך! 📚</p>
+    <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 חזרה לתפריט</button>
+  </div>
+</section>
+
+<!-- ══ כרטיס קורא ══════════════════════════════════════════════════ -->
+<section id="screen-reader-card" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>👤 כרטיס הקורא שלי</h2>
+    </div>
+  </div>
+  <div id="reader-card-content" class="reader-card-content"></div>
+</section>
+
+<!-- ══ הכיתה שלנו ═════════════════════════════════════════════════ -->
+<section id="screen-class" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>🏆 הכיתה שלנו</h2>
+    </div>
+  </div>
+  <div id="class-content" class="class-content"></div>
+</section>
+
+<script src="stories.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
