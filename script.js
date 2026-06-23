@@ -1,40 +1,22 @@
 /* ═══════════════════════════════════════════════════════════════
    יער הקריאה של מיתרים — script.js
+   נתונים: Firebase Firestore (ענן) + localStorage (גיבוי מקומי)
    כל הסיפורים נמצאים ב-stories.js בלבד.
 ═══════════════════════════════════════════════════════════════ */
 
 // ─── קבועים ─────────────────────────────────────────────────────────
 
 const STUDENT_NAMES = [
-  "אדם צור",
-  "אופיר לוינזון",
-  "אוריה חורש",
-  "איה",
-  "אלון גושן קוסובסקי",
-  "אמרי",
-  "אלה סרוטה",
-  "אלכסנדר דוניה",
-  "אלמה כהן מגורי",
-  "אמה חסקל",
-  "דרור גימון",
-  "יאיר היידנפלד",
-  "יהלי אור לויכטר",
-  "יערה רוטנברג",
-  "כרם חייט שיף",
-  "מיכה",
-  "נגה צברי",
-  "נורי שרשבסקי",
-  "נינה אבידן",
-  "נעמה קלפץ",
-  "סול בן-ג׳ויה",
-  "עומר לבהר",
-  "עומרי",
-  "עמית ששון",
-  "פלג חסקל",
-  "קשת בלה הורוויץ",
-  "שילה",
-  "שירה דהן",
-  "תמר לוי"
+  "אדם צור",           "אופיר לוינזון",      "אוריה חורש",
+  "איה",               "אלון גושן קוסובסקי",  "אמרי",
+  "אלה סרוטה",         "אלכסנדר דוניה",       "אלמה כהן מגורי",
+  "אמה חסקל",          "דרור גימון",          "יאיר היידנפלד",
+  "יהלי אור לויכטר",   "יערה רוטנברג",        "כרם חייט שיף",
+  "מיכה",              "נגה צברי",            "נורי שרשבסקי",
+  "נינה אבידן",        "נעמה קלפץ",           "סול בן-ג׳ויה",
+  "עומר לבהר",         "עומרי",               "עמית ששון",
+  "פלג חסקל",          "קשת בלה הורוויץ",     "שילה",
+  "שירה דהן",          "תמר לוי"
 ];
 
 const STUDENT_EMOJIS = [
@@ -56,10 +38,12 @@ const RANKS = [
 const CLASS_GOAL = 1500;
 
 // ─── מצב נוכחי ──────────────────────────────────────────────────────
-let currentStudentId = null;
-let currentStory     = null;
-let currentPageIndex = 0;
-let bookData         = {};
+let currentStudentId     = null;
+let currentStudentData   = null;   // נתוני התלמיד הנוכחי בזיכרון
+let currentStory         = null;
+let currentPageIndex     = 0;
+let bookData             = {};
+let classViewUnsubscribe = null;   // unsubscribe של listener כיתה
 
 // ─── ניווט מסכים ────────────────────────────────────────────────────
 
@@ -68,6 +52,11 @@ function showScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
+  // נקה Firebase listener כשעוזבים את מסך הכיתה
+  if (id !== 'screen-class' && classViewUnsubscribe) {
+    classViewUnsubscribe();
+    classViewUnsubscribe = null;
+  }
 }
 
 function goToStudents() {
@@ -80,7 +69,7 @@ function goToStudents() {
 function defaultStudent(id) {
   return {
     id,
-    name:         STUDENT_NAMES[id],
+    name:         STUDENT_NAMES[id] || '—',
     totalMinutes: 0,
     appMinutes:   0,
     bookMinutes:  0,
@@ -90,53 +79,48 @@ function defaultStudent(id) {
   };
 }
 
-function loadStudent(id) {
-  if (id === null || id === undefined) {
-    console.error('[booki] loadStudent: id is null — returning default 0');
-    return defaultStudent(0);
-  }
-  const key = 'booki_s_' + id;
-  const raw = localStorage.getItem(key);
+// ─── LocalStorage (גיבוי מקומי מהיר) ───────────────────────────────
+
+function loadStudentLocal(id) {
+  if (id === null || id === undefined) return defaultStudent(0);
+  const raw = localStorage.getItem('booki_s_' + id);
   if (!raw) return defaultStudent(id);
+  try { return JSON.parse(raw); } catch { return defaultStudent(id); }
+}
+
+function saveStudentLocal(data) {
+  if (data.id === null || data.id === undefined) return;
   try {
-    const data = JSON.parse(raw);
-    return data;
+    localStorage.setItem('booki_s_' + data.id, JSON.stringify(data));
   } catch (e) {
-    console.error('[booki] loadStudent: JSON parse error for', key, e);
-    return defaultStudent(id);
+    console.error('[local] saveStudentLocal error:', e);
   }
 }
 
-function saveStudent(data) {
-  if (data.id === null || data.id === undefined) {
-    console.error('[booki] saveStudent: data.id is null/undefined — aborting save!');
-    return false;
+// ─── שמירה וטעינה מאוחדות (Firebase + localStorage) ────────────────
+
+async function loadStudentFull(id) {
+  // נסה Firebase קודם
+  const fbData = await fbLoadStudent(id);
+  if (fbData) {
+    saveStudentLocal(fbData);   // שמור גיבוי מקומי
+    return fbData;
   }
-  const key = 'booki_s_' + data.id;
-  try {
-    const serialized = JSON.stringify(data);
-    localStorage.setItem(key, serialized);
-    const readback = localStorage.getItem(key);
-    if (readback !== serialized) {
-      console.error('[booki] saveStudent: write-verification FAILED for', key);
-      return false;
-    }
-    console.log('[booki] ✅ saved', key, '| points:', data.points, '| minutes:', data.totalMinutes);
-    return true;
-  } catch (e) {
-    console.error('[booki] saveStudent: localStorage error:', e);
-    return false;
-  }
+  // fallback ל-localStorage
+  return loadStudentLocal(id);
 }
 
-function allStudents() {
-  return STUDENT_NAMES.map((_, i) => loadStudent(i));
+async function saveStudentFull(data) {
+  saveStudentLocal(data);        // מיידי — גיבוי מקומי
+  await fbSaveStudent(data);     // ענן — עיקרי
 }
+
+// ─── כרטיסי תלמידים ─────────────────────────────────────────────────
 
 function renderStudentCards() {
   const grid = document.getElementById('student-grid');
   grid.innerHTML = STUDENT_NAMES.map((name, i) => {
-    const s = loadStudent(i);
+    const s = loadStudentLocal(i);  // מהיר — localStorage לתצוגה בלבד
     return `
       <button class="student-card" onclick="selectStudent(${i})">
         <span class="student-avatar">${STUDENT_EMOJIS[i]}</span>
@@ -146,16 +130,21 @@ function renderStudentCards() {
   }).join('');
 }
 
-function selectStudent(id) {
+async function selectStudent(id) {
   currentStudentId = id;
-  const s = loadStudent(id);
-  document.getElementById('current-student-name').textContent  = s.name;
-  document.getElementById('greeting-avatar').textContent       = STUDENT_EMOJIS[id];
+  // הצג מידע בסיסי מיד (ללא המתנה)
+  document.getElementById('current-student-name').textContent = STUDENT_NAMES[id];
+  document.getElementById('greeting-avatar').textContent      = STUDENT_EMOJIS[id];
   showScreen('screen-main');
+  // טען נתונים מלאים מ-Firebase ברקע
+  currentStudentData = await loadStudentFull(id);
+  // עדכן שם (אם שונה ב-Firebase)
+  document.getElementById('current-student-name').textContent = currentStudentData.name;
 }
 
 function logout() {
-  currentStudentId = null;
+  currentStudentId   = null;
+  currentStudentData = null;
   renderStudentCards();
   showScreen('screen-students');
 }
@@ -169,16 +158,18 @@ function showLibrary() {
 
 function filterLibrary(filter) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const map = { all:'tab-all', 'מוכרים':'tab-familiar', 'מקוריים':'tab-original' };
+  const map = { all: 'tab-all', 'מוכרים': 'tab-familiar', 'מקוריים': 'tab-original' };
   const tabEl = document.getElementById(map[filter]);
   if (tabEl) tabEl.classList.add('active');
 
   const stories = filter === 'all' ? getAllStories() : getStoriesByCategory(filter);
-  const s = loadStudent(currentStudentId);
-  const readIds = new Set(s.history.filter(h => h.type === 'app').map(h => h.storyId));
+  const s       = currentStudentData || defaultStudent(currentStudentId || 0);
+  const readIds = new Set(
+    s.history.filter(h => h.type === 'app').map(h => h.storyId)
+  );
 
   document.getElementById('story-list').innerHTML = stories.map(story => {
-    const done = readIds.has(story.id);
+    const done      = readIds.has(story.id);
     const totalMins = story.pages.reduce((acc, p) => acc + (p.readingMinutes || 0.5), 0);
     return `
       <button class="story-card" onclick="startStory(${story.id})">
@@ -199,7 +190,7 @@ function filterLibrary(filter) {
 // ─── קורא הסיפורים ──────────────────────────────────────────────────
 
 function startStory(storyId) {
-  currentStory     = getStoryById(storyId);
+  currentStory = getStoryById(storyId);
   if (!currentStory) return;
   currentPageIndex = 0;
   document.getElementById('reader-story-title').textContent = currentStory.title;
@@ -211,11 +202,10 @@ function renderReaderPage() {
   const page  = currentStory.pages[currentPageIndex];
   const total = currentStory.pages.length;
 
-  document.getElementById('reader-text').textContent = page.text;
+  document.getElementById('reader-text').textContent        = page.text;
   document.getElementById('reader-page-counter').textContent =
     `עמוד ${currentPageIndex + 1} מתוך ${total}`;
 
-  // נקודות ניווט
   document.getElementById('page-dots').innerHTML =
     currentStory.pages.map((_, i) =>
       `<span class="dot ${i === currentPageIndex ? 'dot-active' : ''}"></span>`
@@ -223,11 +213,8 @@ function renderReaderPage() {
 
   const isFirst = currentPageIndex === 0;
   const isLast  = currentPageIndex === total - 1;
-
-  const btnPrev = document.getElementById('btn-prev');
-  const btnNext = document.getElementById('btn-next');
-  btnPrev.style.visibility = isFirst ? 'hidden' : 'visible';
-  btnNext.style.visibility = isLast  ? 'hidden' : 'visible';
+  document.getElementById('btn-prev').style.visibility = isFirst ? 'hidden' : 'visible';
+  document.getElementById('btn-next').style.visibility = isLast  ? 'hidden' : 'visible';
 
   const finishDiv = document.getElementById('finish-reading-div');
   isLast ? finishDiv.classList.remove('hidden') : finishDiv.classList.add('hidden');
@@ -254,17 +241,18 @@ function exitReader() {
   }
 }
 
-function finishAppReading() {
+async function finishAppReading() {
   if (currentStudentId === null || currentStudentId === undefined) {
-    console.error('[booki] finishAppReading: currentStudentId is null — aborting!');
+    console.error('[booki] finishAppReading: currentStudentId is null — aborting');
     return;
   }
+
   const minutes = Math.max(1, Math.round(
     currentStory.pages.reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0)
   ));
   const points = minutes * 1;
 
-  const s = loadStudent(currentStudentId);
+  const s = currentStudentData || loadStudentLocal(currentStudentId);
   s.totalMinutes += minutes;
   s.appMinutes   += minutes;
   s.points       += points;
@@ -277,7 +265,9 @@ function finishAppReading() {
     points,
     date: todayStr()
   });
-  saveStudent(s);
+  currentStudentData = s;
+
+  await saveStudentFull(s);
   showComplete(minutes, points);
 }
 
@@ -313,11 +303,12 @@ function selectPages(evt, range, minutes) {
   }, 280);
 }
 
-function submitBookReading() {
+async function submitBookReading() {
   if (currentStudentId === null || currentStudentId === undefined) {
-    console.error('[booki] submitBookReading: currentStudentId is null — aborting!');
+    console.error('[booki] submitBookReading: currentStudentId is null — aborting');
     return;
   }
+
   const char  = document.getElementById('q-character').value.trim();
   const story = document.getElementById('q-story').value.trim();
   const liked = document.getElementById('q-liked').value.trim();
@@ -326,20 +317,22 @@ function submitBookReading() {
   const minutes = bookData.minutes || 5;
   const points  = minutes * 1;
 
-  const s = loadStudent(currentStudentId);
+  const s = currentStudentData || loadStudentLocal(currentStudentId);
   s.totalMinutes += minutes;
   s.bookMinutes  += minutes;
   s.points       += points;
   s.history.push({
-    type:      'book',
-    title:     bookData.title,
-    author:    bookData.author || '',
-    pages:     bookData.pages,
+    type:   'book',
+    title:  bookData.title,
+    author: bookData.author || '',
+    pages:  bookData.pages,
     minutes,
     points,
     date: todayStr()
   });
-  saveStudent(s);
+  currentStudentData = s;
+
+  await saveStudentFull(s);
   showComplete(minutes, points);
 }
 
@@ -358,7 +351,7 @@ function launchConfetti() {
   const colors = ['#F1C40F','#E74C3C','#3498DB','#2ECC71','#9B59B6','#F39C12','#1ABC9C'];
   for (let i = 0; i < 60; i++) {
     const el = document.createElement('div');
-    el.className = 'confetti-piece';
+    el.className  = 'confetti-piece';
     el.style.cssText = `
       left:${Math.random()*100}%;
       background:${colors[Math.floor(Math.random()*colors.length)]};
@@ -375,10 +368,10 @@ function launchConfetti() {
 // ─── כרטיס קורא ─────────────────────────────────────────────────────
 
 function showReaderCard() {
-  const s     = loadStudent(currentStudentId);
-  const rank  = getRank(s.totalMinutes);
-  const next  = getNextRank(s.totalMinutes);
-  const pct   = next ? Math.min(100, Math.round((s.totalMinutes / next.min) * 100)) : 100;
+  const s    = currentStudentData || loadStudentLocal(currentStudentId || 0);
+  const rank = getRank(s.totalMinutes);
+  const next = getNextRank(s.totalMinutes);
+  const pct  = next ? Math.min(100, Math.round((s.totalMinutes / next.min) * 100)) : 100;
 
   const progressSection = next
     ? `<div class="progress-card">
@@ -403,7 +396,6 @@ function showReaderCard() {
       <div class="card-name">${s.name}</div>
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
-
     <div class="stats-grid">
       <div class="stat-box">
         <span class="stat-icon-big">⏱️</span>
@@ -426,9 +418,7 @@ function showReaderCard() {
         <span class="stat-lbl">דק׳ מספרים</span>
       </div>
     </div>
-
     ${progressSection}
-
     ${s.history.length > 0
       ? `<div class="history-section">
            <h3>היסטוריית קריאה</h3>
@@ -439,21 +429,47 @@ function showReaderCard() {
   showScreen('screen-reader-card');
 }
 
-// ─── הכיתה שלנו ─────────────────────────────────────────────────────
+// ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
 
 function showClassView() {
-  const students   = allStudents();
-  const totalMins  = students.reduce((a, s) => a + s.totalMinutes, 0);
-  const appMins    = students.reduce((a, s) => a + s.appMinutes,   0);
-  const bookMins   = students.reduce((a, s) => a + s.bookMinutes,  0);
-  const leaves     = Math.floor(totalMins / 100);
-  const fruits     = Math.floor(totalMins / 500);
-  const blooming   = totalMins >= CLASS_GOAL;
-  const pct        = Math.min(100, Math.round((totalMins / CLASS_GOAL) * 100));
+  showScreen('screen-class');
+  document.getElementById('class-content').innerHTML =
+    '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
 
-  const sorted     = [...students].sort((a, b) => b.points - a.points).slice(0, 10);
-  const posIcons   = ['🥇','🥈','🥉'];
-  const rowClasses = ['leader-first','leader-second','leader-third'];
+  if (classViewUnsubscribe) {
+    classViewUnsubscribe();
+    classViewUnsubscribe = null;
+  }
+
+  // האזן לשינויים בזמן אמת
+  classViewUnsubscribe = fbWatchClass(fbStudents => {
+    _renderClassContent(fbStudents);
+  });
+}
+
+function _renderClassContent(fbStudents) {
+  // בנה מפה מלאה: id → נתונים (Firebase ראשי, localStorage גיבוי)
+  const byId = {};
+  fbStudents.forEach(s => {
+    if (s && s.id !== undefined && s.id !== null) byId[s.id] = s;
+  });
+  // השלם תלמידים שעדיין אין ב-Firebase
+  for (let i = 0; i < STUDENT_NAMES.length; i++) {
+    if (!byId[i]) byId[i] = loadStudentLocal(i);
+  }
+
+  const students  = Object.values(byId);
+  const totalMins = students.reduce((a, s) => a + (s.totalMinutes || 0), 0);
+  const appMins   = students.reduce((a, s) => a + (s.appMinutes   || 0), 0);
+  const bookMins  = students.reduce((a, s) => a + (s.bookMinutes  || 0), 0);
+  const leaves    = Math.floor(totalMins / 100);
+  const fruits    = Math.floor(totalMins / 500);
+  const blooming  = totalMins >= CLASS_GOAL;
+  const pct       = Math.min(100, Math.round((totalMins / CLASS_GOAL) * 100));
+
+  const sorted   = [...students].sort((a, b) => (b.points||0) - (a.points||0)).slice(0, 10);
+  const posIcons = ['🥇','🥈','🥉'];
+  const rowCls   = ['leader-first','leader-second','leader-third'];
 
   document.getElementById('class-content').innerHTML = `
     <div class="class-hero">
@@ -468,37 +484,33 @@ function showClassView() {
         <span>🍎 כל 500 דק׳ = פרי</span>
       </div>
     </div>
-
     <div class="class-stats-row">
       <div class="class-stat"><span>📱</span><strong>${appMins}</strong><span>באפליקציה</span></div>
       <div class="class-stat"><span>📚</span><strong>${bookMins}</strong><span>מספרים</span></div>
       <div class="class-stat"><span>🍃</span><strong>${leaves}</strong><span>עלים</span></div>
       <div class="class-stat"><span>🍎</span><strong>${fruits}</strong><span>פירות</span></div>
     </div>
-
     <div class="goal-section">
       <p>יעד הכיתה: ${CLASS_GOAL} דקות · ${pct}% הושלמו</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
     </div>
-
     <div class="leaderboard">
       <h3>🏆 10 הקוראים המובילים</h3>
       ${sorted.map((s, i) => {
-        const r = getRank(s.totalMinutes);
+        const r = getRank(s.totalMinutes || 0);
         return `
-          <div class="leader-row ${rowClasses[i] || ''}">
+          <div class="leader-row ${rowCls[i] || ''}">
             <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-            <span class="leader-avatar">${STUDENT_EMOJIS[s.id]}</span>
+            <span class="leader-avatar">${STUDENT_EMOJIS[s.id] || '📚'}</span>
             <span class="leader-name">${s.name}</span>
             <span class="leader-rank">${r.icon}</span>
-            <span class="leader-pts">${s.points} נק׳</span>
+            <span class="leader-pts">${s.points || 0} נק׳</span>
           </div>`;
       }).join('')}
     </div>
   `;
-  showScreen('screen-class');
 }
 
 // ─── דרגות ──────────────────────────────────────────────────────────
@@ -520,44 +532,51 @@ function todayStr() {
   return new Date().toLocaleDateString('he-IL');
 }
 
-// ─── אתחול ──────────────────────────────────────────────────────────
+// ─── אתחול ──────────────────────────────────────════════════════════
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // ─── בדיקת localStorage ──────────────────────────────────────
   try {
     localStorage.setItem('_booki_test_', '1');
     const ok = localStorage.getItem('_booki_test_') === '1';
     localStorage.removeItem('_booki_test_');
-    if (ok) {
-      console.log('[booki] ✅ localStorage: זמין ופעיל');
-    } else {
-      console.error('[booki] ❌ localStorage: כתיבה נכשלה בשקט!');
-    }
+    console.log(ok ? '[booki] ✅ localStorage: זמין' : '[booki] ❌ localStorage: כתיבה נכשלה');
   } catch (e) {
     console.error('[booki] ❌ localStorage: לא זמין!', e);
   }
 
   // ─── בדיקות קונסול ───────────────────────────────────────────
-  const storiesLoaded  = (typeof getAllStories === 'function') ? getAllStories().length : 0;
-  const studentsLoaded = STUDENT_NAMES.length;
-  const filesOk        = (typeof getAllStories === 'function') &&
-                         (typeof getStoryById  === 'function') &&
-                         (typeof STORIES       !== 'undefined');
+  const storiesLoaded = (typeof getAllStories === 'function') ? getAllStories().length : 0;
+  const filesOk       = (typeof getAllStories === 'function') &&
+                        (typeof getStoryById  === 'function') &&
+                        (typeof STORIES       !== 'undefined');
+  const fbOk          = (typeof fbLoadStudent  === 'function') &&
+                        (typeof fbSaveStudent  === 'function') &&
+                        (typeof fbWatchClass   === 'function');
 
   console.log('╔══════════════════════════════════════════╗');
   console.log('║   יער הקריאה של מיתרים — בדיקת טעינה   ║');
   console.log('╠══════════════════════════════════════════╣');
-  console.log(`║  📚 סיפורים שנטענו:   ${String(storiesLoaded).padEnd(18)}║`);
-  console.log(`║  👤 תלמידים שנטענו:   ${String(studentsLoaded).padEnd(18)}║`);
-  console.log(`║  ✅ כל הקבצים תקינים: ${String(filesOk).padEnd(18)}║`);
+  console.log(`║  📚 סיפורים:  ${String(storiesLoaded).padEnd(27)}║`);
+  console.log(`║  👤 תלמידים:  ${String(STUDENT_NAMES.length).padEnd(27)}║`);
+  console.log(`║  🔥 Firebase: ${String(fbOk ? '✅ firebase.js נטען' : '❌ חסר firebase.js').padEnd(27)}║`);
   console.log('╚══════════════════════════════════════════╝');
 
   if (!filesOk) {
-    console.error('[booki] ❌ stories.js לא נטען כראוי — בדוק שהקובץ קיים ונטען לפני script.js');
+    console.error('[booki] ❌ stories.js לא נטען — בדוק שהקובץ קיים לפני script.js');
+  }
+  if (!fbOk) {
+    console.error('[booki] ❌ firebase.js לא נטען — בדוק את סדר הסקריפטים ב-index.html');
   }
 
-  // ─── כל פתיחה מתחילה בבחירת תלמיד (ללא auto-login) ─────────
-  // auto-login הוסר: כל תלמיד חייב לזהות את עצמו בכל כניסה
-  // כך נמנע מצב שנתוני תלמיד X יופיעו אצל תלמיד Y
+  // ─── מעבר מ-localStorage ל-Firebase (פעם אחת) ───────────────
+  if (typeof migrateFromLocalStorage === 'function') {
+    const migrated = await migrateFromLocalStorage();
+    if (migrated > 0) {
+      console.log(`[booki] ✅ הועברו ${migrated} תלמידים מ-localStorage ל-Firebase`);
+    }
+  }
+
+  // כל פתיחה מתחילה בבחירת תלמיד — ללא auto-login
   showScreen('screen-splash');
 });
