@@ -91,13 +91,42 @@ function defaultStudent(id) {
 }
 
 function loadStudent(id) {
-  const raw = localStorage.getItem('booki_s_' + id);
+  if (id === null || id === undefined) {
+    console.error('[booki] loadStudent: id is null — returning default 0');
+    return defaultStudent(0);
+  }
+  const key = 'booki_s_' + id;
+  const raw = localStorage.getItem(key);
   if (!raw) return defaultStudent(id);
-  try { return JSON.parse(raw); } catch { return defaultStudent(id); }
+  try {
+    const data = JSON.parse(raw);
+    return data;
+  } catch (e) {
+    console.error('[booki] loadStudent: JSON parse error for', key, e);
+    return defaultStudent(id);
+  }
 }
 
 function saveStudent(data) {
-  localStorage.setItem('booki_s_' + data.id, JSON.stringify(data));
+  if (data.id === null || data.id === undefined) {
+    console.error('[booki] saveStudent: data.id is null/undefined — aborting save!');
+    return false;
+  }
+  const key = 'booki_s_' + data.id;
+  try {
+    const serialized = JSON.stringify(data);
+    localStorage.setItem(key, serialized);
+    const readback = localStorage.getItem(key);
+    if (readback !== serialized) {
+      console.error('[booki] saveStudent: write-verification FAILED for', key);
+      return false;
+    }
+    console.log('[booki] ✅ saved', key, '| points:', data.points, '| minutes:', data.totalMinutes);
+    return true;
+  } catch (e) {
+    console.error('[booki] saveStudent: localStorage error:', e);
+    return false;
+  }
 }
 
 function allStudents() {
@@ -119,7 +148,6 @@ function renderStudentCards() {
 
 function selectStudent(id) {
   currentStudentId = id;
-  localStorage.setItem('booki_current', id);
   const s = loadStudent(id);
   document.getElementById('current-student-name').textContent  = s.name;
   document.getElementById('greeting-avatar').textContent       = STUDENT_EMOJIS[id];
@@ -128,7 +156,6 @@ function selectStudent(id) {
 
 function logout() {
   currentStudentId = null;
-  localStorage.removeItem('booki_current');
   renderStudentCards();
   showScreen('screen-students');
 }
@@ -228,6 +255,10 @@ function exitReader() {
 }
 
 function finishAppReading() {
+  if (currentStudentId === null || currentStudentId === undefined) {
+    console.error('[booki] finishAppReading: currentStudentId is null — aborting!');
+    return;
+  }
   const minutes = Math.max(1, Math.round(
     currentStory.pages.reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0)
   ));
@@ -283,13 +314,17 @@ function selectPages(evt, range, minutes) {
 }
 
 function submitBookReading() {
+  if (currentStudentId === null || currentStudentId === undefined) {
+    console.error('[booki] submitBookReading: currentStudentId is null — aborting!');
+    return;
+  }
   const char  = document.getElementById('q-character').value.trim();
   const story = document.getElementById('q-story').value.trim();
   const liked = document.getElementById('q-liked').value.trim();
   if (!char || !story || !liked) { alert('יש למלא את כל השדות'); return; }
 
   const minutes = bookData.minutes || 5;
-  const points  = minutes * 2;
+  const points  = minutes * 1;
 
   const s = loadStudent(currentStudentId);
   s.totalMinutes += minutes;
@@ -488,6 +523,20 @@ function todayStr() {
 // ─── אתחול ──────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ─── בדיקת localStorage ──────────────────────────────────────
+  try {
+    localStorage.setItem('_booki_test_', '1');
+    const ok = localStorage.getItem('_booki_test_') === '1';
+    localStorage.removeItem('_booki_test_');
+    if (ok) {
+      console.log('[booki] ✅ localStorage: זמין ופעיל');
+    } else {
+      console.error('[booki] ❌ localStorage: כתיבה נכשלה בשקט!');
+    }
+  } catch (e) {
+    console.error('[booki] ❌ localStorage: לא זמין!', e);
+  }
+
   // ─── בדיקות קונסול ───────────────────────────────────────────
   const storiesLoaded  = (typeof getAllStories === 'function') ? getAllStories().length : 0;
   const studentsLoaded = STUDENT_NAMES.length;
@@ -507,14 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('[booki] ❌ stories.js לא נטען כראוי — בדוק שהקובץ קיים ונטען לפני script.js');
   }
 
-  // ─── אתחול תלמיד שמור ────────────────────────────────────────
-  const saved = localStorage.getItem('booki_current');
-  if (saved !== null) {
-    const id = parseInt(saved, 10);
-    if (!isNaN(id) && id >= 0 && id < STUDENT_NAMES.length) {
-      selectStudent(id);
-      return;
-    }
-  }
+  // ─── כל פתיחה מתחילה בבחירת תלמיד (ללא auto-login) ─────────
+  // auto-login הוסר: כל תלמיד חייב לזהות את עצמו בכל כניסה
+  // כך נמנע מצב שנתוני תלמיד X יופיעו אצל תלמיד Y
   showScreen('screen-splash');
 });
