@@ -7,14 +7,14 @@
 
 let _newClub = { type: null, name: '', emoji: '🌳', members: [] };
 let _newClubId = null;
-let _generatedCodes = [];
+let _clubCode  = '';
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 function showCreateClub() {
-  _newClub = { type: null, name: '', emoji: '🌳', members: [] };
+  _newClub  = { type: null, name: '', emoji: '🌳', members: [] };
   _newClubId = null;
-  _generatedCodes = [];
+  _clubCode  = '';
   showScreen('screen-create-type');
 }
 
@@ -184,24 +184,20 @@ async function createClub() {
   if (typeof fbCreateClub === 'function') await fbCreateClub(club);
   if (typeof analyticsClubCreated === 'function') analyticsClubCreated(_newClubId, _newClub.type);
 
-  // צור קוד הצטרפות לכל חבר
-  _generatedCodes = [];
-  for (const memberName of _newClub.members) {
-    const code = _genCode();
-    _generatedCodes.push({ name: memberName, code });
-    if (typeof fbCreateInvitation === 'function') {
-      await fbCreateInvitation({
-        code,
-        clubId:       _newClubId,
-        createdBy:    'admin',
-        targetName:   memberName,
-        targetUserId: null,
-        channel:      'pre-created',
-        link:         null,
-        maxUses:      1,
-        expiresAt:    null,
-      });
-    }
+  // קוד הצטרפות אחיד לכל המועדון (ללא הגבלת שימושים)
+  _clubCode = _genCode();
+  if (typeof fbCreateInvitation === 'function') {
+    await fbCreateInvitation({
+      code:         _clubCode,
+      clubId:       _newClubId,
+      createdBy:    'admin',
+      targetName:   null,
+      targetUserId: null,
+      channel:      'whatsapp',
+      link:         _buildJoinLink(_clubCode),
+      maxUses:      null,
+      expiresAt:    null,
+    });
   }
 
   // שמור את המועדון במכשיר (המנהל/ת כבר נמצא/ת פה)
@@ -226,24 +222,34 @@ function _genCode() {
   ).join('');
 }
 
+function _buildJoinLink(code) {
+  return `${window.location.origin}?join=${code}`;
+}
+
 function _renderSuccessScreen() {
   const nameEl  = document.getElementById('success-club-name');
   const emojiEl = document.getElementById('success-club-emoji');
-  const listEl  = document.getElementById('success-codes-list');
+  const codeEl  = document.getElementById('success-club-code');
+  const linkEl  = document.getElementById('success-club-link');
   if (nameEl)  nameEl.textContent  = _newClub.name;
   if (emojiEl) emojiEl.textContent = _newClub.emoji;
-  if (listEl)  listEl.innerHTML    = _generatedCodes.map(({ name, code }) => `
-    <div class="code-card">
-      <span class="code-name">${name}</span>
-      <span class="code-value">${code}</span>
-    </div>`).join('');
+  if (codeEl)  codeEl.textContent  = _clubCode;
+  if (linkEl)  linkEl.textContent  = _buildJoinLink(_clubCode);
 }
 
 function shareCodesWhatsApp() {
-  const lines = _generatedCodes
-    .map(({ name, code }) => `*${name}*: \`${code}\``)
-    .join('\n');
-  const text = `🌳 מועדון הקריאה "${_newClub.name}" מוכן!\n\nהקודים האישיים:\n${lines}\n\nפתחו את בוקי ← "התחברות למועדון" ← הזינו את הקוד שלכם`;
+  const link = _buildJoinLink(_clubCode);
+  const text = [
+    `🌳 מועדון הקריאה "${_newClub.name}" מוכן!`,
+    ``,
+    `קוד ההצטרפות:`,
+    `*${_clubCode}*`,
+    ``,
+    `פתחו את בוקי, לחצו על "הצטרפות למועדון", הזינו את הקוד, כתבו שם — ומתחילים לקרוא 📚`,
+    ``,
+    `קישור ישיר:`,
+    link,
+  ].join('\n');
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 

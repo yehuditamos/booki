@@ -491,8 +491,12 @@
     <span id="success-club-emoji" class="success-big-emoji">🌳</span>
     <h3 id="success-club-name">שם המועדון</h3>
   </div>
-  <p class="success-inst">שתף/י את הקוד האישי של כל קורא/ת:</p>
-  <div id="success-codes-list" class="success-codes-list"></div>
+  <div class="success-code-block">
+    <p class="success-code-label">קוד ההצטרפות:</p>
+    <div class="success-code-value" id="success-club-code">——</div>
+    <p class="success-code-label" style="margin-top:14px">קישור ישיר:</p>
+    <div class="success-link-value" id="success-club-link"></div>
+  </div>
   <div class="success-actions">
     <button class="btn-giant btn-green" onclick="shareCodesWhatsApp()">📤 שתף/י ב-WhatsApp</button>
     <button class="btn-giant btn-outline-green" style="margin-top:10px" onclick="goFromSuccessToWhoReads()">📖 מי קורא עכשיו? →</button>
@@ -508,7 +512,7 @@
     </div>
   </div>
   <div class="join-code-section">
-    <p class="join-label">הזן/י קוד אישי</p>
+    <p class="join-label">הזן/י קוד מועדון</p>
     <input id="join-code-input" type="text" class="join-code-input"
            maxlength="6" placeholder="ABC123"
            onkeydown="handleCodeKeydown(event)" autocomplete="off" />
@@ -528,6 +532,28 @@
   </div>
   <div class="join-divider">— מועדונים קיימים —</div>
   <div id="existing-clubs-list" class="existing-clubs-list"></div>
+</section>
+
+<!-- ══ הצטרפות — הזנת שם ══════════════════════════════════════════ -->
+<section id="screen-join-name" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goBackFromJoin()">חזרה →</button>
+      <h2>ברוכים הבאים!</h2>
+    </div>
+  </div>
+  <div class="join-code-section">
+    <div class="join-club-banner">
+      <span id="join-club-emoji-display"></span>
+      <span id="join-club-name-display"></span>
+    </div>
+    <p class="join-label">מה שמך?</p>
+    <input id="join-name-input" type="text" class="join-code-input"
+           maxlength="30" placeholder="שם פרטי"
+           onkeydown="handleNameKeydown(event)" autocomplete="given-name" />
+    <p id="join-name-error" class="join-error"></p>
+    <button id="btn-join-name" class="btn-giant btn-blue" onclick="submitJoinName()">מצטרף/ת ⬅️</button>
+  </div>
 </section>
 
 <!-- ══ הצטרפות — ברוכים הבאים ════════════════════════════════════ -->

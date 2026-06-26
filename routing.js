@@ -97,26 +97,30 @@ function _updateClubCount() {
 function routeOnLoad() {
   if (typeof track === 'function') track('app_open');
   setNavVisible(false);
+
+  // קישור ישיר עם קוד הצטרפות: ?join=XXXXXX
+  const joinCode = new URLSearchParams(window.location.search).get('join');
+  if (joinCode && typeof showJoinClubWithCode === 'function') {
+    showJoinClubWithCode(joinCode);
+    return;
+  }
+
   if (!hasDeviceClubs()) { showScreen('screen-splash'); return; }
   showScreen('screen-home');
 }
 
-/** "מתחילים" — מסך הבית לכיתה שלנו / בחירת מועדון */
+/** "מתחילים" — תמיד מציג מועדונים קיימים, ללא דילוג */
 function startReading() {
   const clubs = getDeviceClubs();
   if (!clubs.length) { showScreen('screen-splash'); return; }
-  if (clubs.length === 1) {
-    showWhoReads(clubs[0].clubId);
-  } else {
-    const titleEl = document.getElementById('club-select-title');
-    if (titleEl) titleEl.textContent = 'לאיזה יער נכנסים היום?';
-    _clubSelectMode = 'device';
-    _pendingUserId  = null;
-    _pendingProfile = null;
-    _renderClubSelect(clubs);
-    setNavTab('clubs');
-    showScreen('screen-club-select');
-  }
+  const titleEl = document.getElementById('club-select-title');
+  if (titleEl) titleEl.textContent = '🌳 מועדונים קיימים';
+  _clubSelectMode = 'device';
+  _pendingUserId  = null;
+  _pendingProfile = null;
+  _renderClubSelect(clubs);
+  setNavTab('clubs');
+  showScreen('screen-club-select');
 }
 
 /** חזרה למסך הבית */
@@ -473,7 +477,7 @@ function _enterPersonalHome(userId, profile) {
   // טוען נתוני קריאה צבורים מ-localStorage (סינכרוני, מהיר)
   const saved = typeof loadStudentLocal === 'function' ? loadStudentLocal(userId) : null;
   const studentData = (saved && saved.id === userId && saved.totalMinutes >= 0)
-    ? { ...saved, name: profile.name || saved.name || userId, emoji: profile.emoji || '📚' }
+    ? { history: [], ...saved, name: profile.name || saved.name || userId, emoji: profile.emoji || '📚' }
     : {
         id:           userId,
         name:         profile.name  || userId,

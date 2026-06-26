@@ -200,7 +200,7 @@ function filterLibrary(filter) {
   }
   const s       = currentStudentData || defaultStudent(currentStudentId || 0);
   const readIds = new Set(
-    s.history.filter(h => h.type === 'app').map(h => h.storyId)
+    (s.history || []).filter(h => h.type === 'app').map(h => h.storyId)
   );
 
   document.getElementById('story-list').innerHTML = stories.map(story => {

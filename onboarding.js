@@ -10,6 +10,7 @@ let _ob = {
   userId: null, name: '', clubId: null,
   grade: null, readingLevel: null, niqqudLevel: null, interests: [],
 };
+let _pendingInv = null;  // invitation validated but not yet claimed
 
 // ─── Join Entry ───────────────────────────────────────────────────────────────
 
@@ -20,7 +21,16 @@ function showJoinClub() {
   if (input) input.value = '';
   const err = document.getElementById('join-error-msg');
   if (err) err.textContent = '';
+  _pendingInv = null;
   showScreen('screen-join-entry');
+}
+
+/** נקרא מ-routing.js כש-URL מכיל ?join=CODE */
+function showJoinClubWithCode(code) {
+  showJoinClub();
+  const inp = document.getElementById('join-code-input');
+  if (inp) inp.value = code.toUpperCase().slice(0, 6);
+  setTimeout(submitJoinCode, 80);
 }
 
 function _renderSeedClubs() {
@@ -57,16 +67,15 @@ function joinSeedClub(clubId) {
 function handleCodeKeydown(e) { if (e.key === 'Enter') submitJoinCode(); }
 
 async function submitJoinCode() {
-  const raw  = (document.getElementById('join-code-input')?.value || '').trim().toUpperCase();
-  const err  = document.getElementById('join-error-msg');
-  const btn  = document.getElementById('btn-join-code');
+  const raw = (document.getElementById('join-code-input')?.value || '').trim().toUpperCase();
+  const err = document.getElementById('join-error-msg');
+  const btn = document.getElementById('btn-join-code');
 
   if (err) err.textContent = '';
   if (raw.length < 4) {
     if (err) err.textContent = 'נא להזין קוד בן 6 תווים';
     return;
   }
-
   if (btn) { btn.disabled = true; btn.textContent = 'בודק...'; }
 
   if (typeof fbLoadInvitation !== 'function') {
@@ -76,41 +85,102 @@ async function submitJoinCode() {
   }
 
   const inv = await fbLoadInvitation(raw);
+  if (btn) { btn.disabled = false; btn.textContent = 'כניסה'; }
 
   if (!inv) {
     if (err) err.textContent = 'הקוד לא נמצא — בדוק/י שוב';
-    if (btn) { btn.disabled = false; btn.textContent = 'כניסה'; }
     return;
   }
   if (inv.status !== 'pending') {
-    if (err) err.textContent = inv.status === 'claimed' ? 'קוד זה כבר שומש' : 'הקוד אינו בתוקף';
-    if (btn) { btn.disabled = false; btn.textContent = 'כניסה'; }
+    if (err) err.textContent = 'הקוד אינו בתוקף';
+    return;
+  }
+  if (inv.maxUses !== null && inv.usedCount >= inv.maxUses) {
+    if (err) err.textContent = 'קוד זה כבר שומש';
     return;
   }
 
-  // צור userId ייחודי אם לא קיים
-  let userId = localStorage.getItem('booki_tmp_uid');
-  if (!userId) {
-    userId = 'user_' + Math.random().toString(36).slice(2, 11);
-    localStorage.setItem('booki_tmp_uid', userId);
+  _pendingInv = inv;
+
+  // קוד אישי (targetName קיים) — זרימה ישנה
+  if (inv.targetName) {
+    await _completeJoin(null, inv.targetName, inv);
+    return;
   }
 
+  // קוד מועדון — מבקשים שם
+  _showNameEntry(inv);
+}
+
+function _showNameEntry(inv) {
+  const emojiEl = document.getElementById('join-club-emoji-display');
+  const nameEl  = document.getElementById('join-club-name-display');
+  if (emojiEl) emojiEl.textContent = '';
+  if (nameEl)  nameEl.textContent  = inv.clubId;
+
+  // נסה לטעון שם המועדון מהמכשיר
+  if (typeof getDeviceClubs === 'function') {
+    const local = getDeviceClubs().find(c => c.clubId === inv.clubId);
+    if (local) {
+      if (emojiEl) emojiEl.textContent = local.emoji ?? '';
+      if (nameEl)  nameEl.textContent  = local.name  ?? inv.clubId;
+    }
+  }
+
+  const input = document.getElementById('join-name-input');
+  if (input) { input.value = ''; input.focus(); }
+  const nameErr = document.getElementById('join-name-error');
+  if (nameErr) nameErr.textContent = '';
+  showScreen('screen-join-name');
+}
+
+function handleNameKeydown(e) { if (e.key === 'Enter') submitJoinName(); }
+
+async function submitJoinName() {
+  const name    = (document.getElementById('join-name-input')?.value || '').trim();
+  const nameErr = document.getElementById('join-name-error');
+  const btn     = document.getElementById('btn-join-name');
+
+  if (nameErr) nameErr.textContent = '';
+  if (!name || name.length < 2) {
+    if (nameErr) nameErr.textContent = 'נא להזין שם (לפחות 2 תווים)';
+    return;
+  }
+
+  // בדיקת כפל שם מתוך נתוני המכשיר המקומיים
+  if (_pendingInv && typeof getDeviceClubs === 'function') {
+    const local = getDeviceClubs().find(c => c.clubId === _pendingInv.clubId);
+    if (local?.members?.some(m => m.name === name)) {
+      if (nameErr) nameErr.textContent = `כבר יש קורא בשם "${name}" במועדון. אפשר להוסיף שם משפחה או כינוי?`;
+      return;
+    }
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'מצטרף/ת...'; }
+  await _completeJoin(null, name, _pendingInv);
+  if (btn) { btn.disabled = false; btn.textContent = 'מצטרף/ת ⬅️'; }
+}
+
+async function _completeJoin(existingUserId, name, inv) {
+  let userId = existingUserId
+    || localStorage.getItem('booki_tmp_uid')
+    || ('user_' + Math.random().toString(36).slice(2, 11));
+  localStorage.setItem('booki_tmp_uid', userId);
+
   const result = typeof fbClaimInvitation === 'function'
-    ? await fbClaimInvitation(raw, userId)
+    ? await fbClaimInvitation(inv.code, userId)
     : { success: false };
 
   if (!result.success) {
-    if (err) err.textContent = 'שגיאה בהתחברות — נסה שוב';
-    if (btn) { btn.disabled = false; btn.textContent = 'כניסה'; }
+    const errEl = document.getElementById('join-name-error') || document.getElementById('join-error-msg');
+    if (errEl) errEl.textContent = 'שגיאה בהתחברות — נסה שוב';
     return;
   }
 
-  // צור פרופיל ראשוני
   if (typeof fbGetOrCreateUserProfile === 'function') {
-    await fbGetOrCreateUserProfile(userId, { name: inv.targetName, emoji: '📚' });
+    await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
   }
 
-  // הוסף מועדון + קורא למכשיר
   if (typeof addDeviceClub === 'function') {
     const club = (typeof fbLoadClub === 'function') ? await fbLoadClub(inv.clubId) : null;
     addDeviceClub({
@@ -121,16 +191,14 @@ async function submitJoinCode() {
     });
   }
   if (typeof addDeviceMember === 'function') {
-    addDeviceMember(inv.clubId, { userId, name: inv.targetName, emoji: '📚' });
+    addDeviceMember(inv.clubId, { userId, name, emoji: '📚' });
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = 'כניסה'; }
   if (typeof track === 'function') track('join_club_completed', { clubId: inv.clubId });
 
-  // כניסה לאונבורדינג
-  _ob = { userId, name: inv.targetName, clubId: inv.clubId,
+  _ob = { userId, name, clubId: inv.clubId,
           grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
-  _showWelcome(inv.targetName);
+  _showWelcome(name);
 }
 
 // ─── Onboarding Entry Point ───────────────────────────────────────────────────
@@ -221,4 +289,11 @@ function goHomeAfterOnboarding() {
   } else if (typeof routeOnLoad === 'function') {
     routeOnLoad();
   }
+}
+
+// חשיפה גלובלית
+if (typeof window !== 'undefined') {
+  window.showJoinClubWithCode = showJoinClubWithCode;
+  window.submitJoinName       = submitJoinName;
+  window.handleNameKeydown    = handleNameKeydown;
 }

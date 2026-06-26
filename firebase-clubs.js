@@ -399,12 +399,14 @@ async function fbClaimInvitation(code, userId) {
     if (inv.expiresAt && _now() > inv.expiresAt)
                                         return { success: false, reason: 'expired' };
 
+    const isUnlimited = inv.maxUses === null;
     await _db().collection('invitations').doc(code).set({
-      targetUserId: userId,
-      usedCount:    inv.usedCount + 1,
-      status:       'claimed',
-      claimedAt:    _now(),
-      claimedBy:    userId,
+      usedCount: inv.usedCount + 1,
+      claimedAt: _now(),
+      claimedBy: userId,
+      ...(isUnlimited
+        ? {}  // קוד מועדון — נשאר 'pending' לשימושים נוספים
+        : { targetUserId: userId, status: 'claimed' }),
     }, { merge: true });
 
     await fbAddClubMembership(inv.clubId, {
