@@ -176,11 +176,28 @@ function showLibrary() {
 
 function filterLibrary(filter) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const map = { all: 'tab-all', 'מוכרים': 'tab-familiar', 'מקוריים': 'tab-original', 'ארוכים': 'tab-long' };
+  const map = {
+    all:           'tab-all',
+    'מוכרים':      'tab-familiar',
+    'מקוריים':     'tab-original',
+    'ארוכים':      'tab-long',
+    'תנ״ך לילדים': 'tab-tanakh',
+    'ערכים וחברות':'tab-values',
+    'טבע וסקרנות': 'tab-nature',
+    'משפחה וחגים': 'tab-family',
+  };
   const tabEl = document.getElementById(map[filter]);
   if (tabEl) tabEl.classList.add('active');
 
-  const stories = filter === 'all' ? getAllStories() : getStoriesByCategory(filter);
+  let stories;
+  if (filter === 'all') {
+    stories = getAllStories();
+  } else {
+    stories = getAllStories().filter(s => {
+      const cat = s.category || 'סיפורים קצרים';
+      return cat === filter;
+    });
+  }
   const s       = currentStudentData || defaultStudent(currentStudentId || 0);
   const readIds = new Set(
     s.history.filter(h => h.type === 'app').map(h => h.storyId)
