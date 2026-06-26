@@ -741,6 +741,63 @@
 <script src="onboarding.js"></script>
 
 <script src="script.js"></script>
+<script src="owner-dashboard.js"></script>
+
+<!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
+<section id="screen-owner-dashboard" class="screen od-screen">
+  <div class="od-header">
+    <h2>📊 Owner Dashboard</h2>
+    <span id="od-status" class="od-status"></span>
+    <button class="od-close" onclick="showScreen('screen-home')">✕</button>
+  </div>
+  <div class="od-body">
+
+    <div class="od-section">
+      <div class="od-section-title">👥 משתמשים</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-total-users">—</span><span class="od-lbl">סה״כ רשומים</span></div>
+        <div class="od-metric"><span class="od-val" id="od-dau-today">—</span><span class="od-lbl">פעילים היום</span></div>
+        <div class="od-metric"><span class="od-val" id="od-wau">—</span><span class="od-lbl">פעילים 7 ימים</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></div>
+      </div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">📅 היום</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-opens-today">—</span><span class="od-lbl">פתיחות אפליקציה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-sessions-today">—</span><span class="od-lbl">סשני קריאה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-new-today">—</span><span class="od-lbl">הרשמות חדשות</span></div>
+        <div class="od-metric"><span class="od-val" id="od-joins-today">—</span><span class="od-lbl">הצטרפויות מועדון</span></div>
+      </div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">📚 קריאה סה״כ</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-sessions">—</span><span class="od-lbl">סשנים</span></div>
+      </div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">⭐ סיפורים פופולריים</div>
+      <div id="od-top-stories"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🌳 מועדונים פעילים</div>
+      <div id="od-clubs-list"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🚨 שגיאות אחרונות</div>
+      <div id="od-errors"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <button class="od-refresh" onclick="_odLoad()">🔄 רענן נתונים</button>
+  </div>
+</section>
 
 <!-- ══ Tab Bar — 2 עוגני ניווט ════════════════════════════════════ -->
 <nav id="booki-nav" class="booki-nav" data-tab="" aria-label="ניווט ראשי">

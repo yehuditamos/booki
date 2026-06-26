@@ -311,13 +311,17 @@ function enterReadingFromDashboard() {
 async function showWhoReads(clubId) {
   _activeClubId = clubId || null;
 
-  const titleEl = document.getElementById('who-reads-club-name');
+  const subEl = document.getElementById('who-reads-club-name');
+  const h2El  = document.querySelector('.who-reads-title');
+
   if (clubId) {
     const club = getDeviceClubs().find(c => c.clubId === clubId);
-    if (titleEl) titleEl.textContent = club?.name || '';
+    if (h2El)  h2El.textContent  = (club?.emoji || '📚') + ' ' + (club?.name || '');
+    if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
     _renderProfileGrid(club);
   } else {
-    if (titleEl) titleEl.textContent = '';
+    if (h2El)  h2El.textContent  = '📖 מי קורא עכשיו?';
+    if (subEl) subEl.textContent = '';
     _renderAllProfiles();
   }
 
@@ -356,10 +360,7 @@ function _renderAllProfiles() {
   }
 
   if (!allMembers.length) {
-    grid.innerHTML = `
-      <div class="who-reads-empty">
-        <p>עוד אין קוראים — התחבר/י עם קוד</p>
-      </div>`;
+    grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
     return;
   }
 
@@ -381,10 +382,7 @@ function _renderProfileGrid(club) {
 
   const members = club?.members || [];
   if (!members.length) {
-    grid.innerHTML = `
-      <div class="who-reads-empty">
-        <p>עוד אין קוראים — התחבר/י עם קוד</p>
-      </div>`;
+    grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
     return;
   }
 

@@ -175,52 +175,56 @@ function showLibrary() {
 }
 
 function filterLibrary(filter) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const map = {
-    all:           'tab-all',
-    'מוכרים':      'tab-familiar',
-    'מקוריים':     'tab-original',
-    'ארוכים':      'tab-long',
-    'תנ״ך לילדים': 'tab-tanakh',
-    'ערכים וחברות':'tab-values',
-    'טבע וסקרנות': 'tab-nature',
-    'משפחה וחגים': 'tab-family',
-  };
-  const tabEl = document.getElementById(map[filter]);
-  if (tabEl) tabEl.classList.add('active');
+  try {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const map = {
+      all:           'tab-all',
+      'מוכרים':      'tab-familiar',
+      'מקוריים':     'tab-original',
+      'ארוכים':      'tab-long',
+      'תנ״ך לילדים': 'tab-tanakh',
+      'ערכים וחברות':'tab-values',
+      'טבע וסקרנות': 'tab-nature',
+      'משפחה וחגים': 'tab-family',
+    };
+    const tabEl = document.getElementById(map[filter]);
+    if (tabEl) tabEl.classList.add('active');
 
-  let stories;
-  if (filter === 'all') {
-    stories = getAllStories();
-  } else {
-    stories = getAllStories().filter(s => {
-      const cat = s.category || 'סיפורים קצרים';
-      return cat === filter;
-    });
-  }
-  const s       = currentStudentData || defaultStudent(currentStudentId || 0);
-  const readIds = new Set(
-    (s.history || []).filter(h => h.type === 'app').map(h => h.storyId)
-  );
+    const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
+    const stories = (filter === 'all')
+      ? allStories
+      : allStories.filter(s => (s.category || 'סיפורים קצרים') === filter);
 
-  document.getElementById('story-list').innerHTML = stories.map(story => {
-    // בדיקה כפולה: slug חדש + legacyId מספרי לתאימות אחורה עם היסטוריית Firebase
-    const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
-    const totalMins = story.pages.reduce((acc, p) => acc + (p.readingMinutes || 0.5), 0);
-    return `
-      <button class="story-card" onclick="startStory('${story.id}')">
-        <div class="story-card-left">
-          <span class="story-emoji">${story.emoji || '📖'}</span>
-          <div class="story-info">
-            <span class="story-title">${story.title}</span>
-            <span class="story-meta">${story.category} · ${story.pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
+    const s       = currentStudentData || defaultStudent(currentStudentId || 0);
+    const readIds = new Set(
+      (s.history || []).filter(h => h.type === 'app').map(h => h.storyId)
+    );
+
+    const listEl = document.getElementById('story-list');
+    if (!listEl) { console.error('[filterLibrary] #story-list לא נמצא'); return; }
+
+    listEl.innerHTML = stories.map(story => {
+      // בדיקה כפולה: slug חדש + legacyId מספרי לתאימות אחורה עם היסטוריית Firebase
+      const done  = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
+      const pages = story.pages || [];
+      const totalMins = pages.reduce((acc, p) => acc + (p.readingMinutes || 0.5), 0);
+      return `
+        <button class="story-card" onclick="startStory('${story.id}')">
+          <div class="story-card-left">
+            <span class="story-emoji">${story.emoji || '📖'}</span>
+            <div class="story-info">
+              <span class="story-title">${story.title}</span>
+              <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
+            </div>
           </div>
-        </div>
-        ${done
-          ? '<span class="read-badge">✓ נקרא</span>'
-          : '<span class="new-badge">קרא →</span>'}
-      </button>`;
-  }).join('');
+          ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
+        </button>`;
+    }).join('');
+  } catch (err) {
+    console.error('[filterLibrary]', err);
+    const listEl = document.getElementById('story-list');
+    if (listEl) listEl.innerHTML = `<p style="color:red;padding:20px;text-align:center">שגיאה בטעינת הספרייה:<br>${err.message}</p>`;
+  }
 }
 
 // ─── קורא הסיפורים ──────────────────────────────────────────────────
