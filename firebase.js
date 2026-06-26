@@ -62,6 +62,7 @@ let _firebaseReady = false;
     console.log('[firebase] initialized');
 
     _db = firebase.firestore();
+    window.db = _db;   // חשיפה ל-firebase-clubs.js
     console.log('[firebase] firestore connected');
 
     _firebaseReady = true;
@@ -252,8 +253,38 @@ async function resetAllStudents() {
   console.log('[reset] 🎉 הכיתה', CLASS_ID, 'מוכנה להשקה!');
 }
 
+// ─── תיקון שמות לא עקביים בין STUDENT_NAMES ל-Firebase ──────────────
+// קריאה: fixAllStudentNames(STUDENT_NAMES) מהקונסול או אוטומטי בטעינה
+
+async function fixAllStudentNames(canonicalNames) {
+  if (!_isReady()) {
+    console.warn('[firebase] fixAllStudentNames: Firebase לא זמין');
+    return 0;
+  }
+  const snapshot = await _studentsRef().get();
+  const batch    = _db.batch();
+  let count      = 0;
+  snapshot.forEach(doc => {
+    const data      = doc.data();
+    const canonical = canonicalNames[data.id];
+    if (canonical && data.name !== canonical) {
+      batch.update(doc.ref, { name: canonical });
+      console.log(`[firebase] תיקון שם id=${data.id}: "${data.name}" → "${canonical}"`);
+      count++;
+    }
+  });
+  if (count > 0) {
+    await batch.commit();
+    console.log(`[firebase] ✅ תוקנו ${count} שמות ב-Firebase`);
+  } else {
+    console.log('[firebase] ✅ כל השמות עקביים — אין צורך בתיקון');
+  }
+  return count;
+}
+
 // ─── חשיפה לקונסול ───────────────────────────────────────────────────
-window.resetAllStudents  = resetAllStudents;
-window.fbLoadStudent     = fbLoadStudent;
-window.fbSaveStudent     = fbSaveStudent;
+window.resetAllStudents    = resetAllStudents;
+window.fbLoadStudent       = fbLoadStudent;
+window.fbSaveStudent       = fbSaveStudent;
+window.fixAllStudentNames  = fixAllStudentNames;
 console.log('[firebase] window.resetAllStudents מוכן לשימוש מהקונסול');

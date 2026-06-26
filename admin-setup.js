@@ -1,0 +1,256 @@
+/**
+ * admin-setup.js — Admin: Club Creation Flow
+ *
+ * screen-splash → screen-create-type → screen-create-name →
+ * screen-create-members → screen-create-review → screen-create-success
+ */
+
+let _newClub = { type: null, name: '', emoji: '🌳', members: [] };
+let _newClubId = null;
+let _generatedCodes = [];
+
+// ─── Entry ────────────────────────────────────────────────────────────────────
+
+function showCreateClub() {
+  _newClub = { type: null, name: '', emoji: '🌳', members: [] };
+  _newClubId = null;
+  _generatedCodes = [];
+  showScreen('screen-create-type');
+}
+
+// ─── Step 1: Type ─────────────────────────────────────────────────────────────
+
+function selectClubType(type) {
+  _newClub.type = type;
+  const input = document.getElementById('club-name-input');
+  if (input) input.value = '';
+  document.querySelectorAll('.emoji-opt').forEach((b, i) => {
+    b.classList.toggle('selected', i === 0);
+  });
+  _newClub.emoji = '🌳';
+  showScreen('screen-create-name');
+}
+
+// ─── Step 2: Name + Emoji ─────────────────────────────────────────────────────
+
+function selectClubEmoji(el) {
+  document.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  _newClub.emoji = el.dataset.emoji;
+}
+
+function submitClubName() {
+  const input = document.getElementById('club-name-input');
+  const name = (input?.value || '').trim();
+  if (!name) { input?.focus(); return; }
+  _newClub.name = name;
+  const sel = document.querySelector('.emoji-opt.selected');
+  if (sel) _newClub.emoji = sel.dataset.emoji;
+  _newClub.members = [];
+  const memberInput = document.getElementById('member-name-input');
+  if (memberInput) memberInput.value = '';
+  const pasteInput = document.getElementById('member-paste-input');
+  if (pasteInput) pasteInput.value = '';
+  setAddMode('single');
+  renderMemberList();
+  const btn = document.getElementById('btn-go-review');
+  if (btn) btn.disabled = true;
+  showScreen('screen-create-members');
+}
+
+function setAddMode(mode) {
+  const single = document.getElementById('add-single-mode');
+  const paste  = document.getElementById('add-paste-mode');
+  if (single) single.style.display = mode === 'single' ? '' : 'none';
+  if (paste)  paste.style.display  = mode === 'paste'  ? '' : 'none';
+  document.querySelectorAll('.add-mode-btn').forEach(b => b.classList.remove('active'));
+  const active = document.getElementById(`btn-mode-${mode}`);
+  if (active) active.classList.add('active');
+}
+
+function addPastedMembers() {
+  const text = (document.getElementById('member-paste-input')?.value || '');
+  const names = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && !_newClub.members.includes(l));
+  _newClub.members.push(...names);
+  const pasteInput = document.getElementById('member-paste-input');
+  if (pasteInput) pasteInput.value = '';
+  setAddMode('single');
+  renderMemberList();
+  const btn = document.getElementById('btn-go-review');
+  if (btn) btn.disabled = _newClub.members.length === 0;
+}
+
+// ─── Step 3: Members ──────────────────────────────────────────────────────────
+
+function addMemberOnEnter(e) { if (e.key === 'Enter') addMember(); }
+
+function addMember() {
+  const input = document.getElementById('member-name-input');
+  const name  = (input?.value || '').trim();
+  if (!name || _newClub.members.includes(name)) {
+    if (input) input.value = '';
+    return;
+  }
+  _newClub.members.push(name);
+  if (input) { input.value = ''; input.focus(); }
+  renderMemberList();
+  const btn = document.getElementById('btn-go-review');
+  if (btn) btn.disabled = false;
+}
+
+function removeMember(i) {
+  _newClub.members.splice(i, 1);
+  renderMemberList();
+  const btn = document.getElementById('btn-go-review');
+  if (btn) btn.disabled = _newClub.members.length === 0;
+}
+
+function renderMemberList() {
+  const countEl = document.getElementById('member-count');
+  if (countEl) {
+    countEl.textContent = _newClub.members.length
+      ? `${_newClub.members.length} חברים נוספו`
+      : '';
+  }
+  const listEl = document.getElementById('member-list');
+  if (!listEl) return;
+  listEl.innerHTML = _newClub.members.map((name, i) => `
+    <div class="member-chip">
+      <span class="member-chip-name">${name}</span>
+      <button class="member-chip-remove" onclick="removeMember(${i})">✕</button>
+    </div>`).join('');
+}
+
+// ─── Step 4: Review ───────────────────────────────────────────────────────────
+
+function goToReview() {
+  if (!_newClub.members.length) return;
+  const typeLabel = (typeof CLUB_TYPE_DEFAULTS !== 'undefined')
+    ? (CLUB_TYPE_DEFAULTS[_newClub.type]?.label ?? _newClub.type)
+    : _newClub.type;
+
+  const emojiEl   = document.getElementById('review-club-emoji');
+  const nameEl    = document.getElementById('review-club-name');
+  const typeEl    = document.getElementById('review-club-type');
+  const listEl    = document.getElementById('review-member-list');
+  const countEl   = document.getElementById('review-count');
+  const createBtn = document.getElementById('btn-create-club');
+
+  if (emojiEl)   emojiEl.textContent   = _newClub.emoji;
+  if (nameEl)    nameEl.textContent     = _newClub.name;
+  if (typeEl)    typeEl.textContent     = typeLabel;
+  if (countEl)   countEl.textContent   = `${_newClub.members.length} חברים`;
+  if (listEl)    listEl.innerHTML       = _newClub.members
+    .map(n => `<div class="review-member">👤 ${n}</div>`).join('');
+  if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'צור מועדון! 🚀'; }
+
+  showScreen('screen-create-review');
+}
+
+// ─── Step 5: Create (async) ───────────────────────────────────────────────────
+
+async function createClub() {
+  const btn = document.getElementById('btn-create-club');
+  if (btn) { btn.disabled = true; btn.textContent = 'יוצר מועדון...'; }
+
+  const slug = _newClub.name
+    .replace(/\s+/g, '-')
+    .replace(/[^א-תa-zA-Z0-9-]/g, '')
+    .slice(0, 20);
+  _newClubId = slug + '-' + Date.now();
+
+  const defaults = (typeof getClubTypeDefaults === 'function')
+    ? getClubTypeDefaults(_newClub.type) : {};
+
+  const club = {
+    id:        _newClubId,
+    type:      _newClub.type,
+    name:      _newClub.name,
+    emoji:     _newClub.emoji,
+    createdBy: 'admin',
+    goal:      defaults.defaultGoal ?? { type: 'minutes', target: 1500, period: 'year' },
+    settings: {
+      countAllSessions: defaults.countAllSessions ?? true,
+      showLeaderboard:  defaults.showLeaderboard  ?? true,
+      showMemberList:   defaults.showMemberList   ?? true,
+      allowSelfJoin:    defaults.allowSelfJoin    ?? false,
+      requireApproval:  defaults.requireApproval  ?? true,
+    },
+    active: true,
+  };
+
+  if (typeof fbCreateClub === 'function') await fbCreateClub(club);
+  if (typeof analyticsClubCreated === 'function') analyticsClubCreated(_newClubId, _newClub.type);
+
+  // צור קוד הצטרפות לכל חבר
+  _generatedCodes = [];
+  for (const memberName of _newClub.members) {
+    const code = _genCode();
+    _generatedCodes.push({ name: memberName, code });
+    if (typeof fbCreateInvitation === 'function') {
+      await fbCreateInvitation({
+        code,
+        clubId:       _newClubId,
+        createdBy:    'admin',
+        targetName:   memberName,
+        targetUserId: null,
+        channel:      'pre-created',
+        link:         null,
+        maxUses:      1,
+        expiresAt:    null,
+      });
+    }
+  }
+
+  // שמור את המועדון במכשיר (המנהל/ת כבר נמצא/ת פה)
+  if (typeof addDeviceClub === 'function') {
+    addDeviceClub({
+      clubId: _newClubId,
+      type:   _newClub.type,
+      name:   _newClub.name,
+      emoji:  _newClub.emoji,
+    });
+  }
+
+  _renderSuccessScreen();
+  showScreen('screen-create-success');
+}
+
+function _genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from(
+    { length: 6 },
+    () => chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
+
+function _renderSuccessScreen() {
+  const nameEl  = document.getElementById('success-club-name');
+  const emojiEl = document.getElementById('success-club-emoji');
+  const listEl  = document.getElementById('success-codes-list');
+  if (nameEl)  nameEl.textContent  = _newClub.name;
+  if (emojiEl) emojiEl.textContent = _newClub.emoji;
+  if (listEl)  listEl.innerHTML    = _generatedCodes.map(({ name, code }) => `
+    <div class="code-card">
+      <span class="code-name">${name}</span>
+      <span class="code-value">${code}</span>
+    </div>`).join('');
+}
+
+function shareCodesWhatsApp() {
+  const lines = _generatedCodes
+    .map(({ name, code }) => `*${name}*: \`${code}\``)
+    .join('\n');
+  const text = `🌳 מועדון הקריאה "${_newClub.name}" מוכן!\n\nהקודים האישיים:\n${lines}\n\nפתחו את בוקי ← "התחברות למועדון" ← הזינו את הקוד שלכם`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+function goFromSuccessToWhoReads() {
+  if (_newClubId && typeof showWhoReads === 'function') {
+    showWhoReads(_newClubId);
+  } else {
+    showScreen('screen-splash');
+  }
+}

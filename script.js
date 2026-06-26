@@ -45,6 +45,15 @@ let currentPageIndex     = 0;
 let bookData             = {};
 let classViewUnsubscribe = null;   // unsubscribe של listener כיתה
 
+/**
+ * Bridge — מאפשר ל-routing.js לאתחל משתמש חדש (לא-Legacy).
+ * Legacy משתמש ב-selectStudent(index) ישירות.
+ */
+window.initCurrentStudent = function(id, data) {
+  currentStudentId   = id;
+  currentStudentData = data;
+};
+
 // ─── ניווט מסכים ────────────────────────────────────────────────────
 
 function showScreen(id) {
@@ -103,6 +112,11 @@ async function loadStudentFull(id) {
   // נסה Firebase קודם
   const fbData = await fbLoadStudent(id);
   if (fbData) {
+    const canonical = STUDENT_NAMES[id] || fbData.name;
+    if (fbData.name !== canonical) {
+      fbData.name = canonical;
+      fbSaveStudent(fbData);   // תקן שם שגוי ב-Firebase
+    }
     saveStudentLocal(fbData);   // שמור גיבוי מקומי
     return fbData;
   }
@@ -111,8 +125,10 @@ async function loadStudentFull(id) {
 }
 
 async function saveStudentFull(data) {
-  saveStudentLocal(data);        // מיידי — גיבוי מקומי
-  await fbSaveStudent(data);     // ענן — עיקרי
+  saveStudentLocal(data);                    // מיידי — גיבוי מקומי
+  if (Number.isInteger(data.id)) {           // fbSaveStudent הוא Legacy בלבד
+    await fbSaveStudent(data);               // ענן — /classes/ collection
+  }
 }
 
 // ─── כרטיסי תלמידים ─────────────────────────────────────────────────
@@ -132,21 +148,23 @@ function renderStudentCards() {
 
 async function selectStudent(id) {
   currentStudentId = id;
-  // הצג מידע בסיסי מיד (ללא המתנה)
   document.getElementById('current-student-name').textContent = STUDENT_NAMES[id];
   document.getElementById('greeting-avatar').textContent      = STUDENT_EMOJIS[id];
+  if (typeof setNavVisible === 'function') { setNavVisible(true); setNavTab(''); }
   showScreen('screen-main');
-  // טען נתונים מלאים מ-Firebase ברקע
   currentStudentData = await loadStudentFull(id);
-  // עדכן שם (אם שונה ב-Firebase)
   document.getElementById('current-student-name').textContent = currentStudentData.name;
 }
 
 function logout() {
   currentStudentId   = null;
   currentStudentData = null;
-  renderStudentCards();
-  showScreen('screen-students');
+  if (typeof switchReader === 'function') {
+    switchReader();   // מסיר reader-active ומנתב לפי מועדונים
+  } else {
+    renderStudentCards();
+    showScreen('screen-students');
+  }
 }
 
 // ─── ספריית סיפורים ─────────────────────────────────────────────────
@@ -169,10 +187,11 @@ function filterLibrary(filter) {
   );
 
   document.getElementById('story-list').innerHTML = stories.map(story => {
-    const done      = readIds.has(story.id);
+    // בדיקה כפולה: slug חדש + legacyId מספרי לתאימות אחורה עם היסטוריית Firebase
+    const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
     const totalMins = story.pages.reduce((acc, p) => acc + (p.readingMinutes || 0.5), 0);
     return `
-      <button class="story-card" onclick="startStory(${story.id})">
+      <button class="story-card" onclick="startStory('${story.id}')">
         <div class="story-card-left">
           <span class="story-emoji">${story.emoji || '📖'}</span>
           <div class="story-info">
@@ -193,6 +212,10 @@ function startStory(storyId) {
   currentStory = getStoryById(storyId);
   if (!currentStory) return;
   currentPageIndex = 0;
+  if (typeof track === 'function') {
+    track('story_selected',  { storyId, storyTitle: currentStory.title });
+    track('reading_started', { storyId, storyTitle: currentStory.title });
+  }
   document.getElementById('reader-story-title').textContent = currentStory.title;
   showScreen('screen-reader');
   renderReaderPage();
@@ -268,6 +291,11 @@ async function finishAppReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  if (typeof analyticsReadingSession === 'function') {
+    analyticsReadingSession(currentStudentId, window.currentClubId || null, {
+      type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes,
+    });
+  }
   showComplete(minutes, points);
 }
 
@@ -333,6 +361,11 @@ async function submitBookReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  if (typeof analyticsReadingSession === 'function') {
+    analyticsReadingSession(currentStudentId, window.currentClubId || null, {
+      type: 'book', storyId: null, storyTitle: bookData.title, minutes,
+    });
+  }
   showComplete(minutes, points);
 }
 
@@ -451,7 +484,10 @@ function _renderClassContent(fbStudents) {
   // בנה מפה מלאה: id → נתונים (Firebase ראשי, localStorage גיבוי)
   const byId = {};
   fbStudents.forEach(s => {
-    if (s && s.id !== undefined && s.id !== null) byId[s.id] = s;
+    if (s && s.id !== undefined && s.id !== null) {
+      s.name = STUDENT_NAMES[s.id] || s.name;
+      byId[s.id] = s;
+    }
   });
   // השלם תלמידים שעדיין אין ב-Firebase
   for (let i = 0; i < STUDENT_NAMES.length; i++) {
@@ -577,6 +613,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // כל פתיחה מתחילה בבחירת תלמיד — ללא auto-login
-  showScreen('screen-splash');
+  // ─── תיקון שמות לא עקביים ב-Firebase (אוטומטי) ──────────────
+  if (typeof fixAllStudentNames === 'function') {
+    await fixAllStudentNames(STUDENT_NAMES);
+  }
+
+  // ניתוב חכם: profile picker למשתמשים חוזרים, splash למשתמשים חדשים
+  if (typeof routeOnLoad === 'function') routeOnLoad();
+  else showScreen('screen-splash');
 });
