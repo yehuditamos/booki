@@ -177,9 +177,36 @@ function showLibrary() {
 }
 
 function filterLibrary(filter) {
+  const listEl = document.getElementById('story-list');
+
+  function showDiag(err) {
+    const getAllStoriesType = typeof getAllStories;
+    let storiesLen = '?';
+    try { if (getAllStoriesType === 'function') storiesLen = getAllStories().length; } catch(e) { storiesLen = 'THROW:' + e.message; }
+    const diagLines = [
+      '=== אבחון ===',
+      'typeof getAllStories: ' + getAllStoriesType,
+      'stories.length: '      + storiesLen,
+      'currentStudentId: '    + currentStudentId,
+      '#story-list קיים: '   + !!document.getElementById('story-list'),
+      '#screen-library קיים: '+ !!document.getElementById('screen-library'),
+      '',
+      '=== שגיאה ===',
+      err ? (err.name + ': ' + err.message) : 'אין שגיאה',
+      '',
+      '=== Stack ===',
+      err ? (err.stack || 'אין stack') : '',
+    ].join('\n');
+
+    if (listEl) {
+      listEl.innerHTML = '<pre style="direction:ltr;text-align:left;background:#111;color:#f88;padding:16px;font-size:12px;border-radius:8px;overflow:auto;white-space:pre-wrap">'
+        + diagLines.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
+    }
+  }
+
   try {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    const map = {
+    const tabMap = {
       all:           'tab-all',
       'מוכרים':      'tab-familiar',
       'מקוריים':     'tab-original',
@@ -189,7 +216,7 @@ function filterLibrary(filter) {
       'טבע וסקרנות': 'tab-nature',
       'משפחה וחגים': 'tab-family',
     };
-    const tabEl = document.getElementById(map[filter]);
+    const tabEl = document.getElementById(tabMap[filter]);
     if (tabEl) tabEl.classList.add('active');
 
     const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
@@ -197,19 +224,18 @@ function filterLibrary(filter) {
       ? allStories
       : allStories.filter(s => (s.category || 'סיפורים קצרים') === filter);
 
-    const s        = currentStudentData || defaultStudent(currentStudentId || 0);
-    const histArr  = Array.isArray(s.history) ? s.history : [];
-    const readIds  = new Set(
+    const s       = currentStudentData || defaultStudent(currentStudentId || 0);
+    const histArr = Array.isArray(s.history) ? s.history : [];
+    const readIds = new Set(
       histArr.filter(h => h && h.type === 'app').map(h => h.storyId)
     );
 
-    const listEl = document.getElementById('story-list');
-    if (!listEl) return;
+    if (!listEl) { showDiag(null); return; }
 
     listEl.innerHTML = stories.map(story => {
       try {
-        const done     = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
-        const pages    = Array.isArray(story.pages) ? story.pages : [];
+        const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
+        const pages     = Array.isArray(story.pages) ? story.pages : [];
         const totalMins = pages.reduce((acc, p) => acc + (p && p.readingMinutes ? p.readingMinutes : 0.5), 0);
         return `
           <button class="story-card" onclick="startStory('${story.id}')">
@@ -222,14 +248,13 @@ function filterLibrary(filter) {
             </div>
             ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
           </button>`;
-      } catch (_) {
-        return '';
+      } catch (storyErr) {
+        return '<div style="color:orange;font-size:11px;padding:4px">סיפור שנשבר: ' + (story && story.id) + ' — ' + storyErr.message + '</div>';
       }
     }).join('');
+
   } catch (err) {
-    console.error('[filterLibrary]', err);
-    const listEl = document.getElementById('story-list');
-    if (listEl) listEl.innerHTML = `<p style="color:red;padding:20px;text-align:center">שגיאה בטעינת הספרייה:<br>${err.message}</p>`;
+    showDiag(err);
   }
 }
 

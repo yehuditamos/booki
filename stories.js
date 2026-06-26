@@ -8,26 +8,28 @@
  */
 
 const STORIES = [
-  ...STORIES_FAMILIAR,    // content/stories-familiar.js  — 1–49
-  ...STORIES_ORIGINAL,    // content/stories-original.js  — 50–79
-  ...STORIES_LONG,        // content/stories-long.js      — 80–99
-  ...STORIES_TANAKH,      // content/stories-tanakh.js    — 101–199
-  ...STORIES_FOLK,        // content/stories-folk.js      — 201–299
-  ...STORIES_HOLIDAYS,    // content/stories-holidays.js  — 301–399
-  ...STORIES_CHAZAL,      // content/stories-chazal.js    — 401–499
-  ...STORIES_SCIENCE,     // content/stories-science.js   — 501–599
-  ...STORIES_ANIMALS,     // content/stories-animals.js   — 601–699
-  ...STORIES_HISTORY,     // content/stories-history.js   — 701–799
-  ...STORIES_ADVENTURE,   // content/stories-adventure.js — 801–899
-  ...STORIES_BOOKI,       // content/stories-booki.js     — 901–999
-  ...STORIES_READING,     // content/stories-reading.js   — 1001–1099
+  ...(Array.isArray(STORIES_FAMILIAR)   ? STORIES_FAMILIAR   : []),
+  ...(Array.isArray(STORIES_ORIGINAL)   ? STORIES_ORIGINAL   : []),
+  ...(Array.isArray(STORIES_LONG)       ? STORIES_LONG       : []),
+  ...(Array.isArray(STORIES_TANAKH)     ? STORIES_TANAKH     : []),
+  ...(Array.isArray(STORIES_FOLK)       ? STORIES_FOLK       : []),
+  ...(Array.isArray(STORIES_HOLIDAYS)   ? STORIES_HOLIDAYS   : []),
+  ...(Array.isArray(STORIES_CHAZAL)     ? STORIES_CHAZAL     : []),
+  ...(Array.isArray(STORIES_SCIENCE)    ? STORIES_SCIENCE    : []),
+  ...(Array.isArray(STORIES_ANIMALS)    ? STORIES_ANIMALS    : []),
+  ...(Array.isArray(STORIES_HISTORY)    ? STORIES_HISTORY    : []),
+  ...(Array.isArray(STORIES_ADVENTURE)  ? STORIES_ADVENTURE  : []),
+  ...(Array.isArray(STORIES_BOOKI)      ? STORIES_BOOKI      : []),
+  ...(Array.isArray(STORIES_READING)    ? STORIES_READING    : []),
 ];
 
 // ─── פונקציות עזר ────────────────────────────────────────────────────
 
 function getAllStories() {
-  return [...STORIES];
+  return Array.isArray(STORIES) ? [...STORIES] : [];
 }
+
+window.getAllStories = getAllStories;
 
 // מחפש לפי id (string slug) או legacyId (מספר) — תאימות אחורה עם Firebase
 function getStoryById(id) {
