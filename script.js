@@ -197,30 +197,34 @@ function filterLibrary(filter) {
       ? allStories
       : allStories.filter(s => (s.category || 'סיפורים קצרים') === filter);
 
-    const s       = currentStudentData || defaultStudent(currentStudentId || 0);
-    const readIds = new Set(
-      (s.history || []).filter(h => h.type === 'app').map(h => h.storyId)
+    const s        = currentStudentData || defaultStudent(currentStudentId || 0);
+    const histArr  = Array.isArray(s.history) ? s.history : [];
+    const readIds  = new Set(
+      histArr.filter(h => h && h.type === 'app').map(h => h.storyId)
     );
 
     const listEl = document.getElementById('story-list');
-    if (!listEl) { console.error('[filterLibrary] #story-list לא נמצא'); return; }
+    if (!listEl) return;
 
     listEl.innerHTML = stories.map(story => {
-      // בדיקה כפולה: slug חדש + legacyId מספרי לתאימות אחורה עם היסטוריית Firebase
-      const done  = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
-      const pages = story.pages || [];
-      const totalMins = pages.reduce((acc, p) => acc + (p.readingMinutes || 0.5), 0);
-      return `
-        <button class="story-card" onclick="startStory('${story.id}')">
-          <div class="story-card-left">
-            <span class="story-emoji">${story.emoji || '📖'}</span>
-            <div class="story-info">
-              <span class="story-title">${story.title}</span>
-              <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
+      try {
+        const done     = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
+        const pages    = Array.isArray(story.pages) ? story.pages : [];
+        const totalMins = pages.reduce((acc, p) => acc + (p && p.readingMinutes ? p.readingMinutes : 0.5), 0);
+        return `
+          <button class="story-card" onclick="startStory('${story.id}')">
+            <div class="story-card-left">
+              <span class="story-emoji">${story.emoji || '📖'}</span>
+              <div class="story-info">
+                <span class="story-title">${story.title || ''}</span>
+                <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
+              </div>
             </div>
-          </div>
-          ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
-        </button>`;
+            ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
+          </button>`;
+      } catch (_) {
+        return '';
+      }
     }).join('');
   } catch (err) {
     console.error('[filterLibrary]', err);
