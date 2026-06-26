@@ -170,8 +170,10 @@ function logout() {
 // ─── ספריית סיפורים ─────────────────────────────────────────────────
 
 function showLibrary() {
-  filterLibrary('all');
+  const listEl = document.getElementById('story-list');
+  if (listEl) listEl.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">טוען סיפורים...</p>';
   showScreen('screen-library');
+  setTimeout(() => filterLibrary('all'), 0);
 }
 
 function filterLibrary(filter) {
