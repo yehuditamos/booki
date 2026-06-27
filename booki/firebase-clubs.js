@@ -230,6 +230,17 @@ async function fbLoadClub(clubId) {
   }
 }
 
+async function fbLoadTeacherClubs(teacherUid) {
+  if (!_db()) return [];
+  try {
+    const snap = await _db().collection('clubs').where('teacherUid', '==', teacherUid).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('[firebase-clubs] fbLoadTeacherClubs:', e.message);
+    return [];
+  }
+}
+
 async function fbSaveClub(clubId, data) {
   if (!_db()) return;
   try {
@@ -511,6 +522,7 @@ Object.assign(window, {
   // Club
   fbCreateClub,
   fbLoadClub,
+  fbLoadTeacherClubs,
   fbSaveClub,
   // ClubMembership
   fbAddClubMembership,

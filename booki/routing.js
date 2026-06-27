@@ -550,6 +550,68 @@ window.resetBookiDevice = function() {
   showScreen('screen-splash');
 };
 
+// ─── Bridge: כניסה ישירה למסך ראשי לאחר הצטרפות ──────────────────────────────
+
+window.enterPersonalHomeAfterJoin = function(userId, name, clubId) {
+  _activeClubId        = clubId;
+  window.currentClubId = clubId;
+  _enterPersonalHome(userId, { name, emoji: '📚' });
+};
+
+// ─── Teacher Dashboard ────────────────────────────────────────────────────────
+
+function showTeacherDashboard(teacher) {
+  const t = teacher || (typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null);
+  if (!t) {
+    if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
+    else showScreen('screen-teacher-auth');
+    return;
+  }
+  window._currentTeacher = t;
+  const nameEl = document.getElementById('td-teacher-name');
+  if (nameEl) nameEl.textContent = t.name || t.email;
+  setNavVisible(false);
+  showScreen('screen-teacher-dashboard');
+  _renderTeacherClubs(t.uid);
+}
+
+async function _renderTeacherClubs(uid) {
+  const list = document.getElementById('td-clubs-list');
+  if (!list) return;
+  list.innerHTML = '<p class="td-loading">טוען מועדונים...</p>';
+  const clubs = (typeof fbLoadTeacherClubs === 'function') ? await fbLoadTeacherClubs(uid) : [];
+  if (!clubs.length) {
+    list.innerHTML = `
+      <div class="td-empty">
+        <p>עדיין לא יצרת מועדון קריאה</p>
+        <button class="btn-giant btn-green" onclick="showCreateClub()">🌳 צור מועדון ראשון</button>
+      </div>`;
+    return;
+  }
+  list.innerHTML = clubs.map(c => `
+    <div class="teacher-club-card">
+      <span class="tc-emoji">${c.emoji || '📚'}</span>
+      <div class="tc-info">
+        <span class="tc-name">${c.name}</span>
+        <span class="tc-meta">${c.type || ''}</span>
+      </div>
+      <button class="btn-small btn-green" onclick="enterTeacherClub('${c.id}')">כנסי ←</button>
+    </div>`).join('');
+}
+
+function enterTeacherClub(clubId) {
+  _activeClubId        = clubId;
+  window.currentClubId = clubId;
+  if (typeof showWhoReads === 'function') showWhoReads(clubId);
+}
+
+function goToTeacherArea() {
+  const t = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
+  if (t) showTeacherDashboard(t);
+  else if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
+  else showScreen('screen-teacher-auth');
+}
+
 // ─── חשיפה גלובלית ───────────────────────────────────────────────────────────
 
 Object.assign(window, {
@@ -567,4 +629,6 @@ Object.assign(window, {
   // Nav
   setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin,
   startReading,
+  // Teacher
+  showTeacherDashboard, enterTeacherClub, goToTeacherArea,
 });

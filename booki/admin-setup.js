@@ -164,12 +164,14 @@ async function createClub() {
   const defaults = (typeof getClubTypeDefaults === 'function')
     ? getClubTypeDefaults(_newClub.type) : {};
 
+  const _teacherUid = (typeof getCurrentTeacher === 'function' && getCurrentTeacher()?.uid) || null;
   const club = {
-    id:        _newClubId,
-    type:      _newClub.type,
-    name:      _newClub.name,
-    emoji:     _newClub.emoji,
-    createdBy: 'admin',
+    id:         _newClubId,
+    type:       _newClub.type,
+    name:       _newClub.name,
+    emoji:      _newClub.emoji,
+    createdBy:  _teacherUid || 'admin',
+    teacherUid: _teacherUid,
     goal:      defaults.defaultGoal ?? { type: 'minutes', target: 1500, period: 'year' },
     settings: {
       countAllSessions: defaults.countAllSessions ?? true,

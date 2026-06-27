@@ -26,7 +26,7 @@
     <h1 class="splash-title">בּוּקִי<br><span class="splash-sub">יַעַר הַקְּרִיאָה</span></h1>
     <p class="splash-tagline">לקריאה מהנה, מדי יום 📖</p>
     <div class="splash-actions">
-      <button class="btn-splash-action btn-sa-create" onclick="showCreateClub()">
+      <button class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
         <span class="sa-icon">🏡</span>
         <div class="sa-text">
           <span class="sa-label">יצירת מועדון חדש</span>
@@ -305,7 +305,7 @@
     </div>
   </div>
   <div class="manage-list">
-    <button class="btn-manage-action" onclick="showCreateClub()">
+    <button class="btn-manage-action" onclick="goToTeacherArea()">
       <span class="sa-icon">🌳</span>
       <div class="sa-text">
         <span class="sa-label">הקמת מועדון חדש</span>
@@ -349,6 +349,35 @@
   </div>
   <div class="club-dash-actions">
     <button class="btn-giant btn-green" onclick="enterReadingFromDashboard()">מתחילים לקרוא ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ Teacher Auth ════════════════════════════════════════════════ -->
+<section id="screen-teacher-auth" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-splash')">חזרה →</button>
+      <h2>כניסה למורים</h2>
+    </div>
+  </div>
+  <div class="auth-container">
+    <div class="auth-icon">👩‍🏫</div>
+    <div id="teacher-auth-form" class="auth-form"></div>
+  </div>
+</section>
+
+<!-- ══ Teacher Dashboard ═══════════════════════════════════════════ -->
+<section id="screen-teacher-dashboard" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2>📚 מועדוני הקריאה שלי</h2>
+      <button class="btn-logout" onclick="teacherSignOut()">יציאה</button>
+    </div>
+    <p id="td-teacher-name" class="td-subtitle"></p>
+  </div>
+  <div class="td-body">
+    <button class="btn-giant btn-green td-new-club" onclick="showCreateClub()">🌳 יצירת מועדון חדש</button>
+    <div id="td-clubs-list" class="td-clubs-list"></div>
   </div>
 </section>
 
@@ -498,6 +527,7 @@
   <div class="success-actions">
     <button class="btn-giant btn-outline-green" onclick="copyJoinLink()">📋 העתק קישור</button>
     <button class="btn-giant btn-green" style="margin-top:10px" onclick="shareCodesWhatsApp()">📤 שלח ב-WhatsApp</button>
+    <button class="btn-giant btn-outline-green" style="margin-top:10px" onclick="goToTeacherArea()">🏠 חזרה לדשבורד</button>
   </div>
 </section>
 
@@ -704,12 +734,14 @@
 <!-- Firebase SDK v10 (compat) — טוען לפני הקבצים שלנו -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="firebase.js"></script>
 
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
 <script src="data-club-types.js"></script>
 <script src="seed-clubs.js"></script>
 <script src="firebase-clubs.js"></script>
+<script src="auth.js"></script>
 <script src="analytics.js"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->

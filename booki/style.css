@@ -858,6 +858,32 @@ label { font-weight: 700; font-size: 1rem; }
   backdrop-filter: blur(6px);
 }
 
+/* ─── Teacher Auth ──────────────────────────────────────────────── */
+.auth-container { padding: 24px 20px; max-width: 360px; margin: 0 auto; }
+.auth-icon { font-size: 3.5rem; text-align: center; margin-bottom: 16px; }
+.auth-form  { display: flex; flex-direction: column; gap: 14px; }
+.auth-tabs  { display: flex; gap: 8px; margin-bottom: 4px; }
+.auth-tab   { flex: 1; padding: 10px; border: 2px solid var(--green); border-radius: 10px; background: #fff; color: var(--green); font-size: .95rem; cursor: pointer; font-weight: 700; font-family: inherit; }
+.auth-tab.active { background: var(--green); color: #fff; }
+.auth-error { color: var(--red); font-size: .85rem; min-height: 1.2em; text-align: center; }
+.auth-remember { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+
+/* ─── Teacher Dashboard ──────────────────────────────────────────── */
+.td-subtitle   { font-size: .9rem; color: var(--muted); text-align: center; margin: 0; padding: 4px 0 8px; }
+.btn-logout    { background: none; border: 1.5px solid var(--muted); color: var(--muted); border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer; font-family: inherit; }
+.td-body       { padding: 16px; }
+.td-new-club   { margin-bottom: 20px; }
+.td-clubs-list { display: flex; flex-direction: column; gap: 10px; }
+.td-empty      { text-align: center; padding: 40px 20px; color: var(--muted); }
+.td-empty p    { margin-bottom: 20px; }
+.td-loading    { text-align: center; color: var(--muted); padding: 20px; }
+.teacher-club-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.tc-emoji { font-size: 2rem; }
+.tc-info  { flex: 1; }
+.tc-name  { display: block; font-weight: 800; font-size: 1rem; }
+.tc-meta  { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.btn-small { padding: 8px 14px; border-radius: 8px; font-size: .85rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; }
+
 body.nav-visible .booki-nav { display: flex; }
 
 /* מסכים מרוחקים מהתחתית כשה-Tab Bar מוצג */
