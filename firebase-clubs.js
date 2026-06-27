@@ -74,6 +74,8 @@ async function fbLoadUser(userId) {
  * מבנה UserProfile:
  * {
  *   userId:              string,
+ *   name:                string|null,
+ *   emoji:               string,
  *   ageGroup:            "grade-1"|"grade-2"|...|null,
  *   readingLevel:        "beginner"|"intermediate"|"advanced"|null,
  *   niqqudLevel:         "full"|"partial"|"none"|null,
@@ -117,12 +119,14 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
 
   const profile = {
     userId,
-    ageGroup:             null,
-    readingLevel:         null,
-    niqqudLevel:          null,
-    interests:            [],
-    onboardingComplete:   false,
-    onboardingCompletedAt: null,
+    name:                  defaults.name  || null,
+    emoji:                 defaults.emoji || '📚',
+    ageGroup:              null,
+    readingLevel:          null,
+    niqqudLevel:           null,
+    interests:             [],
+    onboardingComplete:    true,
+    onboardingCompletedAt: _now(),
   };
   await fbSaveUserProfile(userId, profile);
   return profile;
