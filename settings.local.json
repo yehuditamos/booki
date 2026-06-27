@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\yehud\\\\קודים\\\\booki\\\\style.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(node --check \"C:\\\\Users\\\\yehud\\\\�����\\\\booki\\\\routing.js\")",
+      "PowerShell(node --check \"C:\\\\Users\\\\yehud\\\\�����\\\\booki\\\\script.js\")",
+      "PowerShell(if \\($LASTEXITCODE -eq 0\\) { \"routing.js OK\" } else { \"routing.js FAIL\" })",
+      "PowerShell(if \\($LASTEXITCODE -eq 0\\) { \"script.js OK\" } else { \"script.js FAIL\" })",
+      "PowerShell($check = \"STORIES.filter\\(s=>s.category===' + [char]0x05DE + [char]0x05D5 + [char]0x05DB + [char]0x05E8 + [char]0x05D9 + [char]0x05DD + ''\\)\")",
+      "PowerShell(node --check \"C:\\\\Users\\\\yehud\\\\קודים\\\\booki\\\\script.js\"; if \\($LASTEXITCODE -eq 0\\) { \"script.js OK\" } else { \"SYNTAX ERROR\" })",
+      "PowerShell(node --check \"C:\\\\Users\\\\yehud\\\\קודים\\\\booki\\\\script.js\"; if \\($LASTEXITCODE -eq 0\\) { \"OK\" } else { \"SYNTAX ERROR\" })",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\yehud\\\\קודים\\\\booki\" -Force | Where-Object { $_.Name -match '^\\\\.' } | Select-Object Name)"
+    ]
+  }
+}
