@@ -510,23 +510,28 @@ function showClassView() {
   }
 }
 
-function _renderNewClubView(clubId) {
+async function _renderNewClubView(clubId) {
   const contentEl = document.getElementById('class-content');
   if (!contentEl) return;
 
-  const data    = typeof getDeviceData === 'function' ? getDeviceData() : { clubs: [] };
-  const club    = (data.clubs || []).find(c => c.clubId === clubId);
-  const members = club?.members || [];
+  const memberships = typeof fbLoadClubMemberships === 'function'
+    ? await fbLoadClubMemberships(clubId) : [];
 
-  if (!members.length) {
+  if (!memberships.length) {
     contentEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888">אין חברים רשומים עדיין 📚</div>';
     return;
   }
 
-  const withStats = members.map(m => {
-    const s = typeof loadStudentLocal === 'function' ? loadStudentLocal(m.userId) : {};
-    return { ...m, points: s.points || 0, totalMinutes: s.totalMinutes || 0 };
-  }).sort((a, b) => b.points - a.points);
+  const withStats = memberships
+    .filter(m => m.status !== 'left')
+    .map(m => ({
+      userId:       m.userId,
+      name:         m.name  || m.userId,
+      emoji:        m.emoji || '📚',
+      points:       m.cachedStats?.totalPoints  || 0,
+      totalMinutes: m.cachedStats?.totalMinutes || 0,
+    }))
+    .sort((a, b) => b.points - a.points);
 
   const totalMins = withStats.reduce((sum, m) => sum + m.totalMinutes, 0);
   const posIcons  = ['🥇', '🥈', '🥉'];
@@ -541,8 +546,8 @@ function _renderNewClubView(clubId) {
       ${withStats.slice(0, 10).map((m, i) => `
         <div class="leaderboard-row${i < 3 ? ' ' + ['leader-first', 'leader-second', 'leader-third'][i] : ''}">
           <span class="lb-pos">${posIcons[i] || (i + 1)}</span>
-          <span class="lb-emoji">${m.emoji || '📚'}</span>
-          <span class="lb-name">${m.name || m.userId}</span>
+          <span class="lb-emoji">${m.emoji}</span>
+          <span class="lb-name">${m.name}</span>
           <span class="lb-pts">${m.points} נק׳</span>
         </div>`).join('')}
     </div>`;

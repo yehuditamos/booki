@@ -101,18 +101,9 @@ async function track(eventName, props = {}) {
             }, { merge: true }).catch(() => {});
           }
 
-          // עדכון cache של המועדון ב-localStorage
-          if (props.clubId && typeof updateDeviceClubStats === 'function') {
-            try {
-              const clubs = typeof getDeviceClubs === 'function' ? getDeviceClubs() : [];
-              const club  = clubs.find(c => c.clubId === props.clubId);
-              const cur   = club?.stats || {};
-              updateDeviceClubStats(props.clubId, {
-                totalMinutes:  (cur.totalMinutes  || 0) + props.minutes,
-                totalStories:  (cur.totalStories  || 0) + (props.storyId ? 1 : 0),
-                totalSessions: (cur.totalSessions || 0) + 1,
-              });
-            } catch { /* localStorage failures are silent */ }
+          // עדכון סטטיסטיקות חברות ב-Firebase (מקור האמת)
+          if (props.clubId && props.userId && typeof fbUpdateMembershipStats === 'function') {
+            fbUpdateMembershipStats(props.clubId, props.userId, { minutes: props.minutes }).catch(() => {});
           }
         }
         break;

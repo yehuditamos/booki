@@ -334,15 +334,34 @@ async function fbLoadClubMemberships(clubId) {
   }
 }
 
-async function fbUpdateMembershipStats(clubId, userId, stats) {
+async function fbUpdateMembershipStats(clubId, userId, delta) {
   if (!_db()) return;
+  const inc = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
+    ? firebase.firestore.FieldValue.increment(n) : n;
+  try {
+    await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
+      cachedStats: {
+        totalMinutes:  inc(delta.minutes  || 0),
+        totalSessions: inc(1),
+        totalPoints:   inc(delta.minutes  || 0),
+        lastReadAt:    _now(),
+      },
+      updatedAt: _now(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[firebase-clubs] fbUpdateMembershipStats error:', e);
+  }
+}
+
+async function fbSetMemberName(clubId, userId, name, emoji) {
+  if (!_db() || !userId) return;
   try {
     await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set(
-      { cachedStats: { ...stats }, updatedAt: _now() },
+      { name: name || null, emoji: emoji || '📚', updatedAt: _now() },
       { merge: true }
     );
   } catch (e) {
-    console.warn('[firebase-clubs] fbUpdateMembershipStats error:', e);
+    console.warn('[firebase-clubs] fbSetMemberName error:', e);
   }
 }
 
@@ -533,6 +552,7 @@ Object.assign(window, {
   fbLoadClubMembership,
   fbLoadClubMemberships,
   fbUpdateMembershipStats,
+  fbSetMemberName,
   // ClubInvitation
   fbCreateInvitation,
   fbLoadInvitation,

@@ -31,10 +31,12 @@ async function showJoinClubDirect(clubId) {
   _pendingClubId = clubId;
   _pendingInv    = null;
 
-  // אם המשתמש כבר חבר במועדון הזה — כנס ישירות
+  // אם המשתמש כבר חבר במועדון — כנס ישירות (בדיקה ב-Firebase)
   const uid = localStorage.getItem('booki_tmp_uid');
-  if (uid && typeof getDeviceClubs === 'function') {
-    if (getDeviceClubs().some(c => c.clubId === clubId)) {
+  if (uid) {
+    const existing = typeof fbLoadClubMembership === 'function'
+      ? await fbLoadClubMembership(clubId, uid) : null;
+    if (existing) {
       if (typeof showWhoReads === 'function') showWhoReads(clubId);
       return;
     }
@@ -131,10 +133,12 @@ async function submitJoinCode() {
 
   _pendingInv = inv;
 
-  // אם המשתמש כבר חבר במועדון — כנס ישירות (כמו בזרימת הקישור)
+  // אם המשתמש כבר חבר במועדון — כנס ישירות (בדיקה ב-Firebase)
   const uid = localStorage.getItem('booki_tmp_uid');
-  if (uid && typeof getDeviceClubs === 'function') {
-    if (getDeviceClubs().some(c => c.clubId === inv.clubId)) {
+  if (uid) {
+    const existing = typeof fbLoadClubMembership === 'function'
+      ? await fbLoadClubMembership(inv.clubId, uid) : null;
+    if (existing) {
       if (typeof showWhoReads === 'function') showWhoReads(inv.clubId);
       return;
     }
@@ -194,16 +198,6 @@ async function submitJoinName() {
     return;
   }
 
-  // בדיקת כפל שם
-  const clubId = _pendingInv?.clubId || _pendingClubId;
-  if (clubId && typeof getDeviceClubs === 'function') {
-    const local = getDeviceClubs().find(c => c.clubId === clubId);
-    if (local?.members?.some(m => m.name === name)) {
-      if (nameErr) nameErr.textContent = `כבר יש קורא בשם "${name}" במועדון. אפשר להוסיף שם משפחה או כינוי?`;
-      return;
-    }
-  }
-
   if (btn) { btn.disabled = true; btn.textContent = 'מצטרף/ת...'; }
   if (_pendingInv) {
     await _doJoin(_pendingInv.clubId, name, _pendingInv.code);
@@ -241,12 +235,14 @@ async function _doJoin(clubId, name, invitationCode = null) {
     await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
   }
 
+  // שמור שם ואייקון ב-membership — מקור האמת ב-Firebase
+  if (typeof fbSetMemberName === 'function') {
+    await fbSetMemberName(clubId, userId, name, '📚');
+  }
+
   const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
   if (typeof addDeviceClub === 'function') {
     addDeviceClub({ clubId, type: club?.type ?? 'friends', name: club?.name ?? clubId, emoji: club?.emoji ?? '📚' });
-  }
-  if (typeof addDeviceMember === 'function') {
-    addDeviceMember(clubId, { userId, name, emoji: '📚' });
   }
 
   if (typeof track === 'function') track('join_club_completed', { clubId });
@@ -328,9 +324,9 @@ async function finishInterests() {
     });
   }
 
-  // עדכן את הקורא במכשיר (emoji ידעדכן מאוחר יותר)
-  if (_ob.clubId && typeof addDeviceMember === 'function') {
-    addDeviceMember(_ob.clubId, { userId: _ob.userId, name: _ob.name, emoji: '📚' });
+  // עדכן שם ב-Firebase membership
+  if (_ob.clubId && _ob.userId && typeof fbSetMemberName === 'function') {
+    fbSetMemberName(_ob.clubId, _ob.userId, _ob.name, '📚').catch(() => {});
   }
 
   if (typeof analyticsUserRegistered === 'function') {

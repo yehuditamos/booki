@@ -47,15 +47,7 @@ function submitClubName() {
   const sel = document.querySelector('.emoji-opt.selected');
   if (sel) _newClub.emoji = sel.dataset.emoji;
   _newClub.members = [];
-  const memberInput = document.getElementById('member-name-input');
-  if (memberInput) memberInput.value = '';
-  const pasteInput = document.getElementById('member-paste-input');
-  if (pasteInput) pasteInput.value = '';
-  setAddMode('single');
-  renderMemberList();
-  const btn = document.getElementById('btn-go-review');
-  if (btn) btn.disabled = true;
-  showScreen('screen-create-members');
+  goToReview();
 }
 
 function setAddMode(mode) {
@@ -126,7 +118,6 @@ function renderMemberList() {
 // ─── Step 4: Review ───────────────────────────────────────────────────────────
 
 function goToReview() {
-  if (!_newClub.members.length) return;
   const typeLabel = (typeof CLUB_TYPE_DEFAULTS !== 'undefined')
     ? (CLUB_TYPE_DEFAULTS[_newClub.type]?.label ?? _newClub.type)
     : _newClub.type;
@@ -138,12 +129,11 @@ function goToReview() {
   const countEl   = document.getElementById('review-count');
   const createBtn = document.getElementById('btn-create-club');
 
-  if (emojiEl)   emojiEl.textContent   = _newClub.emoji;
-  if (nameEl)    nameEl.textContent     = _newClub.name;
-  if (typeEl)    typeEl.textContent     = typeLabel;
-  if (countEl)   countEl.textContent   = `${_newClub.members.length} חברים`;
-  if (listEl)    listEl.innerHTML       = _newClub.members
-    .map(n => `<div class="review-member">👤 ${n}</div>`).join('');
+  if (emojiEl)   emojiEl.textContent = _newClub.emoji;
+  if (nameEl)    nameEl.textContent  = _newClub.name;
+  if (typeEl)    typeEl.textContent  = typeLabel;
+  if (countEl)   countEl.textContent = '';
+  if (listEl)    listEl.innerHTML    = '<div style="color:#888;font-size:.9rem;padding:.5rem 0">תלמידים יצטרפו בעצמם דרך קישור או קוד מועדון 📱</div>';
   if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'צור מועדון! 🚀'; }
 
   showScreen('screen-create-review');

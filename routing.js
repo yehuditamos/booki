@@ -256,17 +256,13 @@ async function showClubDashboard(clubId, userId, profile) {
   _pendingProfile    = profile;
   window.currentClubId = clubId;   // חשיפה לאנליטיקס ב-script.js
 
-  const club = getDeviceClubs().find(c => c.clubId === clubId);
-  const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId);
-  const memberCount = isLegacy
-    ? (typeof STUDENT_NAMES !== 'undefined' ? STUDENT_NAMES.length : 0)
-    : (club?.members || []).length;
-  const stats = club?.stats || {};
+  const localClub = getDeviceClubs().find(c => c.clubId === clubId);
+  const isLegacy  = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId);
 
   const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-  set('club-dash-emoji',   club?.emoji || '📚');
-  set('club-dash-name',    club?.name  || '');
-  set('club-dash-members', `👥 ${memberCount} חברים`);
+  set('club-dash-emoji',   localClub?.emoji || '📚');
+  set('club-dash-name',    localClub?.name  || '');
+  set('club-dash-members', '👥 ...');
 
   const minutesEl = document.getElementById('club-dash-minutes');
   const storiesEl = document.getElementById('club-dash-stories');
@@ -293,18 +289,44 @@ async function showClubDashboard(clubId, userId, profile) {
   _enrichClubDashboard(clubId).catch(() => {});
 }
 
-/** טוען ומציג נתוני מועדון מ-Firebase / cache */
+/** טוען ומציג נתוני מועדון מ-Firebase */
 async function _enrichClubDashboard(clubId) {
   const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId);
-  if (isLegacy) await _loadLegacyStats(clubId);
 
-  const club  = getDeviceClubs().find(c => c.clubId === clubId);
-  const stats = club?.stats || {};
+  if (isLegacy) {
+    await _loadLegacyStats(clubId);
+    const club  = getDeviceClubs().find(c => c.clubId === clubId);
+    const stats = club?.stats || {};
+    const minutesEl = document.getElementById('club-dash-minutes');
+    const storiesEl = document.getElementById('club-dash-stories');
+    const membersEl = document.getElementById('club-dash-members');
+    if (membersEl) membersEl.textContent = `👥 ${typeof STUDENT_NAMES !== 'undefined' ? STUDENT_NAMES.length : 0} חברים`;
+    if (minutesEl) minutesEl.textContent = stats.totalMinutes ? `📚 ${_fmtNum(stats.totalMinutes)} דקות קריאה` : '';
+    if (storiesEl) storiesEl.textContent = stats.totalStories ? `📖 ${stats.totalStories} סיפורים` : '';
+    return;
+  }
 
+  // מועדון חדש — Firebase
+  const memberships = typeof fbLoadClubMemberships === 'function'
+    ? await fbLoadClubMemberships(clubId) : [];
+  const totalMins    = memberships.reduce((s, m) => s + (m.cachedStats?.totalMinutes || 0), 0);
+  const totalSession = memberships.reduce((s, m) => s + (m.cachedStats?.totalSessions || 0), 0);
+
+  const membersEl = document.getElementById('club-dash-members');
   const minutesEl = document.getElementById('club-dash-minutes');
   const storiesEl = document.getElementById('club-dash-stories');
-  if (minutesEl) minutesEl.textContent = stats.totalMinutes ? `📚 ${_fmtNum(stats.totalMinutes)} דקות קריאה` : '';
-  if (storiesEl) storiesEl.textContent = stats.totalStories ? `📖 ${stats.totalStories} סיפורים` : '';
+  if (membersEl) membersEl.textContent = `👥 ${memberships.length} חברים`;
+  if (minutesEl) minutesEl.textContent = totalMins    ? `📚 ${_fmtNum(totalMins)} דקות קריאה` : '';
+  if (storiesEl) storiesEl.textContent = totalSession ? `📖 ${totalSession} סשנים` : '';
+
+  // עדכן גם שם ואייקון מועדון מ-Firebase אם לא נטענו מהמכשיר
+  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  if (club) {
+    const emojiEl = document.getElementById('club-dash-emoji');
+    const nameEl  = document.getElementById('club-dash-name');
+    if (emojiEl) emojiEl.textContent = club.emoji || '📚';
+    if (nameEl)  nameEl.textContent  = club.name  || '';
+  }
 }
 
 /** מאגד סטטיסטיקות Legacy מ-Firebase ושומר ב-cache יומי */
@@ -345,22 +367,37 @@ function enterReadingFromDashboard() {
 // ─── Profile Picker ───────────────────────────────────────────────────────────
 
 /**
- * showWhoReads(clubId?)
- * ללא clubId: מציג כל המשתמשים ממוזגים מכל המועדונים (זרימה ראשית)
- * עם clubId:  מציג חברי מועדון ספציפי (דרך 🏘️ → dashboard → "החלף קורא")
+ * showWhoReads(clubId)
+ * מציג חברי מועדון — Firebase הוא מקור האמת לרשימת החברים.
  */
 async function showWhoReads(clubId) {
-  _activeClubId = clubId || null;
+  _activeClubId = clubId || _activeClubId || null;
+  const effectiveClubId = _activeClubId;
 
   const subEl = document.getElementById('who-reads-club-name');
   const h2El  = document.querySelector('.who-reads-title');
+  const grid  = document.getElementById('who-reads-grid');
 
-  if (clubId) {
-    const club = getDeviceClubs().find(c => c.clubId === clubId);
-    if (h2El)  h2El.textContent  = (club?.emoji || '📚') + ' ' + (club?.name || '');
-    if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
-    _renderProfileGrid(club);
+  if (grid) grid.innerHTML = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
+
+  if (effectiveClubId) {
+    const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(effectiveClubId);
+    if (isLegacy) {
+      const club = getDeviceClubs().find(c => c.clubId === effectiveClubId);
+      if (h2El)  h2El.textContent  = (club?.emoji || '🌳') + ' ' + (club?.name || '');
+      if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
+      if (grid) _renderLegacyProfiles(grid);
+    } else {
+      const [club, memberships] = await Promise.all([
+        typeof fbLoadClub === 'function' ? fbLoadClub(effectiveClubId) : Promise.resolve(null),
+        typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
+      ]);
+      if (h2El)  h2El.textContent  = (club?.emoji || '📚') + ' ' + (club?.name || '');
+      if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
+      if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
+    }
   } else {
+    // אין מועדון ידוע — הצג מועדוני מכשיר (legacy fallback)
     if (h2El)  h2El.textContent  = '📖 מי קורא עכשיו?';
     if (subEl) subEl.textContent = '';
     _renderAllProfiles();
@@ -372,7 +409,21 @@ async function showWhoReads(clubId) {
   showScreen('screen-who-reads');
 }
 
-/** מציג כל המשתמשים ממוזגים מכל המועדונים */
+/** Firebase members — מועדונים חדשים */
+function _renderFirebaseMemberGrid(grid, memberships, clubId) {
+  const active = memberships.filter(m => m.status !== 'left');
+  if (!active.length) {
+    grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
+    return;
+  }
+  grid.innerHTML = active.map(m => `
+    <button class="profile-card" onclick="selectProfile('${m.userId}', '${clubId}')">
+      <span class="profile-avatar">${m.emoji || '📚'}</span>
+      <span class="profile-name">${m.name || m.userId}</span>
+    </button>`).join('');
+}
+
+/** Legacy fallback — כל המועדונים מהמכשיר */
 function _renderAllProfiles() {
   const grid = document.getElementById('who-reads-grid');
   if (!grid) return;
@@ -383,55 +434,9 @@ function _renderAllProfiles() {
   const hasLegacy = clubs.some(c =>
     typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(c.clubId)
   );
+  if (hasLegacy) { _renderLegacyProfiles(grid); return; }
 
-  if (hasLegacy) {
-    _renderLegacyProfiles(grid);
-    return;
-  }
-
-  const seen = new Set();
-  const allMembers = [];
-  for (const club of clubs) {
-    for (const m of (club.members || [])) {
-      if (!seen.has(m.userId)) {
-        seen.add(m.userId);
-        allMembers.push(m);
-      }
-    }
-  }
-
-  if (!allMembers.length) {
-    grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = allMembers.map(m => `
-    <button class="profile-card" onclick="selectProfile('${m.userId}')">
-      <span class="profile-avatar">${m.emoji || '📚'}</span>
-      <span class="profile-name">${m.name}</span>
-    </button>`).join('');
-}
-
-/** מציג חברי מועדון ספציפי (דרך 🏘️) */
-function _renderProfileGrid(club) {
-  const grid = document.getElementById('who-reads-grid');
-  if (!grid) return;
-
-  const isLegacy = club && typeof getBootstrapClubById === 'function' &&
-                   !!getBootstrapClubById(club.clubId);
-  if (isLegacy) { _renderLegacyProfiles(grid); return; }
-
-  const members = club?.members || [];
-  if (!members.length) {
-    grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
-    return;
-  }
-
-  grid.innerHTML = members.map(m => `
-    <button class="profile-card" onclick="selectProfile('${m.userId}', '${club.clubId}')">
-      <span class="profile-avatar">${m.emoji || '📚'}</span>
-      <span class="profile-name">${m.name}</span>
-    </button>`).join('');
+  grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
 }
 
 function _renderLegacyProfiles(grid) {
@@ -551,10 +556,12 @@ function _enterPersonalHome(userId, profile) {
 
 // ─── ניווט גלובלי ─────────────────────────────────────────────────────────────
 
-/** 📖 מי קורא עכשיו? — כל המשתמשים */
+/** 📖 מי קורא עכשיו? — מסך בחירת קורא למועדון הפעיל */
 function goWhoReads() {
-  if (!hasDeviceClubs()) return;
-  showWhoReads();
+  const clubId = _activeClubId
+    || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
+  if (!clubId && !hasDeviceClubs()) return;
+  showWhoReads(clubId);
 }
 
 /** החלף קורא */
