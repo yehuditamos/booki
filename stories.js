@@ -7,32 +7,38 @@
  * אין לערוך סיפורים כאן — ערוך אותם בקובץ content/ המתאים.
  */
 
-const STORIES = [
-  ...(typeof STORIES_FAMILIAR  !== 'undefined' && Array.isArray(STORIES_FAMILIAR)  ? STORIES_FAMILIAR  : []),
-  ...(typeof STORIES_ORIGINAL  !== 'undefined' && Array.isArray(STORIES_ORIGINAL)  ? STORIES_ORIGINAL  : []),
-  ...(typeof STORIES_LONG      !== 'undefined' && Array.isArray(STORIES_LONG)      ? STORIES_LONG      : []),
-  ...(typeof STORIES_TANAKH    !== 'undefined' && Array.isArray(STORIES_TANAKH)    ? STORIES_TANAKH    : []),
-  ...(typeof STORIES_FOLK      !== 'undefined' && Array.isArray(STORIES_FOLK)      ? STORIES_FOLK      : []),
-  ...(typeof STORIES_HOLIDAYS  !== 'undefined' && Array.isArray(STORIES_HOLIDAYS)  ? STORIES_HOLIDAYS  : []),
-  ...(typeof STORIES_CHAZAL    !== 'undefined' && Array.isArray(STORIES_CHAZAL)    ? STORIES_CHAZAL    : []),
-  ...(typeof STORIES_SCIENCE   !== 'undefined' && Array.isArray(STORIES_SCIENCE)   ? STORIES_SCIENCE   : []),
-  ...(typeof STORIES_ANIMALS   !== 'undefined' && Array.isArray(STORIES_ANIMALS)   ? STORIES_ANIMALS   : []),
-  ...(typeof STORIES_HISTORY   !== 'undefined' && Array.isArray(STORIES_HISTORY)   ? STORIES_HISTORY   : []),
-  ...(typeof STORIES_ADVENTURE !== 'undefined' && Array.isArray(STORIES_ADVENTURE) ? STORIES_ADVENTURE : []),
-  ...(typeof STORIES_BOOKI     !== 'undefined' && Array.isArray(STORIES_BOOKI)     ? STORIES_BOOKI     : []),
-  ...(typeof STORIES_READING   !== 'undefined' && Array.isArray(STORIES_READING)   ? STORIES_READING   : []),
-];
+let STORIES;
+try {
+  STORIES = [
+    ...(typeof STORIES_FAMILIAR  !== 'undefined' && Array.isArray(STORIES_FAMILIAR)  ? STORIES_FAMILIAR  : []),
+    ...(typeof STORIES_ORIGINAL  !== 'undefined' && Array.isArray(STORIES_ORIGINAL)  ? STORIES_ORIGINAL  : []),
+    ...(typeof STORIES_LONG      !== 'undefined' && Array.isArray(STORIES_LONG)      ? STORIES_LONG      : []),
+    ...(typeof STORIES_TANAKH    !== 'undefined' && Array.isArray(STORIES_TANAKH)    ? STORIES_TANAKH    : []),
+    ...(typeof STORIES_FOLK      !== 'undefined' && Array.isArray(STORIES_FOLK)      ? STORIES_FOLK      : []),
+    ...(typeof STORIES_HOLIDAYS  !== 'undefined' && Array.isArray(STORIES_HOLIDAYS)  ? STORIES_HOLIDAYS  : []),
+    ...(typeof STORIES_CHAZAL    !== 'undefined' && Array.isArray(STORIES_CHAZAL)    ? STORIES_CHAZAL    : []),
+    ...(typeof STORIES_SCIENCE   !== 'undefined' && Array.isArray(STORIES_SCIENCE)   ? STORIES_SCIENCE   : []),
+    ...(typeof STORIES_ANIMALS   !== 'undefined' && Array.isArray(STORIES_ANIMALS)   ? STORIES_ANIMALS   : []),
+    ...(typeof STORIES_HISTORY   !== 'undefined' && Array.isArray(STORIES_HISTORY)   ? STORIES_HISTORY   : []),
+    ...(typeof STORIES_ADVENTURE !== 'undefined' && Array.isArray(STORIES_ADVENTURE) ? STORIES_ADVENTURE : []),
+    ...(typeof STORIES_BOOKI     !== 'undefined' && Array.isArray(STORIES_BOOKI)     ? STORIES_BOOKI     : []),
+    ...(typeof STORIES_READING   !== 'undefined' && Array.isArray(STORIES_READING)   ? STORIES_READING   : []),
+  ];
+} catch (e) {
+  STORIES = [];
+}
 
 // ─── פונקציות עזר ────────────────────────────────────────────────────
 
 function getAllStories() {
-  return typeof STORIES !== 'undefined' && Array.isArray(STORIES) ? [...STORIES] : [];
+  return Array.isArray(STORIES) ? [...STORIES] : [];
 }
 
 window.getAllStories = getAllStories;
 
 // מחפש לפי id (string slug) או legacyId (מספר) — תאימות אחורה עם Firebase
 function getStoryById(id) {
+  if (!Array.isArray(STORIES)) return null;
   return STORIES.find(s => s.id === id || s.legacyId === id) ?? null;
 }
 

@@ -475,7 +475,7 @@ function _enterPersonalHome(userId, profile) {
   // טוען נתוני קריאה צבורים מ-localStorage (סינכרוני, מהיר)
   const saved = typeof loadStudentLocal === 'function' ? loadStudentLocal(userId) : null;
   const studentData = (saved && saved.id === userId && saved.totalMinutes >= 0)
-    ? { history: [], ...saved, name: profile.name || saved.name || userId, emoji: profile.emoji || '📚' }
+    ? { ...saved, history: Array.isArray(saved.history) ? saved.history : [], name: profile.name || saved.name || userId, emoji: profile.emoji || '📚' }
     : {
         id:           userId,
         name:         profile.name  || userId,

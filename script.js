@@ -177,44 +177,17 @@ function showLibrary() {
 }
 
 function filterLibrary(filter) {
-  const listEl = document.getElementById('story-list');
-
-  function showDiag(err) {
-    const getAllStoriesType = typeof getAllStories;
-    let storiesLen = '?';
-    try { if (getAllStoriesType === 'function') storiesLen = getAllStories().length; } catch(e) { storiesLen = 'THROW:' + e.message; }
-    const diagLines = [
-      '=== אבחון ===',
-      'typeof getAllStories: ' + getAllStoriesType,
-      'stories.length: '      + storiesLen,
-      'currentStudentId: '    + currentStudentId,
-      '#story-list קיים: '   + !!document.getElementById('story-list'),
-      '#screen-library קיים: '+ !!document.getElementById('screen-library'),
-      '',
-      '=== שגיאה ===',
-      err ? (err.name + ': ' + err.message) : 'אין שגיאה',
-      '',
-      '=== Stack ===',
-      err ? (err.stack || 'אין stack') : '',
-    ].join('\n');
-
-    if (listEl) {
-      listEl.innerHTML = '<pre style="direction:ltr;text-align:left;background:#111;color:#f88;padding:16px;font-size:12px;border-radius:8px;overflow:auto;white-space:pre-wrap">'
-        + diagLines.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</pre>';
-    }
-  }
-
   try {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const tabMap = {
-      all:           'tab-all',
-      'מוכרים':      'tab-familiar',
-      'מקוריים':     'tab-original',
-      'ארוכים':      'tab-long',
-      'תנ״ך לילדים': 'tab-tanakh',
-      'ערכים וחברות':'tab-values',
-      'טבע וסקרנות': 'tab-nature',
-      'משפחה וחגים': 'tab-family',
+      all:            'tab-all',
+      'מוכרים':       'tab-familiar',
+      'מקוריים':      'tab-original',
+      'ארוכים':       'tab-long',
+      'תנ״ך לילדים':  'tab-tanakh',
+      'ערכים וחברות': 'tab-values',
+      'טבע וסקרנות':  'tab-nature',
+      'משפחה וחגים':  'tab-family',
     };
     const tabEl = document.getElementById(tabMap[filter]);
     if (tabEl) tabEl.classList.add('active');
@@ -222,7 +195,7 @@ function filterLibrary(filter) {
     const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
     const stories = (filter === 'all')
       ? allStories
-      : allStories.filter(s => (s.category || 'סיפורים קצרים') === filter);
+      : allStories.filter(s => (s.category || '') === filter);
 
     const s       = currentStudentData || defaultStudent(currentStudentId || 0);
     const histArr = Array.isArray(s.history) ? s.history : [];
@@ -230,31 +203,29 @@ function filterLibrary(filter) {
       histArr.filter(h => h && h.type === 'app').map(h => h.storyId)
     );
 
-    if (!listEl) { showDiag(null); return; }
+    const listEl = document.getElementById('story-list');
+    if (!listEl) return;
 
     listEl.innerHTML = stories.map(story => {
-      try {
-        const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
-        const pages     = Array.isArray(story.pages) ? story.pages : [];
-        const totalMins = pages.reduce((acc, p) => acc + (p && p.readingMinutes ? p.readingMinutes : 0.5), 0);
-        return `
-          <button class="story-card" onclick="startStory('${story.id}')">
-            <div class="story-card-left">
-              <span class="story-emoji">${story.emoji || '📖'}</span>
-              <div class="story-info">
-                <span class="story-title">${story.title || ''}</span>
-                <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
-              </div>
+      const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
+      const pages     = Array.isArray(story.pages) ? story.pages : [];
+      const totalMins = pages.reduce((acc, p) => acc + (p && p.readingMinutes ? p.readingMinutes : 0.5), 0);
+      return `
+        <button class="story-card" onclick="startStory('${story.id}')">
+          <div class="story-card-left">
+            <span class="story-emoji">${story.emoji || '📖'}</span>
+            <div class="story-info">
+              <span class="story-title">${story.title || ''}</span>
+              <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
             </div>
-            ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
-          </button>`;
-      } catch (storyErr) {
-        return '<div style="color:orange;font-size:11px;padding:4px">סיפור שנשבר: ' + (story && story.id) + ' — ' + storyErr.message + '</div>';
-      }
+          </div>
+          ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
+        </button>`;
     }).join('');
 
   } catch (err) {
-    showDiag(err);
+    const listEl = document.getElementById('story-list');
+    if (listEl) listEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">לא ניתן לטעון את הספרייה כעת.</p>';
   }
 }
 
@@ -328,6 +299,7 @@ async function finishAppReading() {
   const points = minutes * 1;
 
   const s = currentStudentData || loadStudentLocal(currentStudentId);
+  if (!Array.isArray(s.history)) s.history = [];
   s.totalMinutes += minutes;
   s.appMinutes   += minutes;
   s.points       += points;
