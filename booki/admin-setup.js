@@ -262,7 +262,14 @@ function shareCodesWhatsApp() {
     ``,
     `או פתחו את בוקי והזינו את קוד המועדון: *${_clubCode}*`,
   ].join('\n');
-  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  if (navigator.share) {
+    // Web Share API — feature detection; iOS Safari 12.2+ / Android Chrome 61+ / Desktop Chrome 89+.
+    // מעביר טקסט מלא דרך מנגנון שיתוף נייטיב — ללא בעיית Universal Links של iOS.
+    navigator.share({ text }).catch(() => {});
+  } else {
+    // Fallback: WhatsApp Web — Desktop ודפדפנים ללא Web Share API.
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
 }
 
 function goFromSuccessToWhoReads() {

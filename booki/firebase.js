@@ -39,7 +39,7 @@ const FIREBASE_CONFIG = {
 };
 
 // ─── אתחול Firebase ──────────────────────────────────────────────────
-let _db;
+let _firestoreDb;
 let _firebaseReady = false;
 
 (function initFirebase() {
@@ -61,8 +61,8 @@ let _firebaseReady = false;
     firebase.initializeApp(FIREBASE_CONFIG);
     console.log('[firebase] initialized');
 
-    _db = firebase.firestore();
-    window.db = _db;   // חשיפה ל-firebase-clubs.js
+    _firestoreDb = firebase.firestore();
+    window.db = _firestoreDb;   // חשיפה ל-firebase-clubs.js
     console.log('[firebase] firestore connected');
 
     _firebaseReady = true;
@@ -75,20 +75,20 @@ let _firebaseReady = false;
 })();
 
 function _isReady() {
-  return _firebaseReady && !!_db;
+  return _firebaseReady && !!_firestoreDb;
 }
 
 // ─── נתיבי Firestore ─────────────────────────────────────────────────
 
 // classes/mitarim-aleph-2025/students
 function _studentsRef() {
-  return _db.collection('classes').doc(CLASS_ID).collection('students');
+  return _firestoreDb.collection('classes').doc(CLASS_ID).collection('students');
 }
 
 // וידוא שמסמך הכיתה קיים (נוצר פעם אחת)
 async function _ensureClassDoc() {
   try {
-    const ref  = _db.collection('classes').doc(CLASS_ID);
+    const ref  = _firestoreDb.collection('classes').doc(CLASS_ID);
     const snap = await ref.get();
     if (!snap.exists) {
       await ref.set({ ...CLASS_META, createdAt: new Date().toISOString() });
@@ -220,7 +220,7 @@ async function resetAllStudents() {
 
   console.log('[reset] מתחיל איפוס', NAMES.length, 'תלמידים בכיתה', CLASS_ID, '...');
 
-  const batch = _db.batch();
+  const batch = _firestoreDb.batch();
 
   for (let i = 0; i < NAMES.length; i++) {
     const ref = _studentsRef().doc(_studentDocId(i));
@@ -262,7 +262,7 @@ async function fixAllStudentNames(canonicalNames) {
     return 0;
   }
   const snapshot = await _studentsRef().get();
-  const batch    = _db.batch();
+  const batch    = _firestoreDb.batch();
   let count      = 0;
   snapshot.forEach(doc => {
     const data      = doc.data();
