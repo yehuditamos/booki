@@ -494,12 +494,10 @@
   <div class="success-code-block">
     <p class="success-code-label">קוד ההצטרפות:</p>
     <div class="success-code-value" id="success-club-code">——</div>
-    <p class="success-code-label" style="margin-top:14px">קישור ישיר:</p>
-    <div class="success-link-value" id="success-club-link"></div>
   </div>
   <div class="success-actions">
-    <button class="btn-giant btn-green" onclick="shareCodesWhatsApp()">📤 שתף/י ב-WhatsApp</button>
-    <button class="btn-giant btn-outline-green" style="margin-top:10px" onclick="goFromSuccessToWhoReads()">📖 מי קורא עכשיו? →</button>
+    <button class="btn-giant btn-outline-green" onclick="copyJoinLink()">📋 העתק קישור</button>
+    <button class="btn-giant btn-green" style="margin-top:10px" onclick="shareCodesWhatsApp()">📤 שלח ב-WhatsApp</button>
   </div>
 </section>
 
@@ -543,11 +541,12 @@
     </div>
   </div>
   <div class="join-code-section">
+    <p class="join-invite-label">📚 הוזמנתם להצטרף למועדון:</p>
     <div class="join-club-banner">
       <span id="join-club-emoji-display"></span>
       <span id="join-club-name-display"></span>
     </div>
-    <p class="join-label">מה שמך?</p>
+    <p class="join-label">הזינו את שם הילד כדי להצטרף:</p>
     <input id="join-name-input" type="text" class="join-code-input"
            maxlength="30" placeholder="שם פרטי"
            onkeydown="handleNameKeydown(event)" autocomplete="given-name" />

@@ -552,6 +552,14 @@ label { font-weight: 700; font-size: 1rem; }
 
 .join-error { color: var(--red); font-size: .88rem; min-height: 20px; margin-bottom: 10px; font-weight: 600; }
 
+.join-invite-label {
+  font-size: .9rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
 .join-club-banner {
   display: flex;
   align-items: center;

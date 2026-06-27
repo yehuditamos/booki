@@ -98,7 +98,14 @@ function routeOnLoad() {
   if (typeof track === 'function') track('app_open');
   setNavVisible(false);
 
-  // קישור ישיר עם קוד הצטרפות: ?join=XXXXXX
+  // קישור הצטרפות למועדון: ?club=CLUB_ID
+  const clubParam = new URLSearchParams(window.location.search).get('club');
+  if (clubParam && typeof showJoinClubDirect === 'function') {
+    showJoinClubDirect(clubParam);
+    return;
+  }
+
+  // קישור עם קוד הצטרפות ישן: ?join=XXXXXX
   const joinCode = new URLSearchParams(window.location.search).get('join');
   if (joinCode && typeof showJoinClubWithCode === 'function') {
     showJoinClubWithCode(joinCode);

@@ -10,7 +10,8 @@ let _ob = {
   userId: null, name: '', clubId: null,
   grade: null, readingLevel: null, niqqudLevel: null, interests: [],
 };
-let _pendingInv = null;  // invitation validated but not yet claimed
+let _pendingInv    = null;  // invitation validated but not yet claimed
+let _pendingClubId = null;  // direct join via ?club= link
 
 // ─── Join Entry ───────────────────────────────────────────────────────────────
 
@@ -23,6 +24,34 @@ function showJoinClub() {
   if (err) err.textContent = '';
   _pendingInv = null;
   showScreen('screen-join-entry');
+}
+
+/** נקרא מ-routing.js כש-URL מכיל ?club=CLUB_ID */
+async function showJoinClubDirect(clubId) {
+  _pendingClubId = clubId;
+  _pendingInv    = null;
+
+  // אם המשתמש כבר חבר במועדון הזה — כנס ישירות
+  const uid = localStorage.getItem('booki_tmp_uid');
+  if (uid && typeof getDeviceClubs === 'function') {
+    if (getDeviceClubs().some(c => c.clubId === clubId)) {
+      if (typeof showWhoReads === 'function') showWhoReads(clubId);
+      return;
+    }
+  }
+
+  // טוען פרטי המועדון להצגה במסך הזנת שם
+  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  const emojiEl = document.getElementById('join-club-emoji-display');
+  const nameEl  = document.getElementById('join-club-name-display');
+  if (emojiEl) emojiEl.textContent = club?.emoji ?? '';
+  if (nameEl)  nameEl.textContent  = club?.name  ?? clubId;
+
+  const input = document.getElementById('join-name-input');
+  if (input) { input.value = ''; input.focus(); }
+  const nameErr = document.getElementById('join-name-error');
+  if (nameErr) nameErr.textContent = '';
+  showScreen('screen-join-name');
 }
 
 /** נקרא מ-routing.js כש-URL מכיל ?join=CODE */
@@ -147,9 +176,10 @@ async function submitJoinName() {
     return;
   }
 
-  // בדיקת כפל שם מתוך נתוני המכשיר המקומיים
-  if (_pendingInv && typeof getDeviceClubs === 'function') {
-    const local = getDeviceClubs().find(c => c.clubId === _pendingInv.clubId);
+  // בדיקת כפל שם
+  const clubId = _pendingInv?.clubId || _pendingClubId;
+  if (clubId && typeof getDeviceClubs === 'function') {
+    const local = getDeviceClubs().find(c => c.clubId === clubId);
     if (local?.members?.some(m => m.name === name)) {
       if (nameErr) nameErr.textContent = `כבר יש קורא בשם "${name}" במועדון. אפשר להוסיף שם משפחה או כינוי?`;
       return;
@@ -157,8 +187,48 @@ async function submitJoinName() {
   }
 
   if (btn) { btn.disabled = true; btn.textContent = 'מצטרף/ת...'; }
-  await _completeJoin(null, name, _pendingInv);
+  if (_pendingInv) {
+    await _completeJoin(null, name, _pendingInv);
+  } else if (_pendingClubId) {
+    await _directJoinClub(_pendingClubId, name);
+  }
   if (btn) { btn.disabled = false; btn.textContent = 'מצטרף/ת ⬅️'; }
+}
+
+async function _directJoinClub(clubId, name) {
+  let userId = localStorage.getItem('booki_tmp_uid')
+    || ('user_' + Math.random().toString(36).slice(2, 11));
+  localStorage.setItem('booki_tmp_uid', userId);
+
+  if (typeof fbGetOrCreateUserProfile === 'function') {
+    await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
+  }
+  if (typeof fbAddClubMembership === 'function') {
+    await fbAddClubMembership(clubId, {
+      userId,
+      role:         'member',
+      status:       'active',
+      inviteSource: 'link',
+      invitationId: null,
+    });
+  }
+
+  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  if (typeof addDeviceClub === 'function') {
+    addDeviceClub({
+      clubId,
+      type:  club?.type  ?? 'friends',
+      name:  club?.name  ?? clubId,
+      emoji: club?.emoji ?? '📚',
+    });
+  }
+  if (typeof addDeviceMember === 'function') {
+    addDeviceMember(clubId, { userId, name, emoji: '📚' });
+  }
+
+  if (typeof track === 'function') track('join_club_completed', { clubId });
+  _ob = { userId, name, clubId, grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
+  _showWelcome(name);
 }
 
 async function _completeJoin(existingUserId, name, inv) {
@@ -294,6 +364,7 @@ function goHomeAfterOnboarding() {
 // חשיפה גלובלית
 if (typeof window !== 'undefined') {
   window.showJoinClubWithCode = showJoinClubWithCode;
+  window.showJoinClubDirect   = showJoinClubDirect;
   window.submitJoinName       = submitJoinName;
   window.handleNameKeydown    = handleNameKeydown;
 }
