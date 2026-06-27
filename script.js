@@ -642,7 +642,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fixAllStudentNames(STUDENT_NAMES);
   }
 
-  // ניתוב חכם: profile picker למשתמשים חוזרים, splash למשתמשים חדשים
-  if (typeof routeOnLoad === 'function') routeOnLoad();
-  else showScreen('screen-splash');
+  // ניתוב ראשוני: בדוק אם מורה מחוברת לפני ניתוב רגיל
+  if (typeof onTeacherAuthChange === 'function') {
+    onTeacherAuthChange(teacher => {
+      if (teacher) {
+        if (typeof showTeacherDashboard === 'function') showTeacherDashboard(teacher);
+      } else {
+        if (typeof routeOnLoad === 'function') routeOnLoad();
+        else showScreen('screen-splash');
+      }
+    });
+  } else {
+    if (typeof routeOnLoad === 'function') routeOnLoad();
+    else showScreen('screen-splash');
+  }
 });
