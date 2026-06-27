@@ -122,7 +122,8 @@
       }
       if (typeof showTeacherDashboard === 'function') showTeacherDashboard(teacher);
     } catch (e) {
-      if (errEl) errEl.textContent = MSGS[e.code] || 'שגיאה — נסה שוב';
+      console.error('[auth] error.code:', e.code, '| error.message:', e.message);
+      if (errEl) errEl.textContent = MSGS[e.code] || `שגיאה (${e.code || 'unknown'}) — בדוק Console`;
       if (btn) btn.disabled = false;
     }
   }
