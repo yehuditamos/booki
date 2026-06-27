@@ -194,7 +194,7 @@ async function createClub() {
       targetName:   null,
       targetUserId: null,
       channel:      'whatsapp',
-      link:         _buildJoinLink(_clubCode),
+      link:         _buildJoinLink(),
       maxUses:      null,
       expiresAt:    null,
     });
@@ -222,35 +222,54 @@ function _genCode() {
   ).join('');
 }
 
-function _buildJoinLink(code) {
-  return `${window.location.origin}?join=${code}`;
+function _buildJoinLink() {
+  const base = window.location.href.split('?')[0];
+  return base + '?club=' + encodeURIComponent(_newClubId);
+}
+
+function copyJoinLink() {
+  const link = _buildJoinLink();
+  const btn  = document.querySelector('[onclick="copyJoinLink()"]');
+  const done = () => {
+    if (btn) { const orig = btn.textContent; btn.textContent = '✅ הועתק!'; setTimeout(() => btn.textContent = orig, 2000); }
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(done);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = link; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); done();
+  }
 }
 
 function _renderSuccessScreen() {
   const nameEl  = document.getElementById('success-club-name');
   const emojiEl = document.getElementById('success-club-emoji');
   const codeEl  = document.getElementById('success-club-code');
-  const linkEl  = document.getElementById('success-club-link');
   if (nameEl)  nameEl.textContent  = _newClub.name;
   if (emojiEl) emojiEl.textContent = _newClub.emoji;
   if (codeEl)  codeEl.textContent  = _clubCode;
-  if (linkEl)  linkEl.textContent  = _buildJoinLink(_clubCode);
 }
 
 function shareCodesWhatsApp() {
-  const link = _buildJoinLink(_clubCode);
+  const link = _buildJoinLink();
   const text = [
-    `🌳 מועדון הקריאה "${_newClub.name}" מוכן!`,
+    `📚 *מועדון הקריאה "${_newClub.name}" מוכן!*`,
     ``,
-    `קוד ההצטרפות:`,
-    `*${_clubCode}*`,
-    ``,
-    `פתחו את בוקי, לחצו על "הצטרפות למועדון", הזינו את הקוד, כתבו שם — ומתחילים לקרוא 📚`,
-    ``,
-    `קישור ישיר:`,
+    `לחצו על הקישור להצטרפות מהירה:`,
     link,
+    ``,
+    `או פתחו את בוקי והזינו את קוד המועדון: *${_clubCode}*`,
   ].join('\n');
-  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  if (navigator.share) {
+    // Web Share API — feature detection; iOS Safari 12.2+ / Android Chrome 61+ / Desktop Chrome 89+.
+    // מעביר טקסט מלא דרך מנגנון שיתוף נייטיב — ללא בעיית Universal Links של iOS.
+    navigator.share({ text }).catch(() => {});
+  } else {
+    // Fallback: WhatsApp Web — Desktop ודפדפנים ללא Web Share API.
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  }
 }
 
 function goFromSuccessToWhoReads() {
