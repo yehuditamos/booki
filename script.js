@@ -487,18 +487,65 @@ function showReaderCard() {
 
 function showClassView() {
   showScreen('screen-class');
-  document.getElementById('class-content').innerHTML =
-    '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
+  const contentEl = document.getElementById('class-content');
+  if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
 
   if (classViewUnsubscribe) {
     classViewUnsubscribe();
     classViewUnsubscribe = null;
   }
 
-  // האזן לשינויים בזמן אמת
-  classViewUnsubscribe = fbWatchClass(fbStudents => {
-    _renderClassContent(fbStudents);
-  });
+  const clubId  = window.currentClubId;
+  const isLegacy = !clubId
+    || (typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId));
+
+  if (isLegacy) {
+    // מועדון מקורי — נתונים בזמן אמת מ-Firebase
+    classViewUnsubscribe = fbWatchClass(fbStudents => {
+      _renderClassContent(fbStudents);
+    });
+  } else {
+    // מועדון חדש — נתוני חברים מהמכשיר
+    _renderNewClubView(clubId);
+  }
+}
+
+function _renderNewClubView(clubId) {
+  const contentEl = document.getElementById('class-content');
+  if (!contentEl) return;
+
+  const data    = typeof getDeviceData === 'function' ? getDeviceData() : { clubs: [] };
+  const club    = (data.clubs || []).find(c => c.clubId === clubId);
+  const members = club?.members || [];
+
+  if (!members.length) {
+    contentEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888">אין חברים רשומים עדיין 📚</div>';
+    return;
+  }
+
+  const withStats = members.map(m => {
+    const s = typeof loadStudentLocal === 'function' ? loadStudentLocal(m.userId) : {};
+    return { ...m, points: s.points || 0, totalMinutes: s.totalMinutes || 0 };
+  }).sort((a, b) => b.points - a.points);
+
+  const totalMins = withStats.reduce((sum, m) => sum + m.totalMinutes, 0);
+  const posIcons  = ['🥇', '🥈', '🥉'];
+
+  contentEl.innerHTML = `
+    <div class="class-hero">
+      <div class="class-big-tree">🌳</div>
+      <span class="total-num">${totalMins}</span>
+      <span class="total-lbl">דקות קריאה</span>
+    </div>
+    <div class="class-leaderboard">
+      ${withStats.slice(0, 10).map((m, i) => `
+        <div class="leaderboard-row${i < 3 ? ' ' + ['leader-first', 'leader-second', 'leader-third'][i] : ''}">
+          <span class="lb-pos">${posIcons[i] || (i + 1)}</span>
+          <span class="lb-emoji">${m.emoji || '📚'}</span>
+          <span class="lb-name">${m.name || m.userId}</span>
+          <span class="lb-pts">${m.points} נק׳</span>
+        </div>`).join('')}
+    </div>`;
 }
 
 function _renderClassContent(fbStudents) {

@@ -131,9 +131,18 @@ async function submitJoinCode() {
 
   _pendingInv = inv;
 
-  // קוד אישי (targetName קיים) — זרימה ישנה
+  // אם המשתמש כבר חבר במועדון — כנס ישירות (כמו בזרימת הקישור)
+  const uid = localStorage.getItem('booki_tmp_uid');
+  if (uid && typeof getDeviceClubs === 'function') {
+    if (getDeviceClubs().some(c => c.clubId === inv.clubId)) {
+      if (typeof showWhoReads === 'function') showWhoReads(inv.clubId);
+      return;
+    }
+  }
+
+  // קוד אישי (targetName קיים) — כנס מיד
   if (inv.targetName) {
-    await _completeJoin(null, inv.targetName, inv);
+    await _doJoin(inv.clubId, inv.targetName, inv.code);
     return;
   }
 
@@ -141,18 +150,27 @@ async function submitJoinCode() {
   _showNameEntry(inv);
 }
 
-function _showNameEntry(inv) {
+async function _showNameEntry(inv) {
   const emojiEl = document.getElementById('join-club-emoji-display');
   const nameEl  = document.getElementById('join-club-name-display');
   if (emojiEl) emojiEl.textContent = '';
   if (nameEl)  nameEl.textContent  = inv.clubId;
 
-  // נסה לטעון שם המועדון מהמכשיר
+  // מקומי (מהיר)
   if (typeof getDeviceClubs === 'function') {
     const local = getDeviceClubs().find(c => c.clubId === inv.clubId);
     if (local) {
       if (emojiEl) emojiEl.textContent = local.emoji ?? '';
       if (nameEl)  nameEl.textContent  = local.name  ?? inv.clubId;
+    }
+  }
+
+  // Firebase (זהה לזרימת הקישור)
+  if (typeof fbLoadClub === 'function') {
+    const club = await fbLoadClub(inv.clubId);
+    if (club) {
+      if (emojiEl) emojiEl.textContent = club.emoji ?? emojiEl.textContent;
+      if (nameEl)  nameEl.textContent  = club.name  ?? nameEl.textContent;
     }
   }
 
@@ -188,39 +206,44 @@ async function submitJoinName() {
 
   if (btn) { btn.disabled = true; btn.textContent = 'מצטרף/ת...'; }
   if (_pendingInv) {
-    await _completeJoin(null, name, _pendingInv);
+    await _doJoin(_pendingInv.clubId, name, _pendingInv.code);
   } else if (_pendingClubId) {
-    await _directJoinClub(_pendingClubId, name);
+    await _doJoin(_pendingClubId, name);
   }
   if (btn) { btn.disabled = false; btn.textContent = 'מצטרף/ת ⬅️'; }
 }
 
-async function _directJoinClub(clubId, name) {
+async function _doJoin(clubId, name, invitationCode = null) {
   let userId = localStorage.getItem('booki_tmp_uid')
     || ('user_' + Math.random().toString(36).slice(2, 11));
   localStorage.setItem('booki_tmp_uid', userId);
 
+  if (invitationCode) {
+    // קוד: תובע את ההזמנה (מוסיף חברות פנימית)
+    const result = typeof fbClaimInvitation === 'function'
+      ? await fbClaimInvitation(invitationCode, userId)
+      : { success: false };
+    if (!result.success) {
+      const errEl = document.getElementById('join-name-error') || document.getElementById('join-error-msg');
+      if (errEl) errEl.textContent = 'שגיאה בהתחברות — נסה שוב';
+      return;
+    }
+  } else {
+    // קישור: מוסיף חברות ישירות
+    if (typeof fbAddClubMembership === 'function') {
+      await fbAddClubMembership(clubId, {
+        userId, role: 'member', status: 'active', inviteSource: 'link', invitationId: null,
+      });
+    }
+  }
+
   if (typeof fbGetOrCreateUserProfile === 'function') {
     await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
-  }
-  if (typeof fbAddClubMembership === 'function') {
-    await fbAddClubMembership(clubId, {
-      userId,
-      role:         'member',
-      status:       'active',
-      inviteSource: 'link',
-      invitationId: null,
-    });
   }
 
   const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
   if (typeof addDeviceClub === 'function') {
-    addDeviceClub({
-      clubId,
-      type:  club?.type  ?? 'friends',
-      name:  club?.name  ?? clubId,
-      emoji: club?.emoji ?? '📚',
-    });
+    addDeviceClub({ clubId, type: club?.type ?? 'friends', name: club?.name ?? clubId, emoji: club?.emoji ?? '📚' });
   }
   if (typeof addDeviceMember === 'function') {
     addDeviceMember(clubId, { userId, name, emoji: '📚' });
@@ -228,52 +251,9 @@ async function _directJoinClub(clubId, name) {
 
   if (typeof track === 'function') track('join_club_completed', { clubId });
   _ob = { userId, name, clubId, grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
+
   if (typeof window.enterPersonalHomeAfterJoin === 'function') {
     window.enterPersonalHomeAfterJoin(userId, name, clubId);
-  } else {
-    _showWelcome(name);
-  }
-}
-
-async function _completeJoin(existingUserId, name, inv) {
-  let userId = existingUserId
-    || localStorage.getItem('booki_tmp_uid')
-    || ('user_' + Math.random().toString(36).slice(2, 11));
-  localStorage.setItem('booki_tmp_uid', userId);
-
-  const result = typeof fbClaimInvitation === 'function'
-    ? await fbClaimInvitation(inv.code, userId)
-    : { success: false };
-
-  if (!result.success) {
-    const errEl = document.getElementById('join-name-error') || document.getElementById('join-error-msg');
-    if (errEl) errEl.textContent = 'שגיאה בהתחברות — נסה שוב';
-    return;
-  }
-
-  if (typeof fbGetOrCreateUserProfile === 'function') {
-    await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
-  }
-
-  if (typeof addDeviceClub === 'function') {
-    const club = (typeof fbLoadClub === 'function') ? await fbLoadClub(inv.clubId) : null;
-    addDeviceClub({
-      clubId: inv.clubId,
-      type:   club?.type  ?? 'friends',
-      name:   club?.name  ?? inv.clubId,
-      emoji:  club?.emoji ?? '📚',
-    });
-  }
-  if (typeof addDeviceMember === 'function') {
-    addDeviceMember(inv.clubId, { userId, name, emoji: '📚' });
-  }
-
-  if (typeof track === 'function') track('join_club_completed', { clubId: inv.clubId });
-
-  _ob = { userId, name, clubId: inv.clubId,
-          grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
-  if (typeof window.enterPersonalHomeAfterJoin === 'function') {
-    window.enterPersonalHomeAfterJoin(userId, name, inv.clubId);
   } else {
     _showWelcome(name);
   }
