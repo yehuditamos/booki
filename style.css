@@ -310,6 +310,7 @@ label { font-weight: 700; font-size: 1rem; }
 .btn-splash-action:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
 
 .btn-sa-create { background: #fff; color: var(--text); }
+.btn-sa-reader { background: rgba(255,255,255,.28); color: #fff; border: 2px solid rgba(255,255,255,.6); }
 .btn-sa-join   { background: rgba(255,255,255,.18); color: #fff; border: 2px solid rgba(255,255,255,.5); }
 
 .sa-icon  { font-size: 2.2rem; flex-shrink: 0; }

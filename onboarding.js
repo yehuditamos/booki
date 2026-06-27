@@ -228,8 +228,8 @@ async function _directJoinClub(clubId, name) {
 
   if (typeof track === 'function') track('join_club_completed', { clubId });
   _ob = { userId, name, clubId, grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
-  if (typeof selectProfile === 'function') {
-    await selectProfile(userId, clubId);
+  if (typeof window.enterPersonalHomeAfterJoin === 'function') {
+    window.enterPersonalHomeAfterJoin(userId, name, clubId);
   } else {
     _showWelcome(name);
   }
@@ -272,8 +272,8 @@ async function _completeJoin(existingUserId, name, inv) {
 
   _ob = { userId, name, clubId: inv.clubId,
           grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
-  if (typeof selectProfile === 'function') {
-    await selectProfile(userId, inv.clubId);
+  if (typeof window.enterPersonalHomeAfterJoin === 'function') {
+    window.enterPersonalHomeAfterJoin(userId, name, inv.clubId);
   } else {
     _showWelcome(name);
   }

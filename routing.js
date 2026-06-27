@@ -12,11 +12,38 @@
  *   שאר הקוד אינו מודע לכך שמדובר במשתמש Legacy.
  */
 
-const _DEVICE_KEY = 'booki_device_v1';
+const _DEVICE_KEY        = 'booki_device_v1';
+const _ACTIVE_READER_KEY = 'booki_active_reader';
+
 let _activeClubId   = null;
 let _clubSelectMode = 'device'; // 'device' | 'user'
 let _pendingUserId  = null;
 let _pendingProfile = null;
+
+// ─── Active Reader ────────────────────────────────────────────────────────────
+
+function getActiveReader() {
+  try {
+    const raw = localStorage.getItem(_ACTIVE_READER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function setActiveReader(reader) {
+  if (!reader?.userId) return;
+  try {
+    localStorage.setItem(_ACTIVE_READER_KEY, JSON.stringify({
+      userId: reader.userId,
+      clubId: reader.clubId || _activeClubId || null,
+      name:   reader.name   || '',
+      emoji:  reader.emoji  || '📚',
+    }));
+  } catch {}
+}
+
+function clearActiveReader() {
+  localStorage.removeItem(_ACTIVE_READER_KEY);
+}
 
 // ─── Device State ─────────────────────────────────────────────────────────────
 
@@ -98,22 +125,29 @@ function routeOnLoad() {
   if (typeof track === 'function') track('app_open');
   setNavVisible(false);
 
-  // קישור הצטרפות למועדון: ?club=CLUB_ID
+  // קישור הצטרפות תמיד בעדיפות ראשונה (הורה לחץ על קישור)
   const clubParam = new URLSearchParams(window.location.search).get('club');
   if (clubParam && typeof showJoinClubDirect === 'function') {
     showJoinClubDirect(clubParam);
     return;
   }
-
-  // קישור עם קוד הצטרפות ישן: ?join=XXXXXX
   const joinCode = new URLSearchParams(window.location.search).get('join');
   if (joinCode && typeof showJoinClubWithCode === 'function') {
     showJoinClubWithCode(joinCode);
     return;
   }
 
-  if (!hasDeviceClubs()) { showScreen('screen-splash'); return; }
-  showScreen('screen-home');
+  // קורא שמור — חזרה ישירה למסך הבית
+  const reader = getActiveReader();
+  if (reader?.userId) {
+    _activeClubId        = reader.clubId || null;
+    window.currentClubId = reader.clubId || null;
+    _enterPersonalHome(reader.userId, reader);
+    return;
+  }
+
+  // לא מחובר — מסך פתיחה
+  showScreen('screen-splash');
 }
 
 /** "מתחילים" — תמיד מציג מועדונים קיימים, ללא דילוג */
@@ -437,23 +471,30 @@ async function selectProfile(userId, clubIdHint) {
   const profile = typeof fbLoadUserProfile === 'function'
     ? await fbLoadUserProfile(userId) : null;
 
-  if (!profile || !profile.onboardingComplete) {
-    const clubs  = getClubsForUser(userId);
-    const clubId = clubIdHint || clubs[0]?.clubId;
-    const member = getDeviceClubs()
-      .find(c => c.clubId === clubId)?.members?.find(m => m.userId === userId);
-    if (typeof startOnboarding === 'function') {
-      startOnboarding(userId, member?.name || profile?.name || userId, clubId);
-    }
-    return;
-  }
-
-  // ילד — דלג על דשבורד, כנס ישירות לקריאה
   const targetClubId = clubIdHint || (() => {
     const userClubs = getClubsForUser(userId);
     return userClubs.length === 1 ? userClubs[0].clubId : null;
   })();
 
+  // קורא ללא פרופיל Firebase — השתמש בנתוני המכשיר ישירות
+  if (!profile || !profile.onboardingComplete) {
+    const member = targetClubId
+      ? getDeviceClubs().find(c => c.clubId === targetClubId)?.members?.find(m => m.userId === userId)
+      : null;
+    if (member && targetClubId) {
+      _activeClubId        = targetClubId;
+      window.currentClubId = targetClubId;
+      _enterPersonalHome(userId, { name: member.name, emoji: member.emoji || '📚' });
+      return;
+    }
+    // אין נתוני מכשיר — שלח לאונבורדינג
+    if (typeof startOnboarding === 'function') {
+      startOnboarding(userId, member?.name || profile?.name || userId, targetClubId);
+    }
+    return;
+  }
+
+  // יש פרופיל Firebase — כנס ישירות
   if (targetClubId) {
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
@@ -461,7 +502,7 @@ async function selectProfile(userId, clubIdHint) {
     return;
   }
 
-  // מועדונים מרובים — הצג בחירת מועדון (pickClub ימשיך ב-user mode)
+  // מועדונים מרובים — הצג בחירת מועדון
   const userClubs = getClubsForUser(userId);
   if (!userClubs.length) return;
   _showClubSelectForUser(userId, profile, userClubs);
@@ -502,8 +543,9 @@ function _enterPersonalHome(userId, profile) {
   window.currentStudentData = studentData;
   const nameEl  = document.getElementById('current-student-name');
   const emojiEl = document.getElementById('greeting-avatar');
-  if (nameEl)  nameEl.textContent  = profile.name  || userId;
-  if (emojiEl) emojiEl.textContent = profile.emoji || '📚';
+  if (nameEl)  nameEl.textContent  = studentData.name  || userId;
+  if (emojiEl) emojiEl.textContent = studentData.emoji || '📚';
+  setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji });
   showScreen('screen-main');
 }
 
@@ -544,6 +586,7 @@ function goBackFromManage() {
 /** window.resetBookiDevice() — מנקה localStorage ומחזיר ל-screen-splash */
 window.resetBookiDevice = function() {
   localStorage.removeItem(_DEVICE_KEY);
+  localStorage.removeItem(_ACTIVE_READER_KEY);
   localStorage.removeItem('booki_tmp_uid');
   localStorage.removeItem('booki_migrated_fb_v2');
   console.log('[booki] ✅ resetBookiDevice — המכשיר אופס. מחזיר ל-splash...');
@@ -615,6 +658,8 @@ function goToTeacherArea() {
 // ─── חשיפה גלובלית ───────────────────────────────────────────────────────────
 
 Object.assign(window, {
+  // Active Reader
+  getActiveReader, setActiveReader, clearActiveReader,
   // Device state
   getDeviceClubs, addDeviceClub, addDeviceMember, updateDeviceClubStats,
   hasDeviceClubs, getClubsForUser,

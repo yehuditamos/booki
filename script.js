@@ -159,12 +159,9 @@ async function selectStudent(id) {
 function logout() {
   currentStudentId   = null;
   currentStudentData = null;
-  if (typeof switchReader === 'function') {
-    switchReader();   // מסיר reader-active ומנתב לפי מועדונים
-  } else {
-    renderStudentCards();
-    showScreen('screen-students');
-  }
+  if (typeof clearActiveReader === 'function') clearActiveReader();
+  if (typeof routeOnLoad === 'function') routeOnLoad();
+  else showScreen('screen-splash');
 }
 
 // ─── ספריית סיפורים ─────────────────────────────────────────────────
