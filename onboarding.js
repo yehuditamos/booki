@@ -208,8 +208,14 @@ async function submitJoinName() {
 }
 
 async function _doJoin(clubId, name, invitationCode = null) {
-  let userId = localStorage.getItem('booki_tmp_uid')
-    || ('user_' + Math.random().toString(36).slice(2, 11));
+  // uid מ-Firebase Anonymous Auth — מאומת, עקבי בין סשנים
+  const userId = (typeof ensureStudentAuth === 'function')
+    ? await ensureStudentAuth()
+    : (localStorage.getItem('booki_tmp_uid') || ('user_' + Math.random().toString(36).slice(2, 11)));
+  if (!userId) {
+    console.error('[_doJoin] לא הצלחנו לקבל userId — ביטול');
+    return;
+  }
   localStorage.setItem('booki_tmp_uid', userId);
 
   if (invitationCode) {

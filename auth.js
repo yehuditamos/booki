@@ -42,16 +42,41 @@
   function getCurrentTeacher() {
     const a    = _auth();
     const user = a?.currentUser;
-    if (!user) return null;
+    if (!user || user.isAnonymous) return null;  // anonymous ≠ teacher
     return { uid: user.uid, email: user.email, name: user.displayName || user.email.split('@')[0] };
+  }
+
+  /**
+   * מבטיח שיש auth פעיל לתלמיד — anonymous אם אין.
+   * מחזיר uid. לעולם לא זורק — Fallback ל-localStorage.
+   */
+  async function ensureStudentAuth() {
+    const a = _auth();
+    if (!a) return localStorage.getItem('booki_tmp_uid');
+
+    const current = a.currentUser;
+    if (current) {
+      localStorage.setItem('booki_tmp_uid', current.uid);
+      return current.uid;
+    }
+
+    try {
+      const cred = await a.signInAnonymously();
+      localStorage.setItem('booki_tmp_uid', cred.user.uid);
+      return cred.user.uid;
+    } catch (e) {
+      console.warn('[auth] signInAnonymously failed:', e.message);
+      return localStorage.getItem('booki_tmp_uid');
+    }
   }
 
   function onTeacherAuthChange(cb) {
     const a = _auth();
     if (!a) { setTimeout(() => cb(null), 0); return () => {}; }
-    return a.onAuthStateChanged(u =>
-      cb(u ? { uid: u.uid, email: u.email, name: u.displayName || u.email.split('@')[0] } : null)
-    );
+    return a.onAuthStateChanged(u => {
+      if (!u || u.isAnonymous) { cb(null); return; }
+      cb({ uid: u.uid, email: u.email, name: u.displayName || u.email.split('@')[0] });
+    });
   }
 
   // ─── Teacher Auth Screen ──────────────────────────────────────────────────────
@@ -143,5 +168,6 @@
     showTeacherAuth,
     submitTeacherAuth,
     teacherSignOut,
+    ensureStudentAuth,
   });
 })();
