@@ -251,3 +251,47 @@ async function devReset() {
 window.showOwnerDashboard = showOwnerDashboard;
 window._odLoad            = _odLoad;
 window.devReset           = devReset;
+
+/**
+ * פונקציית פיתוח חד-פעמית.
+ * מעלה את המשתמש המחובר ל-role:'owner' ויוצרת config/setup אם אינו קיים.
+ * יש להסיר פונקציה זו מהקוד לאחר ריצה ראשונה.
+ *
+ * שימוש: הפעל מקונסול הדפדפן בזמן שמורה מחוברת:
+ *   promoteCurrentTeacherToOwner()
+ */
+async function promoteCurrentTeacherToOwner() {
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    console.error('[promoteToOwner] אין משתמש מחובר');
+    return;
+  }
+
+  const db  = firebase.firestore();
+  const uid = user.uid;
+  const now = new Date().toISOString();
+
+  // עדכן role ל-'owner'
+  await db.collection('users').doc(uid).set({
+    role:        'owner',
+    updatedAt:   now,
+    lastLoginAt: now,
+  }, { merge: true });
+  console.log('[promoteToOwner] role עודכן ל-owner עבור', uid);
+
+  // צור config/setup אם אינו קיים
+  const setupSnap = await db.collection('config').doc('setup').get();
+  if (!setupSnap.exists) {
+    await db.collection('config').doc('setup').set({
+      completedAt: now,
+      ownerUid:    uid,
+      orgName:     '',
+    });
+    console.log('[promoteToOwner] config/setup נוצר');
+  } else {
+    console.log('[promoteToOwner] config/setup כבר קיים — לא שונה');
+  }
+
+  console.log('[promoteToOwner] הושלם. רענן את הדף או הפעל showTeacherDashboard()');
+}
+window.promoteCurrentTeacherToOwner = promoteCurrentTeacherToOwner;

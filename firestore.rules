@@ -102,10 +102,14 @@ service cloud.firestore {
                     );
 
       // עדכון: owner יכול לשנות כל שדה; מורה לא יכולה לשנות role.
+      // חריג: role:'owner' מותר כאשר config/setup אינו קיים (פונקציית dev חד-פעמית).
       allow update: if isOwner()
                     || (isMe(userId) &&
                         request.resource.data.get('role', resource.data.get('role', 'teacher'))
-                        == resource.data.get('role', 'teacher'));
+                        == resource.data.get('role', 'teacher'))
+                    || (isMe(userId) &&
+                        request.resource.data.role == 'owner' &&
+                        !exists(/databases/$(database)/documents/config/setup));
 
       allow delete: if false;
 
