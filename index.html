@@ -135,6 +135,11 @@
       <button class="tab-btn"        id="tab-family"   onclick="filterLibrary('משפחה וחגים')">🏠 משפחה וחגים</button>
     </div>
   </div>
+  <div id="for-you-section" class="for-you-section" style="display:none">
+    <div class="for-you-header">⭐ במיוחד בשבילך</div>
+    <div id="for-you-list" class="story-list for-you-list"></div>
+    <div class="for-you-divider">📚 כל הסיפורים</div>
+  </div>
   <div id="story-list" class="story-list"></div>
 </section>
 
@@ -383,6 +388,17 @@
       <button id="btn-submit-setup" class="btn-giant btn-green" onclick="submitInitialSetup()">הגדר מערכת</button>
     </div>
   </div>
+</section>
+
+<!-- ══ Profile Wizard ════════════════════════════════════════════════ -->
+<section id="screen-profile-wizard" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2 id="wizard-screen-title">👋 קצת עלייך</h2>
+    </div>
+    <p class="td-subtitle" id="wizard-screen-subtitle">כך נוכל להמליץ לך סיפורים מושלמים</p>
+  </div>
+  <div id="wizard-content" class="wizard-content"></div>
 </section>
 
 <!-- ══ Teacher Auth ══════════════════════════════════════════════════ -->
@@ -807,6 +823,7 @@
 <script src="script.js"></script>
 <script src="owner-dashboard.js"></script>
 <script src="initial-setup.js"></script>
+<script src="student-profile.js"></script>
 
 <!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
 <section id="screen-owner-dashboard" class="screen od-screen">

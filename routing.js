@@ -586,6 +586,17 @@ function _enterPersonalHome(userId, profile) {
     return;
   }
 
+  // Personalization wizard — מוצג אחרי onboarding, פעם אחת בלבד
+  if (profile?.onboardingComplete && !profile?.personalizationComplete) {
+    if (typeof showProfileWizard === 'function') {
+      showProfileWizard(userId, _activeClubId || null, profile);
+      return;
+    }
+  }
+
+  // שמור פרסונליזציה גלובלית לשימוש ב-"במיוחד בשבילך"
+  window._studentPersonalization = profile?.personalizationComplete ? profile : null;
+
   if (typeof analyticsUserActive === 'function') analyticsUserActive(userId, _activeClubId);
   setNavVisible(true);
   setNavTab('');

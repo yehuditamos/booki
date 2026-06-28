@@ -170,6 +170,7 @@ function showLibrary() {
   const listEl = document.getElementById('story-list');
   if (listEl) listEl.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">טוען סיפורים...</p>';
   showScreen('screen-library');
+  if (typeof renderForYouSection === 'function') renderForYouSection();
   setTimeout(() => filterLibrary('all'), 0);
 }
 

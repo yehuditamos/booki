@@ -460,6 +460,33 @@ async function fbSaveClub(clubId, data) {
   }
 }
 
+/** מחזיר רשימת אווטארים תפוסים במועדון (למניעת כפילות בתוך מועדון). */
+async function fbGetClubAvatars(clubId, excludeUserId) {
+  if (!_db() || !clubId) return [];
+  try {
+    const snap = await _db().collection('clubs').doc(clubId).collection('memberships').get();
+    return snap.docs
+      .filter(d => d.id !== excludeUserId)
+      .map(d => d.data().avatar)
+      .filter(Boolean);
+  } catch (e) {
+    console.warn('[firebase-clubs] fbGetClubAvatars:', e.message);
+    return [];
+  }
+}
+
+/** עדכון אווטאר של תלמיד בתוך membership מועדון (denormalization לבדיקת ייחודיות). */
+async function fbUpdateMemberAvatar(clubId, userId, avatar) {
+  if (!_db() || !clubId || !userId) return;
+  try {
+    await _db().collection('clubs').doc(clubId)
+      .collection('memberships').doc(userId)
+      .update({ avatar });
+  } catch (e) {
+    console.warn('[firebase-clubs] fbUpdateMemberAvatar:', e.message);
+  }
+}
+
 // ─── ClubMembership ───────────────────────────────────────────────────────────
 
 /**
@@ -769,6 +796,8 @@ Object.assign(window, {
   fbCreateSetupRecord,
   fbDevReset,
   // ClubMembership
+  fbGetClubAvatars,
+  fbUpdateMemberAvatar,
   fbAddClubMembership,
   fbLoadClubMembership,
   fbLoadClubMemberships,
