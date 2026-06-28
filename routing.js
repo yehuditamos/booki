@@ -684,15 +684,6 @@ async function showTeacherDashboard(teacher) {
   }
   window._currentTeacher = t;
 
-  // Initial Setup guard — fallback אם showTeacherAuth עקף
-  if (typeof fbCheckSetupComplete === 'function') {
-    const setupDone = await fbCheckSetupComplete();
-    if (!setupDone) {
-      if (typeof showInitialSetup === 'function') showInitialSetup();
-      return;
-    }
-  }
-
   // טוען role מ-Firestore — owner מנותב לדשבורד שלו
   if (typeof fbLoadUser === 'function') {
     const userDoc = await fbLoadUser(t.uid);

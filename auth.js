@@ -83,18 +83,8 @@
 
   let _authMode = 'login';
 
-  async function showTeacherAuth(mode) {
+  function showTeacherAuth(mode) {
     _authMode = mode || 'login';
-
-    // Initial Setup guard — אם config/setup אינו קיים, מציג Initial Setup ראשון
-    if (typeof fbCheckSetupComplete === 'function') {
-      const setupDone = await fbCheckSetupComplete();
-      if (!setupDone) {
-        if (typeof showInitialSetup === 'function') showInitialSetup();
-        return;
-      }
-    }
-
     _renderAuthForm();
     if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
   }
