@@ -82,6 +82,12 @@ function updateDeviceClubStats(clubId, stats) {
   _saveDeviceData(data);
 }
 
+function removeDeviceClub(clubId) {
+  const data = getDeviceData();
+  data.clubs = (data.clubs || []).filter(c => c.clubId !== clubId);
+  _saveDeviceData(data);
+}
+
 function addDeviceMember(clubId, member) {
   const data = getDeviceData();
   const club = (data.clubs || []).find(c => c.clubId === clubId);
@@ -231,14 +237,16 @@ function _buildClubCard(c) {
     } else if (legacyCount > 0) {
       metaHtml = `<span class="csc-meta">👥 ${legacyCount} חברים</span>`;
     }
+  } else {
+    // מספר חברים אמיתי — נטען async אחרי render
+    metaHtml = `<span class="csc-meta" data-count-club="${c.clubId}">👥 ...</span>`;
   }
-  // מועדונים חדשים: מספר חברים נטען async ב-_enrichClubDashboard — לא מציגים כאן
 
   return `
     <button class="club-select-card" onclick="pickClub('${c.clubId}')">
       <span class="csc-emoji">${c.emoji || '📚'}</span>
       <div class="csc-info">
-        <span class="csc-name">${c.name}</span>
+        <span class="csc-name">${c.name || c.clubId}</span>
         ${metaHtml}
       </div>
       <span class="csc-arrow">←</span>
@@ -249,6 +257,20 @@ function _renderClubSelect(clubs) {
   const list = document.getElementById('club-select-list');
   if (!list) return;
   list.innerHTML = clubs.map(c => _buildClubCard(c)).join('');
+  _enrichClubSelectCounts().catch(() => {});
+}
+
+async function _enrichClubSelectCounts() {
+  const placeholders = document.querySelectorAll('[data-count-club]');
+  for (const el of placeholders) {
+    const clubId = el.dataset.countClub;
+    try {
+      const memberships = typeof fbLoadClubMemberships === 'function'
+        ? await fbLoadClubMemberships(clubId) : [];
+      const active = memberships.filter(m => m.status !== 'left').length;
+      if (el.isConnected) el.textContent = `👥 ${active} חברים`;
+    } catch {}
+  }
 }
 
 // ─── Club Dashboard ───────────────────────────────────────────────────────────
@@ -261,6 +283,7 @@ async function showClubDashboard(clubId, userId, profile) {
 
   const localClub = getDeviceClubs().find(c => c.clubId === clubId);
   const isLegacy  = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId);
+  const stats     = localClub?.stats || {};
 
   const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   set('club-dash-emoji',   localClub?.emoji || '📚');
@@ -418,16 +441,10 @@ async function showWhoReads(clubId) {
   }
 
   // מועדון חדש — Firebase
-  // ── TRACE 3: clubId right before fbLoadClub ──
-  console.log('[TRACE 3] before fbLoadClub | effectiveClubId:', effectiveClubId);
-
   const [club, memberships] = await Promise.all([
     typeof fbLoadClub === 'function' ? fbLoadClub(effectiveClubId) : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
   ]);
-
-  // ── TRACE 5: club.name before display ──
-  console.log('[TRACE 5] fbLoadClub returned | club:', club, '| memberships count:', memberships.length);
 
   if (h2El) h2El.textContent = (club?.emoji || '📚') + ' ' + (club?.name || '');
   if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
@@ -497,9 +514,6 @@ function selectLegacyProfile(index) {
 }
 
 async function selectProfile(userId, clubIdHint) {
-  // ── TRACE 2: clubId on selectProfile entry ──
-  console.log('[TRACE 2] selectProfile | userId:', userId, '| clubIdHint:', clubIdHint);
-
   const profile = typeof fbLoadUserProfile === 'function'
     ? await fbLoadUserProfile(userId) : null;
 
@@ -660,11 +674,43 @@ async function _renderTeacherClubs(uid) {
     <div class="teacher-club-card">
       <span class="tc-emoji">${c.emoji || '📚'}</span>
       <div class="tc-info">
-        <span class="tc-name">${c.name}</span>
-        <span class="tc-meta">${c.type || ''}</span>
+        <span class="tc-name">${c.name || c.id}</span>
+        <span class="tc-meta" data-member-count="${c.id}">👥 ...</span>
       </div>
-      <button class="btn-small btn-green" onclick="enterTeacherClub('${c.id}')">כנסי ←</button>
+      <div class="tc-actions">
+        <button class="btn-small btn-green" onclick="enterTeacherClub('${c.id}')">כנסי ←</button>
+        <button class="btn-small" style="background:#dc3545;color:#fff" onclick="confirmDeleteClub('${c.id}','${(c.name || c.id).replace(/'/g, "\\'")}')">מחק</button>
+      </div>
     </div>`).join('');
+
+  // מונה חברים אמיתי — Firebase
+  clubs.forEach(async c => {
+    try {
+      const memberships = typeof fbLoadClubMemberships === 'function'
+        ? await fbLoadClubMemberships(c.id) : [];
+      const active = memberships.filter(m => m.status !== 'left').length;
+      const el = list.querySelector(`[data-member-count="${c.id}"]`);
+      if (el) el.textContent = `👥 ${active} חברים`;
+    } catch {}
+  });
+}
+
+async function confirmDeleteClub(clubId, clubName) {
+  if (!confirm(`למחוק את "${clubName}" ואת כל נתוניו לצמיתות?\nפעולה זו אינה הפיכה.`)) return;
+  const t = window._currentTeacher;
+  if (!t) return;
+
+  const allBtns = document.querySelectorAll(`[onclick*="confirmDeleteClub('${clubId}'"]`);
+  allBtns.forEach(b => { b.disabled = true; b.textContent = 'מוחק...'; });
+
+  const ok = typeof fbDeleteClub === 'function' ? await fbDeleteClub(clubId) : false;
+  if (ok) {
+    removeDeviceClub(clubId);
+    _renderTeacherClubs(t.uid);
+  } else {
+    alert('שגיאה במחיקה — נסה שוב');
+    allBtns.forEach(b => { b.disabled = false; b.textContent = 'מחק'; });
+  }
 }
 
 function enterTeacherClub(clubId) {
@@ -686,7 +732,7 @@ Object.assign(window, {
   // Active Reader
   getActiveReader, setActiveReader, clearActiveReader,
   // Device state
-  getDeviceClubs, addDeviceClub, addDeviceMember, updateDeviceClubStats,
+  getDeviceClubs, addDeviceClub, removeDeviceClub, addDeviceMember, updateDeviceClubStats,
   hasDeviceClubs, getClubsForUser,
   // Routing
   routeOnLoad, showWhoReads, showClubDashboard, enterReadingFromDashboard,
@@ -700,5 +746,5 @@ Object.assign(window, {
   setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin,
   startReading,
   // Teacher
-  showTeacherDashboard, enterTeacherClub, goToTeacherArea,
+  showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
 });

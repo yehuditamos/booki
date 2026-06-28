@@ -224,17 +224,9 @@ async function fbCreateClub(club) {
 }
 
 async function fbLoadClub(clubId) {
-  // ── TRACE 4: inside fbLoadClub ──
-  const path = 'clubs/' + clubId;
-  console.log('[TRACE 4] fbLoadClub | clubId:', clubId, '| Firestore path:', path);
-
-  if (!_db()) {
-    console.error('[TRACE 4] ❌ _db() is null — Firebase not initialized');
-    return null;
-  }
+  if (!_db()) return null;
   try {
     const snap = await _db().collection('clubs').doc(clubId).get();
-    console.log('[TRACE 4] snap.exists:', snap.exists, '| path:', snap.ref.path);
     return snap.exists ? { id: snap.id, ...snap.data() } : null;
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadClub error:', e);
@@ -250,6 +242,27 @@ async function fbLoadTeacherClubs(teacherUid) {
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadTeacherClubs:', e.message);
     return [];
+  }
+}
+
+/**
+ * מוחק מועדון לחלוטין: memberships → invitations → club.
+ * מבוצע על ידי המורה שיצרה את המועדון בלבד (נאכף ב-Firestore Rules).
+ */
+async function fbDeleteClub(clubId) {
+  if (!_db()) return false;
+  try {
+    const membSnap = await _db().collection('clubs').doc(clubId).collection('memberships').get();
+    await Promise.all(membSnap.docs.map(d => d.ref.delete()));
+
+    const invSnap = await _db().collection('invitations').where('clubId', '==', clubId).get();
+    await Promise.all(invSnap.docs.map(d => d.ref.delete()));
+
+    await _db().collection('clubs').doc(clubId).delete();
+    return true;
+  } catch (e) {
+    console.warn('[firebase-clubs] fbDeleteClub error:', e.message);
+    return false;
   }
 }
 
@@ -555,6 +568,7 @@ Object.assign(window, {
   fbLoadClub,
   fbLoadTeacherClubs,
   fbSaveClub,
+  fbDeleteClub,
   // ClubMembership
   fbAddClubMembership,
   fbLoadClubMembership,

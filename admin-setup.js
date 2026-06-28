@@ -182,7 +182,7 @@ async function createClub() {
     await fbCreateInvitation({
       code:         _clubCode,
       clubId:       _newClubId,
-      createdBy:    'admin',
+      createdBy:    _teacherUid || 'admin',
       targetName:   null,
       targetUserId: null,
       channel:      'whatsapp',
