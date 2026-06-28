@@ -234,6 +234,93 @@ async function fbLoadClub(clubId) {
   }
 }
 
+/**
+ * יוצר מסמך משתמש ב-Firestore עם role: 'teacher' בעת הרשמה.
+ * { merge: true } — בטוח לקריאה חוזרת.
+ */
+async function fbCreateTeacherUser(uid, name, email) {
+  if (!_db()) return;
+  try {
+    await _db().collection('users').doc(uid).set({
+      name,
+      email,
+      role:        'teacher',
+      status:      'active',
+      createdAt:   _now(),
+      updatedAt:   _now(),
+      lastLoginAt: _now(),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[firebase-clubs] fbCreateTeacherUser error:', e.message);
+  }
+}
+
+/**
+ * מעדכן lastLoginAt בכל התחברות.
+ * אם המסמך אינו קיים (מורה ישנה לפני תמיכת user-docs) — יוצר אותו עם role:'teacher'.
+ */
+async function fbUpdateTeacherLastLogin(uid) {
+  if (!_db()) return;
+  const now = _now();
+  try {
+    await _db().collection('users').doc(uid).update({ lastLoginAt: now, updatedAt: now });
+  } catch {
+    try {
+      await _db().collection('users').doc(uid).set(
+        { role: 'teacher', lastLoginAt: now, updatedAt: now },
+        { merge: true }
+      );
+    } catch {}
+  }
+}
+
+/** טוען את כל המורות (role: teacher|owner) — לשימוש Owner Dashboard בלבד. */
+async function fbLoadAllTeachers() {
+  if (!_db()) return [];
+  try {
+    const snap = await _db().collection('users')
+      .where('role', 'in', ['teacher', 'owner'])
+      .get();
+    const teachers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    teachers.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return teachers;
+  } catch (e) {
+    console.warn('[firebase-clubs] fbLoadAllTeachers:', e.message);
+    return [];
+  }
+}
+
+/** טוען את כל המועדונים — לשימוש Owner Dashboard בלבד. */
+async function fbLoadAllClubs() {
+  if (!_db()) return [];
+  try {
+    const snap = await _db().collection('clubs').get();
+    const clubs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    clubs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return clubs;
+  } catch (e) {
+    console.warn('[firebase-clubs] fbLoadAllClubs:', e.message);
+    return [];
+  }
+}
+
+/**
+ * טוען את כל memberships של תלמיד (collection group query).
+ * דורש אינדקס Firestore ב-memberships.userId — יופיע כשגיאה עם קישור לקליק אחד.
+ */
+async function fbLoadMembershipsForUser(userId) {
+  if (!_db()) return [];
+  try {
+    const snap = await _db().collectionGroup('memberships')
+      .where('userId', '==', userId)
+      .get();
+    return snap.docs.map(d => d.data()).filter(m => m.status !== 'left');
+  } catch (e) {
+    console.warn('[firebase-clubs] fbLoadMembershipsForUser:', e.message);
+    return [];
+  }
+}
+
 async function fbLoadTeacherClubs(teacherUid) {
   if (!_db()) return [];
   try {
@@ -326,6 +413,12 @@ async function fbAddClubMembership(clubId, member) {
       },
       updatedAt: _now(),
     });
+    // Denormalize: מעדכן memberCount במסמך המועדון — בלי לחסום את הפעולה
+    const _inc = (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
+      ? firebase.firestore.FieldValue.increment(1) : 1;
+    _db().collection('clubs').doc(clubId)
+      .update({ memberCount: _inc })
+      .catch(() => {});
     return true;
   } catch (e) {
     console.warn('[firebase-clubs] fbAddClubMembership error:', e);
@@ -569,6 +662,12 @@ Object.assign(window, {
   fbLoadTeacherClubs,
   fbSaveClub,
   fbDeleteClub,
+  // Owner / Multi-club
+  fbCreateTeacherUser,
+  fbUpdateTeacherLastLogin,
+  fbLoadAllTeachers,
+  fbLoadAllClubs,
+  fbLoadMembershipsForUser,
   // ClubMembership
   fbAddClubMembership,
   fbLoadClubMembership,

@@ -156,16 +156,49 @@ function routeOnLoad() {
   showScreen('screen-splash');
 }
 
-/** "מתחילים" — תמיד מציג מועדונים קיימים, ללא דילוג */
-function startReading() {
-  const clubs = getDeviceClubs();
-  if (!clubs.length) { showScreen('screen-splash'); return; }
+/** "מתחילים" — טוען מועדוני תלמיד מ-Firebase (multi-club), Fallback ל-device */
+async function startReading() {
+  const uid = (typeof firebase !== 'undefined' && firebase.apps?.length)
+    ? firebase.auth()?.currentUser?.uid
+    : null;
+  const effectiveUid = uid || localStorage.getItem('booki_tmp_uid');
+
+  if (effectiveUid && typeof fbLoadMembershipsForUser === 'function') {
+    // הצג ספינר מיד
+    const titleEl = document.getElementById('club-select-title');
+    const listEl  = document.getElementById('club-select-list');
+    if (titleEl) titleEl.textContent = '📚 המועדונים שלי';
+    if (listEl)  listEl.innerHTML    = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
+    _clubSelectMode = 'device';
+    _pendingUserId  = null;
+    _pendingProfile = null;
+    setNavTab('clubs');
+    showScreen('screen-club-select');
+
+    try {
+      const memberships = await fbLoadMembershipsForUser(effectiveUid);
+      const clubIds     = [...new Set(memberships.map(m => m.clubId))];
+      const clubs = (await Promise.all(
+        clubIds.map(async id => {
+          const c = typeof fbLoadClub === 'function' ? await fbLoadClub(id) : null;
+          return c ? { clubId: c.id, name: c.name, emoji: c.emoji, type: c.type } : null;
+        })
+      )).filter(Boolean);
+
+      if (clubs.length === 1) { showWhoReads(clubs[0].clubId); return; }
+      if (clubs.length > 1)   { _renderClubSelect(clubs);      return; }
+    } catch {}
+  }
+
+  // Fallback — מועדוני המכשיר
+  const deviceClubs = getDeviceClubs();
+  if (!deviceClubs.length) { showScreen('screen-splash'); return; }
   const titleEl = document.getElementById('club-select-title');
   if (titleEl) titleEl.textContent = '🌳 מועדונים קיימים';
   _clubSelectMode = 'device';
   _pendingUserId  = null;
   _pendingProfile = null;
-  _renderClubSelect(clubs);
+  _renderClubSelect(deviceClubs);
   setNavTab('clubs');
   showScreen('screen-club-select');
 }
@@ -642,7 +675,7 @@ window.enterPersonalHomeAfterJoin = function(userId, name, clubId) {
 
 // ─── Teacher Dashboard ────────────────────────────────────────────────────────
 
-function showTeacherDashboard(teacher) {
+async function showTeacherDashboard(teacher) {
   const t = teacher || (typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null);
   if (!t) {
     if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
@@ -650,6 +683,16 @@ function showTeacherDashboard(teacher) {
     return;
   }
   window._currentTeacher = t;
+
+  // טוען role מ-Firestore — owner מנותב לדשבורד שלו
+  if (typeof fbLoadUser === 'function') {
+    const userDoc = await fbLoadUser(t.uid);
+    if (userDoc?.role === 'owner') {
+      if (typeof showOwnerDashboard === 'function') showOwnerDashboard({ ...t, role: 'owner' });
+      return;
+    }
+  }
+
   const nameEl = document.getElementById('td-teacher-name');
   if (nameEl) nameEl.textContent = t.name || t.email;
   setNavVisible(false);

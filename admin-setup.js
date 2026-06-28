@@ -154,14 +154,20 @@ async function createClub() {
   const defaults = (typeof getClubTypeDefaults === 'function')
     ? getClubTypeDefaults(_newClub.type) : {};
 
-  const _teacherUid = (typeof getCurrentTeacher === 'function' && getCurrentTeacher()?.uid) || null;
+  const _teacher    = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
+  const _teacherUid   = _teacher?.uid   || null;
+  const _teacherName  = _teacher?.name  || '';
+  const _teacherEmail = _teacher?.email || '';
   const club = {
-    id:         _newClubId,
-    type:       _newClub.type,
-    name:       _newClub.name,
-    emoji:      _newClub.emoji,
-    createdBy:  _teacherUid || 'admin',
-    teacherUid: _teacherUid,
+    id:           _newClubId,
+    type:         _newClub.type,
+    name:         _newClub.name,
+    emoji:        _newClub.emoji,
+    createdBy:    _teacherUid || 'admin',
+    teacherUid:   _teacherUid,
+    teacherName:  _teacherName,
+    teacherEmail: _teacherEmail,
+    memberCount:  0,
     goal:      defaults.defaultGoal ?? { type: 'minutes', target: 1500, period: 'year' },
     settings: {
       countAllSessions: defaults.countAllSessions ?? true,
@@ -182,7 +188,7 @@ async function createClub() {
     await fbCreateInvitation({
       code:         _clubCode,
       clubId:       _newClubId,
-      createdBy:    _teacherUid || 'admin',
+      createdBy:    _teacherUid   || 'admin',
       targetName:   null,
       targetUserId: null,
       channel:      'whatsapp',

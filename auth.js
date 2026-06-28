@@ -140,11 +140,20 @@
       let teacher;
       if (_authMode === 'register') {
         const user = await signUpTeacher(email, password, name || email.split('@')[0]);
-        teacher = { uid: user.uid, email: user.email, name: user.displayName || name };
+        teacher = { uid: user.uid, email: user.email, name: user.displayName || name || email.split('@')[0] };
+        // יצירת מסמך משתמש ב-Firestore — role: 'teacher' ברירת מחדל
+        if (typeof fbCreateTeacherUser === 'function') {
+          await fbCreateTeacherUser(user.uid, teacher.name, teacher.email);
+        }
       } else {
         const user = await signInTeacher(email, password, remember);
         teacher = { uid: user.uid, email: user.email, name: user.displayName || email.split('@')[0] };
+        // עדכון lastLoginAt — fire and forget, לא חוסם את הניתוב
+        if (typeof fbUpdateTeacherLastLogin === 'function') {
+          fbUpdateTeacherLastLogin(user.uid).catch(() => {});
+        }
       }
+      // showTeacherDashboard טוענת role מ-Firestore ומנתבת ל-owner אם נדרש
       if (typeof showTeacherDashboard === 'function') showTeacherDashboard(teacher);
     } catch (e) {
       console.error('[auth] error.code:', e.code, '| error.message:', e.message);

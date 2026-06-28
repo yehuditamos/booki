@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Auth Helpers ─────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAnonymous() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    function isTeacher() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function isMe(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // isOwner(): בודק role == 'owner' ב-Firestore (ללא hardcode של UID/email)
+    function isOwner() {
+      return isTeacher() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    function validMemberStatus(status) {
+      return status == 'active' || status == 'pending' || status == 'left';
+    }
+
+    // ─── Legacy classes ───────────────────────────────────────────────────────
+    match /classes/{classId} {
+      allow read, write: if true;
+      match /students/{studentId} {
+        allow read, write: if true;
+      }
+    }
+
+    // ─── Clubs ────────────────────────────────────────────────────────────────
+    match /clubs/{clubId} {
+      allow read:   if true;
+      allow create: if isTeacher()
+                    && request.resource.data.teacherUid == request.auth.uid;
+      allow update: if isOwner()
+                    || (isTeacher() && resource.data.teacherUid == request.auth.uid)
+                    // תלמיד (anonymous) יכול לעדכן memberCount בלבד — denormalization בטוחה
+                    || (isSignedIn() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']));
+      allow delete: if isOwner()
+                    || (isTeacher() && resource.data.teacherUid == request.auth.uid);
+
+      match /memberships/{userId} {
+        allow read:   if true;
+        allow create: if isMe(userId)
+                      && request.resource.data.userId == userId
+                      && validMemberStatus(request.resource.data.status);
+        allow update: if isMe(userId)
+                      && request.resource.data.userId == resource.data.userId
+                      && request.resource.data.clubId == resource.data.clubId;
+        allow delete: if isTeacher();
+      }
+    }
+
+    // ─── Collection group: memberships — תמיכה ב-fbLoadMembershipsForUser ────
+    match /{path=**}/memberships/{membershipId} {
+      allow read: if true;
+    }
+
+    // ─── Invitations ──────────────────────────────────────────────────────────
+    match /invitations/{code} {
+      allow read:   if true;
+      allow create: if isTeacher();
+      allow update: if isSignedIn()
+                    && request.resource.data.clubId == resource.data.clubId
+                    && request.resource.data.code   == resource.data.code;
+      allow delete: if isTeacher();
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if true;
+
+      // יצירה: role חייב להיות 'teacher' (לא 'owner') — מניעת self-elevation
+      allow create: if isMe(userId)
+                    && request.resource.data.get('role', 'teacher') == 'teacher';
+
+      // עדכון: owner יכול לשנות כל שדה (כולל role);
+      //         משתמש רגיל — לא יכול לשנות את ה-role שלו
+      allow update: if isOwner()
+                    || (isMe(userId) &&
+                        request.resource.data.get('role', resource.data.get('role', 'teacher'))
+                        == resource.data.get('role', 'teacher'));
+
+      allow delete: if false;
+
+      match /profile/{doc} {
+        allow read:  if true;
+        allow write: if isMe(userId);
+      }
+
+      match /readingSessions/{sessionId} {
+        allow read:   if isMe(userId);
+        allow create: if isMe(userId);
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // ─── Analytics (owner-stats) ──────────────────────────────────────────────
+    match /owner-stats/{anyPath=**} {
+      allow read:   if isTeacher();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
+    }
+
+  }
+}
