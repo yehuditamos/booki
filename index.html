@@ -68,21 +68,8 @@
     <p class="splash-tagline">בוחרים מועדון, בוחרים קורא,<br>ומתחילים להצמיח עץ מקריאה 🌱</p>
     <div class="home-actions">
       <button class="btn-home-start" onclick="startReading()">מתחילים ⬅️</button>
-      <button class="btn-home-manage" onclick="showManage()">⚙️ ניהול / הקמת מועדון</button>
     </div>
   </div>
-</section>
-
-<!-- ══ בחירת תלמיד ════════════════════════════════════════════════ -->
-<section id="screen-students" class="screen">
-  <div class="screen-header sticky-header">
-    <div class="header-row">
-      <button class="btn-back" onclick="routeOnLoad()">חזרה →</button>
-      <h2>מי את/ה?</h2>
-    </div>
-    <p class="header-sub">בחר/י את הכרטיס שלך 👇</p>
-  </div>
-  <div id="student-grid" class="student-grid"></div>
 </section>
 
 <!-- ══ תפריט ראשי ═════════════════════════════════════════════════ -->
@@ -298,47 +285,12 @@
     <div class="header-row">
       <button class="btn-back" onclick="goClubs()">חזרה →</button>
       <h2 class="who-reads-title">📖 מי קורא עכשיו?</h2>
-      <button class="btn-manage-gear" onclick="showManage()">⚙️ ניהול</button>
     </div>
     <p id="who-reads-club-name" class="who-reads-club"></p>
   </div>
   <div id="who-reads-grid" class="who-reads-grid"></div>
   <div class="who-reads-footer">
     <button class="btn-join-another" onclick="showJoinClub()">+ התחבר/י עם קוד</button>
-  </div>
-</section>
-
-<!-- ══ ניהול מועדון ════════════════════════════════════════════════ -->
-<section id="screen-manage" class="screen">
-  <div class="screen-header sticky-header">
-    <div class="header-row">
-      <button class="btn-back" onclick="goBackFromManage()">חזרה →</button>
-      <h2>⚙️ ניהול</h2>
-    </div>
-  </div>
-  <div class="manage-list">
-    <button class="btn-manage-action" onclick="goToTeacherArea()">
-      <span class="sa-icon">🌳</span>
-      <div class="sa-text">
-        <span class="sa-label">הקמת מועדון חדש</span>
-        <span class="sa-sub">למורים ולהורים</span>
-      </div>
-    </button>
-    <button class="btn-manage-action" onclick="showJoinClub()">
-      <span class="sa-icon">🔑</span>
-      <div class="sa-text">
-        <span class="sa-label">התחברות עם קוד</span>
-        <span class="sa-sub">כבר חבר/ה? כנס/י</span>
-      </div>
-    </button>
-    <button class="btn-manage-action" onclick="goClubs()">
-      <span class="sa-icon">🏘️</span>
-      <div class="sa-text">
-        <span class="sa-label">החלפת מועדון</span>
-        <span class="sa-sub">עבור בין מועדונים</span>
-      </div>
-    </button>
-    <button class="btn-manage-back-link" onclick="goBackFromManage()">← חזרה לכיתה שלנו</button>
   </div>
 </section>
 

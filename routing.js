@@ -650,20 +650,6 @@ function goBackFromJoin() {
   if (hasDeviceClubs()) routeOnLoad(); else showScreen('screen-splash');
 }
 
-// ─── Manage Screen ────────────────────────────────────────────────────────────
-
-function showManage() {
-  showScreen('screen-manage');
-}
-
-function goBackFromManage() {
-  if (_activeClubId) {
-    showWhoReads(_activeClubId);
-  } else {
-    routeOnLoad();
-  }
-}
-
 // ─── כלי פיתוח (קונסול) ──────────────────────────────────────────────────────
 
 /** window.resetBookiDevice() — מנקה localStorage ומחזיר ל-screen-splash */
@@ -794,8 +780,6 @@ Object.assign(window, {
   selectProfile, selectLegacyProfile,
   // Club selection
   goClubs, pickClub,
-  // Manage
-  showManage, goBackFromManage,
   // Nav
   setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin,
   startReading,

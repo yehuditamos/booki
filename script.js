@@ -68,11 +68,6 @@ function showScreen(id) {
   }
 }
 
-function goToStudents() {
-  renderStudentCards();
-  showScreen('screen-students');
-}
-
 // ─── ניהול תלמידים ──────────────────────────────────────────────────
 
 function defaultStudent(id) {
@@ -129,21 +124,6 @@ async function saveStudentFull(data) {
   if (Number.isInteger(data.id)) {           // fbSaveStudent הוא Legacy בלבד
     await fbSaveStudent(data);               // ענן — /classes/ collection
   }
-}
-
-// ─── כרטיסי תלמידים ─────────────────────────────────────────────────
-
-function renderStudentCards() {
-  const grid = document.getElementById('student-grid');
-  grid.innerHTML = STUDENT_NAMES.map((name, i) => {
-    const s = loadStudentLocal(i);  // מהיר — localStorage לתצוגה בלבד
-    return `
-      <button class="student-card" onclick="selectStudent(${i})">
-        <span class="student-avatar">${STUDENT_EMOJIS[i]}</span>
-        <span class="student-name">${name}</span>
-        ${s.points > 0 ? `<span class="student-points">${s.points} נק׳</span>` : ''}
-      </button>`;
-  }).join('');
 }
 
 async function selectStudent(id) {
