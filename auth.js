@@ -83,8 +83,18 @@
 
   let _authMode = 'login';
 
-  function showTeacherAuth(mode) {
+  async function showTeacherAuth(mode) {
     _authMode = mode || 'login';
+
+    // Initial Setup guard — אם config/setup אינו קיים, מציג Initial Setup ראשון
+    if (typeof fbCheckSetupComplete === 'function') {
+      const setupDone = await fbCheckSetupComplete();
+      if (!setupDone) {
+        if (typeof showInitialSetup === 'function') showInitialSetup();
+        return;
+      }
+    }
+
     _renderAuthForm();
     if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
   }
@@ -148,9 +158,9 @@
       } else {
         const user = await signInTeacher(email, password, remember);
         teacher = { uid: user.uid, email: user.email, name: user.displayName || email.split('@')[0] };
-        // עדכון lastLoginAt — fire and forget, לא חוסם את הניתוב
+        // await — ודאות שהמסמך קיים/מעודכן לפני שה-routing בודק role
         if (typeof fbUpdateTeacherLastLogin === 'function') {
-          fbUpdateTeacherLastLogin(user.uid).catch(() => {});
+          await fbUpdateTeacherLastLogin(user.uid, teacher.name, teacher.email);
         }
       }
       // showTeacherDashboard טוענת role מ-Firestore ומנתבת ל-owner אם נדרש

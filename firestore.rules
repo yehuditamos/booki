@@ -78,16 +78,30 @@ service cloud.firestore {
       allow delete: if isTeacher();
     }
 
+    // ─── Config (setup sentinel) ──────────────────────────────────────────────
+    // config/setup נוצר פעם אחת בלבד על ידי Initial Setup.
+    // לאחר יצירה: immutable — רק Owner יכול למחוק (Dev Reset בלבד).
+    match /config/setup {
+      allow read:   if true;
+      allow create: if isSignedIn()
+                    && !exists(/databases/$(database)/documents/config/setup);
+      allow update: if false;
+      allow delete: if isOwner();
+    }
+
     // ─── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if true;
 
-      // יצירה: role חייב להיות 'teacher' (לא 'owner') — מניעת self-elevation
-      allow create: if isMe(userId)
-                    && request.resource.data.get('role', 'teacher') == 'teacher';
+      // יצירה: role:'teacher' תמיד (הרשמה רגילה).
+      // role:'owner' מותר אך ורק כאשר config/setup עדיין אינו קיים (Initial Setup בלבד).
+      allow create: if isMe(userId) && (
+                      request.resource.data.get('role', 'teacher') == 'teacher'
+                      || (request.resource.data.role == 'owner'
+                          && !exists(/databases/$(database)/documents/config/setup))
+                    );
 
-      // עדכון: owner יכול לשנות כל שדה (כולל role);
-      //         משתמש רגיל — לא יכול לשנות את ה-role שלו
+      // עדכון: owner יכול לשנות כל שדה; מורה לא יכולה לשנות role.
       allow update: if isOwner()
                     || (isMe(userId) &&
                         request.resource.data.get('role', resource.data.get('role', 'teacher'))
@@ -113,7 +127,7 @@ service cloud.firestore {
       allow read:   if isTeacher();
       allow create: if isSignedIn();
       allow update: if isSignedIn();
-      allow delete: if false;
+      allow delete: if isOwner();  // Dev Reset בלבד
     }
 
   }

@@ -632,6 +632,18 @@ label { font-weight: 700; font-size: 1rem; }
 }
 .od-refresh:hover { background: #30363d; }
 
+.od-danger-zone {
+  border: 2px solid #c0392b !important;
+  margin-top: 16px;
+}
+.btn-dev-reset {
+  width: 100%; background: #c0392b; color: #fff; border: none;
+  border-radius: 8px; padding: 10px; font-size: .9rem; cursor: pointer;
+  font-family: inherit;
+}
+.btn-dev-reset:hover { background: #a93226; }
+.btn-dev-reset:disabled { opacity: .5; cursor: not-allowed; }
+
 .join-divider { text-align: center; color: var(--muted); font-size: .85rem; margin: 20px 0 12px; }
 
 .join-channels { display: flex; flex-direction: column; gap: 10px; padding: 0 16px; }

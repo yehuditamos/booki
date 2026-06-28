@@ -207,7 +207,47 @@ function _odStoryTitle(storyId) {
   return storyId;
 }
 
+// ─── Developer Reset ─────────────────────────────────────────────────────────
+
+async function devReset() {
+  const msg = [
+    '⚠️ Developer Reset',
+    '',
+    'פעולה זו תמחק:',
+    '• כל המועדונים + חברויות',
+    '• כל ההזמנות',
+    '• owner-stats',
+    '',
+    'לא נמחק: חשבונות משתמשים, classes/ — Legacy "מיתרים כיתה א\'"',
+    '',
+    'להמשיך?',
+  ].join('\n');
+
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById('btn-dev-reset');
+  if (btn) { btn.disabled = true; btn.textContent = 'מוחק...'; }
+
+  try {
+    const result = typeof fbDevReset === 'function'
+      ? await fbDevReset()
+      : { ok: false, error: 'fbDevReset לא נמצא' };
+
+    if (result.ok) {
+      alert('✅ Reset הושלם:\n' + JSON.stringify(result.counts, null, 2));
+      _odLoad(); // רענן את הדשבורד — Owner נשאר מחובר
+    } else {
+      alert('❌ שגיאה: ' + result.error);
+      if (btn) { btn.disabled = false; btn.textContent = '🗑️ Developer Reset'; }
+    }
+  } catch (e) {
+    alert('❌ חריגה: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🗑️ Developer Reset'; }
+  }
+}
+
 // ─── חשיפה גלובלית ───────────────────────────────────────────────────────────
 
 window.showOwnerDashboard = showOwnerDashboard;
 window._odLoad            = _odLoad;
+window.devReset           = devReset;

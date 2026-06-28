@@ -360,6 +360,32 @@
 </section>
 
 <!-- ══ Teacher Auth ════════════════════════════════════════════════ -->
+<!-- ══ Initial Setup — מוצג פעם אחת בלבד כשאין config/setup ══════════ -->
+<section id="screen-initial-setup" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2>🚀 הגדרת מערכת ראשונית</h2>
+    </div>
+    <p class="td-subtitle">מסך זה מופיע פעם אחת בלבד</p>
+  </div>
+  <div class="auth-container">
+    <div class="auth-icon">🔑</div>
+    <div class="auth-form">
+      <p style="color:#555;font-size:.9rem;text-align:center;margin-bottom:1.2rem">
+        הגדר/י את פרטי בעלת המערכת.<br>
+        לאחר אישור, ה-Owner Dashboard ייפתח אוטומטית.
+      </p>
+      <input id="su-name"     type="text"     class="input-field" placeholder="שם מלא" autocomplete="name" />
+      <input id="su-email"    type="email"    class="input-field" placeholder="כתובת אימייל" autocomplete="email" />
+      <input id="su-password" type="password" class="input-field" placeholder="סיסמה (לפחות 6 תווים)" autocomplete="new-password" />
+      <input id="su-org"      type="text"     class="input-field" placeholder="שם הארגון (אופציונלי)" />
+      <p id="su-error" class="auth-error"></p>
+      <button id="btn-submit-setup" class="btn-giant btn-green" onclick="submitInitialSetup()">הגדר מערכת</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Teacher Auth ══════════════════════════════════════════════════ -->
 <section id="screen-teacher-auth" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
@@ -780,6 +806,7 @@
 
 <script src="script.js"></script>
 <script src="owner-dashboard.js"></script>
+<script src="initial-setup.js"></script>
 
 <!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
 <section id="screen-owner-dashboard" class="screen od-screen">
@@ -841,6 +868,15 @@
     </div>
 
     <button class="od-refresh" onclick="_odLoad()">🔄 רענן נתונים</button>
+
+    <div class="od-section od-danger-zone">
+      <div class="od-section-title" style="color:#c0392b">⚠️ Danger Zone</div>
+      <p style="font-size:.82rem;color:#666;margin:.4rem 0 .9rem">
+        מוחק את כל נתוני הבדיקה של Booki.<br>
+        <strong>לא נוגע ב-Legacy ("מיתרים כיתה א'")</strong>.
+      </p>
+      <button id="btn-dev-reset" class="btn-dev-reset" onclick="devReset()">🗑️ Developer Reset</button>
+    </div>
   </div>
 </section>
 

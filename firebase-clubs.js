@@ -238,6 +238,26 @@ async function fbLoadClub(clubId) {
  * יוצר מסמך משתמש ב-Firestore עם role: 'teacher' בעת הרשמה.
  * { merge: true } — בטוח לקריאה חוזרת.
  */
+/** בודק אם קיים owner כלשהו ב-users — ללא hardcode של UID/email. */
+async function fbCheckOwnerExists() {
+  if (!_db()) return false;
+  try {
+    const snap = await _db().collection('users').where('role', '==', 'owner').limit(1).get();
+    return !snap.empty;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * יצירת מסמך מורה ב-Firestore עם role אוטומטי:
+ *   הרשמה ראשונה → role:'owner'  (אין צורך בהגדרה ידנית)
+ *   הרשמות נוספות → role:'teacher'
+ */
+/**
+ * יוצר מסמך Firestore למורה חדשה — תמיד role:'teacher'.
+ * Owner נוצר אך ורק דרך Initial Setup (שורה אחת ב-config/setup).
+ */
 async function fbCreateTeacherUser(uid, name, email) {
   if (!_db()) return;
   try {
@@ -255,24 +275,99 @@ async function fbCreateTeacherUser(uid, name, email) {
   }
 }
 
+/** בדיקה אם Initial Setup הושלם (config/setup קיים). */
+async function fbCheckSetupComplete() {
+  if (!_db()) return true; // fail-safe — אל תנעל את המערכת בשגיאת Firestore
+  try {
+    const doc = await _db().collection('config').doc('setup').get();
+    return doc.exists;
+  } catch {
+    return true;
+  }
+}
+
+/** יוצר sentinel config/setup — נועל את Initial Setup לצמיתות. */
+async function fbCreateSetupRecord(uid, orgName) {
+  if (!_db()) return false;
+  try {
+    await _db().collection('config').doc('setup').set({
+      completedAt: _now(),
+      ownerUid:    uid,
+      orgName:     orgName || '',
+    });
+    return true;
+  } catch (e) {
+    console.warn('[firebase-clubs] fbCreateSetupRecord:', e.message);
+    return false;
+  }
+}
+
 /**
- * מעדכן lastLoginAt בכל התחברות.
- * אם המסמך אינו קיים (מורה ישנה לפני תמיכת user-docs) — יוצר אותו עם role:'teacher'.
+ * Developer Reset — מוחק את כל נתוני Booki החדש.
+ * לא נוגע ב: classes/ (Legacy "מיתרים כיתה א'"), users/, config/setup.
+ * חשבונות Firebase Auth נשמרים (לא ניתן למחוק מ-Client SDK).
+ * אחרי Reset: Owner נשאר מחובר ויכול להתחיל מחדש.
  */
-async function fbUpdateTeacherLastLogin(uid) {
+async function fbDevReset() {
+  if (!_db()) return { ok: false, error: 'Firestore not ready' };
+  const counts = { clubs: 0, memberships: 0, invitations: 0, stats: 0 };
+  try {
+    // 1. Clubs + subcollection memberships
+    const clubsSnap = await _db().collection('clubs').get();
+    for (const doc of clubsSnap.docs) {
+      const membSnap = await _db().collection('clubs').doc(doc.id).collection('memberships').get();
+      await Promise.all(membSnap.docs.map(d => d.ref.delete()));
+      counts.memberships += membSnap.size;
+      await doc.ref.delete();
+      counts.clubs++;
+    }
+
+    // 2. Invitations
+    const invSnap = await _db().collection('invitations').get();
+    await Promise.all(invSnap.docs.map(d => d.ref.delete()));
+    counts.invitations = invSnap.size;
+
+    // 3. owner-stats — דורש allow delete: if isOwner() ב-Rules
+    const statsSnap = await _db().collection('owner-stats').get();
+    await Promise.all(statsSnap.docs.map(d => d.ref.delete()));
+    counts.stats = statsSnap.size;
+
+    return { ok: true, counts };
+  } catch (e) {
+    return { ok: false, error: e.message, counts };
+  }
+}
+
+/**
+ * עדכון lastLoginAt בכל התחברות.
+ * אם המסמך אינו קיים (מורה ישנה לפני תמיכת user-docs) — יוצר מסמך מלא עם role:'teacher'.
+ * לא משנה את role קיים — Owner בטוח.
+ * @returns {Promise<void>} — await לפני routing כדי שהמסמך יהיה קיים לבדיקת role.
+ */
+async function fbUpdateTeacherLastLogin(uid, name = '', email = '') {
   if (!_db()) return;
   const now = _now();
   try {
+    // update() מעדכן lastLoginAt בלבד, שומר על role קיים
     await _db().collection('users').doc(uid).update({ lastLoginAt: now, updatedAt: now });
   } catch {
+    // המסמך לא קיים (מורה ישנה) — יצירת מסמך מלא
     try {
-      await _db().collection('users').doc(uid).set(
-        { role: 'teacher', lastLoginAt: now, updatedAt: now },
-        { merge: true }
-      );
-    } catch {}
+      await _db().collection('users').doc(uid).set({
+        name,
+        email,
+        role:        'teacher',
+        status:      'active',
+        createdAt:   now,
+        updatedAt:   now,
+        lastLoginAt: now,
+      }, { merge: true });
+    } catch (e2) {
+      console.warn('[firebase-clubs] fbUpdateTeacherLastLogin create failed:', e2.message);
+    }
   }
 }
+
 
 /** טוען את כל המורות (role: teacher|owner) — לשימוש Owner Dashboard בלבד. */
 async function fbLoadAllTeachers() {
@@ -663,11 +758,16 @@ Object.assign(window, {
   fbSaveClub,
   fbDeleteClub,
   // Owner / Multi-club
+  fbCheckOwnerExists,
   fbCreateTeacherUser,
   fbUpdateTeacherLastLogin,
   fbLoadAllTeachers,
   fbLoadAllClubs,
   fbLoadMembershipsForUser,
+  // Initial Setup + Dev Reset
+  fbCheckSetupComplete,
+  fbCreateSetupRecord,
+  fbDevReset,
   // ClubMembership
   fbAddClubMembership,
   fbLoadClubMembership,
