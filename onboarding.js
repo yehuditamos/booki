@@ -240,6 +240,42 @@ async function _doJoin(clubId, name, invitationCode = null) {
     await fbSetMemberName(clubId, userId, name, '📚');
   }
 
+  // ─── אבחון: קרא חזרה את המסמך שנכתב ─────────────────────────────────
+  if (window.db) {
+    window.db.collection('clubs').doc(clubId)
+      .collection('memberships').doc(userId).get()
+      .then(snap => {
+        if (!snap.exists) {
+          console.error('[JOIN DIAG] ❌ מסמך לא נוצר!', { clubId, userId });
+        } else {
+          const d = snap.data();
+          console.log('[JOIN DIAG] ✅ מסמך קיים:', {
+            exists:   true,
+            userId:   d.userId,
+            clubId:   d.clubId,
+            name:     d.name,
+            emoji:    d.emoji,
+            status:   d.status,
+            joinedAt: d.joinedAt,
+          });
+        }
+        // קרא את כל חברי המועדון ובדוק כמה יש
+        return window.db.collection('clubs').doc(clubId).collection('memberships').get();
+      })
+      .then(snap => {
+        if (!snap) return;
+        console.log('[JOIN DIAG] סה"כ מסמכים ב-memberships:', snap.size);
+        snap.forEach(d => {
+          const m = d.data();
+          console.log('[JOIN DIAG]  חבר:', m.userId, '|', m.name, '| status:', m.status);
+        });
+      })
+      .catch(e => console.error('[JOIN DIAG] שגיאת קריאה:', e.message));
+  } else {
+    console.error('[JOIN DIAG] ❌ window.db הוא null — Firebase לא אותחל!');
+  }
+  // ─── סוף אבחון ───────────────────────────────────────────────────────
+
   const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
   if (typeof addDeviceClub === 'function') {
     addDeviceClub({ clubId, type: club?.type ?? 'friends', name: club?.name ?? clubId, emoji: club?.emoji ?? '📚' });
