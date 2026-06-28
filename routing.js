@@ -216,20 +216,23 @@ function _fmtNum(n) {
 
 function _buildClubCard(c) {
   const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(c.clubId);
-  const memberCount = isLegacy
+  const legacyCount = isLegacy
     ? (typeof STUDENT_NAMES !== 'undefined' ? STUDENT_NAMES.length : 0)
-    : (c.members || []).length;
+    : 0;
   const stats = c.stats;
 
   let metaHtml = '';
-  if (stats && (stats.totalMinutes > 0 || stats.totalStories > 0)) {
-    const parts = [`👥 ${memberCount} חברים`];
-    if (stats.totalMinutes > 0) parts.push(`📚 ${_fmtNum(stats.totalMinutes)} דקות`);
-    if (stats.totalStories > 0) parts.push(`📖 ${stats.totalStories} סיפורים`);
-    metaHtml = `<span class="csc-meta">${parts.join(' · ')}</span>`;
-  } else if (memberCount > 0) {
-    metaHtml = `<span class="csc-meta">👥 ${memberCount} חברים</span>`;
+  if (isLegacy) {
+    if (stats && (stats.totalMinutes > 0 || stats.totalStories > 0)) {
+      const parts = [`👥 ${legacyCount} חברים`];
+      if (stats.totalMinutes > 0) parts.push(`📚 ${_fmtNum(stats.totalMinutes)} דקות`);
+      if (stats.totalStories > 0) parts.push(`📖 ${stats.totalStories} סיפורים`);
+      metaHtml = `<span class="csc-meta">${parts.join(' · ')}</span>`;
+    } else if (legacyCount > 0) {
+      metaHtml = `<span class="csc-meta">👥 ${legacyCount} חברים</span>`;
+    }
   }
+  // מועדונים חדשים: מספר חברים נטען async ב-_enrichClubDashboard — לא מציגים כאן
 
   return `
     <button class="club-select-card" onclick="pickClub('${c.clubId}')">
@@ -367,46 +370,60 @@ function enterReadingFromDashboard() {
 // ─── Profile Picker ───────────────────────────────────────────────────────────
 
 /**
- * showWhoReads(clubId)
- * מציג חברי מועדון — Firebase הוא מקור האמת לרשימת החברים.
+ * showWhoReads(clubId?)
+ * מציג חברי מועדון — Firebase הוא מקור האמת.
+ * מציג מסך מיד עם ספינר, טוען מ-Firebase ברקע.
  */
 async function showWhoReads(clubId) {
   _activeClubId = clubId || _activeClubId || null;
-  const effectiveClubId = _activeClubId;
+  let effectiveClubId = _activeClubId;
+
+  // אם אין clubId מפורש — זהה מועדוני המכשיר
+  if (!effectiveClubId) {
+    const deviceClubs = getDeviceClubs();
+    const nonLegacy = deviceClubs.filter(c =>
+      !(typeof getBootstrapClubById === 'function' && getBootstrapClubById(c.clubId))
+    );
+    if (nonLegacy.length >= 1) {
+      effectiveClubId = nonLegacy[0].clubId;
+      _activeClubId   = effectiveClubId;
+    }
+  }
 
   const subEl = document.getElementById('who-reads-club-name');
   const h2El  = document.querySelector('.who-reads-title');
   const grid  = document.getElementById('who-reads-grid');
 
-  if (grid) grid.innerHTML = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
-
-  if (effectiveClubId) {
-    const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(effectiveClubId);
-    if (isLegacy) {
-      const club = getDeviceClubs().find(c => c.clubId === effectiveClubId);
-      if (h2El)  h2El.textContent  = (club?.emoji || '🌳') + ' ' + (club?.name || '');
-      if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
-      if (grid) _renderLegacyProfiles(grid);
-    } else {
-      const [club, memberships] = await Promise.all([
-        typeof fbLoadClub === 'function' ? fbLoadClub(effectiveClubId) : Promise.resolve(null),
-        typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
-      ]);
-      if (h2El)  h2El.textContent  = (club?.emoji || '📚') + ' ' + (club?.name || '');
-      if (subEl) subEl.textContent = '📖 מי קורא עכשיו?';
-      if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
-    }
-  } else {
-    // אין מועדון ידוע — הצג מועדוני מכשיר (legacy fallback)
-    if (h2El)  h2El.textContent  = '📖 מי קורא עכשיו?';
-    if (subEl) subEl.textContent = '';
-    _renderAllProfiles();
-  }
-
+  // הצג מסך מיד — תוכן יעודכן כשהנתונים יגיעו
+  if (h2El)  h2El.textContent  = '📖 מי קורא עכשיו?';
+  if (subEl) subEl.textContent = '';
+  if (grid)  grid.innerHTML    = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
   _updateClubCount();
   setNavVisible(true);
   setNavTab('reader');
   showScreen('screen-who-reads');
+
+  if (!effectiveClubId) {
+    _renderAllProfiles();
+    return;
+  }
+
+  const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(effectiveClubId);
+
+  if (isLegacy) {
+    const club = getDeviceClubs().find(c => c.clubId === effectiveClubId);
+    if (h2El) h2El.textContent = (club?.emoji || '🌳') + ' ' + (club?.name || '');
+    if (grid) _renderLegacyProfiles(grid);
+    return;
+  }
+
+  // מועדון חדש — Firebase
+  const [club, memberships] = await Promise.all([
+    typeof fbLoadClub === 'function' ? fbLoadClub(effectiveClubId) : Promise.resolve(null),
+    typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
+  ]);
+  if (h2El) h2El.textContent = (club?.emoji || '📚') + ' ' + (club?.name || '');
+  if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
 }
 
 /** Firebase members — מועדונים חדשים */
@@ -476,41 +493,32 @@ async function selectProfile(userId, clubIdHint) {
   const profile = typeof fbLoadUserProfile === 'function'
     ? await fbLoadUserProfile(userId) : null;
 
-  const targetClubId = clubIdHint || (() => {
-    const userClubs = getClubsForUser(userId);
-    return userClubs.length === 1 ? userClubs[0].clubId : null;
-  })();
+  const targetClubId = clubIdHint || null;
 
-  // קורא ללא פרופיל Firebase — השתמש בנתוני המכשיר ישירות
-  if (!profile || !profile.onboardingComplete) {
-    const member = targetClubId
-      ? getDeviceClubs().find(c => c.clubId === targetClubId)?.members?.find(m => m.userId === userId)
-      : null;
-    if (member && targetClubId) {
-      _activeClubId        = targetClubId;
-      window.currentClubId = targetClubId;
-      _enterPersonalHome(userId, { name: member.name, emoji: member.emoji || '📚' });
-      return;
-    }
-    // אין נתוני מכשיר — שלח לאונבורדינג
-    if (typeof startOnboarding === 'function') {
-      startOnboarding(userId, member?.name || profile?.name || userId, targetClubId);
-    }
-    return;
-  }
-
-  // יש פרופיל Firebase — כנס ישירות
-  if (targetClubId) {
+  // יש פרופיל Firebase תקין — כנס ישירות
+  if (profile?.onboardingComplete && targetClubId) {
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
     _enterPersonalHome(userId, profile);
     return;
   }
 
-  // מועדונים מרובים — הצג בחירת מועדון
-  const userClubs = getClubsForUser(userId);
-  if (!userClubs.length) return;
-  _showClubSelectForUser(userId, profile, userClubs);
+  // פרופיל חסר / לא שלם — שחזר מ-Firebase membership
+  if (targetClubId) {
+    const membership = typeof fbLoadClubMembership === 'function'
+      ? await fbLoadClubMembership(targetClubId, userId) : null;
+    if (membership) {
+      _activeClubId        = targetClubId;
+      window.currentClubId = targetClubId;
+      _enterPersonalHome(userId, { name: membership.name || userId, emoji: membership.emoji || '📚' });
+      return;
+    }
+  }
+
+  // אין נתונים כלל — שלח לאונבורדינג
+  if (typeof startOnboarding === 'function') {
+    startOnboarding(userId, profile?.name || userId, targetClubId);
+  }
 }
 
 function _enterPersonalHome(userId, profile) {

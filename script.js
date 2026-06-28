@@ -505,7 +505,7 @@ function showClassView() {
       _renderClassContent(fbStudents);
     });
   } else {
-    // מועדון חדש — נתוני חברים מהמכשיר
+    // מועדון חדש — נתוני חברים מ-Firebase
     _renderNewClubView(clubId);
   }
 }
