@@ -418,10 +418,17 @@ async function showWhoReads(clubId) {
   }
 
   // מועדון חדש — Firebase
+  // ── TRACE 3: clubId right before fbLoadClub ──
+  console.log('[TRACE 3] before fbLoadClub | effectiveClubId:', effectiveClubId);
+
   const [club, memberships] = await Promise.all([
     typeof fbLoadClub === 'function' ? fbLoadClub(effectiveClubId) : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
   ]);
+
+  // ── TRACE 5: club.name before display ──
+  console.log('[TRACE 5] fbLoadClub returned | club:', club, '| memberships count:', memberships.length);
+
   if (h2El) h2El.textContent = (club?.emoji || '📚') + ' ' + (club?.name || '');
   if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
 }
@@ -490,6 +497,9 @@ function selectLegacyProfile(index) {
 }
 
 async function selectProfile(userId, clubIdHint) {
+  // ── TRACE 2: clubId on selectProfile entry ──
+  console.log('[TRACE 2] selectProfile | userId:', userId, '| clubIdHint:', clubIdHint);
+
   const profile = typeof fbLoadUserProfile === 'function'
     ? await fbLoadUserProfile(userId) : null;
 

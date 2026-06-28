@@ -284,6 +284,9 @@ async function _doJoin(clubId, name, invitationCode = null) {
   if (typeof track === 'function') track('join_club_completed', { clubId });
   _ob = { userId, name, clubId, grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
 
+  // ── TRACE 1: clubId immediately after _doJoin ──
+  console.log('[TRACE 1] _doJoin done | clubId:', clubId, '| userId:', userId, '| name:', name);
+
   if (typeof window.enterPersonalHomeAfterJoin === 'function') {
     window.enterPersonalHomeAfterJoin(userId, name, clubId);
   } else {

@@ -224,9 +224,17 @@ async function fbCreateClub(club) {
 }
 
 async function fbLoadClub(clubId) {
-  if (!_db()) return null;
+  // ── TRACE 4: inside fbLoadClub ──
+  const path = 'clubs/' + clubId;
+  console.log('[TRACE 4] fbLoadClub | clubId:', clubId, '| Firestore path:', path);
+
+  if (!_db()) {
+    console.error('[TRACE 4] ❌ _db() is null — Firebase not initialized');
+    return null;
+  }
   try {
     const snap = await _db().collection('clubs').doc(clubId).get();
+    console.log('[TRACE 4] snap.exists:', snap.exists, '| path:', snap.ref.path);
     return snap.exists ? { id: snap.id, ...snap.data() } : null;
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadClub error:', e);
