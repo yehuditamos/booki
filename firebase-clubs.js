@@ -312,9 +312,11 @@ async function fbDevReset() {
   if (!_db()) return { ok: false, error: 'Firestore not ready' };
   const counts = { clubs: 0, memberships: 0, invitations: 0, stats: 0 };
   try {
-    // 1. Clubs + subcollection memberships
+    // 1. Clubs + subcollection memberships — מדלג על מועדוני Bootstrap/Legacy
     const clubsSnap = await _db().collection('clubs').get();
     for (const doc of clubsSnap.docs) {
+      const isBootstrap = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(doc.id);
+      if (isBootstrap) continue;
       const membSnap = await _db().collection('clubs').doc(doc.id).collection('memberships').get();
       await Promise.all(membSnap.docs.map(d => d.ref.delete()));
       counts.memberships += membSnap.size;

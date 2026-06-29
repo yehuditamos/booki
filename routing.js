@@ -660,9 +660,13 @@ window.resetBookiDevice = function() {
   showScreen('screen-splash');
 };
 
-/** clearDeviceLocalCache() — מנקה כל ה-cache המקומי ללא ניווט */
+/** clearDeviceLocalCache() — מנקה מועדוני בדיקה, שומר Bootstrap/Legacy */
 function clearDeviceLocalCache() {
-  localStorage.removeItem(_DEVICE_KEY);
+  const data = getDeviceData();
+  data.clubs = (data.clubs || []).filter(c =>
+    typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(c.clubId)
+  );
+  _saveDeviceData(data);
   localStorage.removeItem(_ACTIVE_READER_KEY);
   localStorage.removeItem('booki_tmp_uid');
   localStorage.removeItem('booki_migrated_fb_v2');
