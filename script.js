@@ -301,6 +301,7 @@ async function finishAppReading() {
   // מקור האמת — awaited כדי שכרטיס הקורא יראה נתונים עדכניים מיד
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbUpdateMembershipStats === 'function') {
+    if (typeof ensureStudentAuth === 'function') await ensureStudentAuth();
     await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points });
   }
   if (typeof analyticsReadingSession === 'function') {
@@ -382,6 +383,7 @@ async function submitBookReading() {
   // מקור האמת — awaited
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbUpdateMembershipStats === 'function') {
+    if (typeof ensureStudentAuth === 'function') await ensureStudentAuth();
     await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, books: 1 });
   }
   if (typeof analyticsReadingSession === 'function') {

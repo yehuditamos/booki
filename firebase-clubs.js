@@ -590,11 +590,17 @@ async function fbLoadClubMemberships(clubId) {
 }
 
 async function fbUpdateMembershipStats(clubId, userId, delta) {
-  if (!_db()) return;
+  if (!_db() || !clubId || !userId) return;
   const inc = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
     ? firebase.firestore.FieldValue.increment(n) : n;
   try {
+    // userId + clubId + status נדרשים גם לכלל CREATE (אם doc לא קיים) וגם לכלל UPDATE.
+    // { merge: true } שומר ערכים קיימים — שדות אלו רק ימלאו אם חסרים.
     await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
+      userId,
+      clubId,
+      status: 'active',
+      role:   'member',
       cachedStats: {
         totalMinutes:  inc(delta.minutes || 0),
         totalSessions: inc(1),
@@ -604,8 +610,9 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
       },
       updatedAt: _now(),
     }, { merge: true });
+    console.log('[firebase-clubs] fbUpdateMembershipStats ✓', clubId, userId, delta);
   } catch (e) {
-    console.warn('[firebase-clubs] fbUpdateMembershipStats error:', e);
+    console.error('[firebase-clubs] fbUpdateMembershipStats FAILED:', e.code, e.message, { clubId, userId });
   }
 }
 

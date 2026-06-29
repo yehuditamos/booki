@@ -55,7 +55,8 @@ service cloud.firestore {
         allow read:   if true;
         allow create: if isMe(userId)
                       && request.resource.data.userId == userId
-                      && validMemberStatus(request.resource.data.status);
+                      && (!request.resource.data.keys().hasAny(['status'])
+                          || validMemberStatus(request.resource.data.status));
         allow update: if isMe(userId)
                       && request.resource.data.userId == resource.data.userId
                       && request.resource.data.clubId == resource.data.clubId;
