@@ -271,10 +271,15 @@ async function finishAppReading() {
     return;
   }
 
-  const minutes = Math.max(1, Math.round(
-    currentStory.pages.reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0)
-  ));
-  const points = minutes * 1;
+  const _rawMins = currentStory.pages.reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0);
+  const minutes  = Math.max(1, Math.round(_rawMins));
+  const points   = minutes * 1;
+  console.group('[TRACE] finishAppReading');
+  console.log('minutesRead     =', minutes, '(raw sum:', _rawMins, ')');
+  console.log('currentStudentId=', currentStudentId, '| isInteger?', Number.isInteger(currentStudentId));
+  console.log('currentClubId   =', window.currentClubId);
+  console.log('condition pass? =', !!(window.currentClubId && !Number.isInteger(currentStudentId)));
+  console.groupEnd();
 
   const s = currentStudentData || loadStudentLocal(currentStudentId);
   if (!Array.isArray(s.history)) s.history = [];
@@ -357,6 +362,12 @@ async function submitBookReading() {
 
   const minutes = bookData.minutes || 5;
   const points  = minutes * 1;
+  console.group('[TRACE] submitBookReading');
+  console.log('minutesRead     =', minutes, '(bookData.minutes raw:', bookData.minutes, ')');
+  console.log('currentStudentId=', currentStudentId, '| isInteger?', Number.isInteger(currentStudentId));
+  console.log('currentClubId   =', window.currentClubId);
+  console.log('condition pass? =', !!(window.currentClubId && !Number.isInteger(currentStudentId)));
+  console.groupEnd();
 
   const s = currentStudentData || loadStudentLocal(currentStudentId);
   s.totalMinutes += minutes;
@@ -456,6 +467,16 @@ async function showReaderCard() {
   const sorted  = (sessions || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const appMins = sorted.filter(r => r.type === 'app').reduce((t, r) => t + (r.minutes || 0), 0);
   const bkMins  = sorted.filter(r => r.type !== 'app').reduce((t, r) => t + (r.minutes || 0), 0);
+
+  // ─── TRACE: Firestore read ───────────────────────────────────────
+  console.group('[TRACE] showReaderCard — Firestore read');
+  console.log('clubId          =', clubId, '| userId =', userId);
+  console.log('membership doc  =', membership ? 'exists' : 'null');
+  console.log('Firestore read  =', JSON.stringify(cs));
+  console.log('sessions count  =', (sessions || []).length, '| appMins =', appMins, '| bkMins =', bkMins);
+  console.log('totalMinutes →  =', cs.totalMinutes || (appMins + bkMins), '(cs.totalMinutes=', cs.totalMinutes, ')');
+  console.groupEnd();
+  // ─────────────────────────────────────────────────────────────────
 
   const enriched = {
     ...s,

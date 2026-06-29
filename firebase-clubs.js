@@ -593,10 +593,23 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   if (!_db() || !clubId || !userId) return;
   const inc = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
     ? firebase.firestore.FieldValue.increment(n) : n;
+  const ref = _db().collection('clubs').doc(clubId).collection('memberships').doc(userId);
+
+  // ─── TRACE: stats before ─────────────────────────────────────────
+  console.group('[TRACE] fbUpdateMembershipStats');
+  console.log('delta (writing) =', JSON.stringify(delta));
+  console.log('FieldValue.incr =', typeof firebase !== 'undefined' && !!firebase.firestore?.FieldValue);
+  console.log('auth.uid        =', typeof firebase !== 'undefined' ? firebase.auth?.()?.currentUser?.uid : 'N/A');
   try {
-    // userId + clubId + status נדרשים גם לכלל CREATE (אם doc לא קיים) וגם לכלל UPDATE.
-    // { merge: true } שומר ערכים קיימים — שדות אלו רק ימלאו אם חסרים.
-    await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
+    const before = await ref.get();
+    console.log('stats BEFORE    =', JSON.stringify(before.exists ? before.data()?.cachedStats : 'doc does not exist'));
+  } catch (readErr) {
+    console.warn('stats BEFORE read failed:', readErr.message);
+  }
+  // ─────────────────────────────────────────────────────────────────
+
+  try {
+    await ref.set({
       userId,
       clubId,
       status: 'active',
@@ -610,10 +623,16 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
       },
       updatedAt: _now(),
     }, { merge: true });
-    console.log('[firebase-clubs] fbUpdateMembershipStats ✓', clubId, userId, delta);
+
+    // ─── TRACE: stats after ──────────────────────────────────────
+    const after = await ref.get();
+    console.log('Firestore write = SUCCESS');
+    console.log('stats AFTER     =', JSON.stringify(after.exists ? after.data()?.cachedStats : 'missing?!'));
+    // ─────────────────────────────────────────────────────────────
   } catch (e) {
-    console.error('[firebase-clubs] fbUpdateMembershipStats FAILED:', e.code, e.message, { clubId, userId });
+    console.error('Firestore write = FAILED:', e.code, e.message);
   }
+  console.groupEnd();
 }
 
 async function fbSetMemberName(clubId, userId, name, emoji) {
