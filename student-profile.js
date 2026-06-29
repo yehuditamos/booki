@@ -108,7 +108,7 @@ const WIZARD_STEPS = [
   { id: 'name',       color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                            next: '🚀 בוא נתחיל!'  },
   { id: 'avatar',     color: '#9B59B6', icon: '🎨', title: 'הדמות שלי',     sub: '🎨 איזו דמות אני רוצה שתופיע ליד השם שלי?', next: 'בחרתי! ✨'    },
   { id: 'niqqudPref', color: '#27AE60', icon: '📖', title: 'איך אני קורא',   sub: 'איך אתה/את קורא/ת בדרך כלל?',        next: 'ממשיכים! 📖'  },
-  { id: 'loveSlider', color: '#E74C3C', icon: '❤️', title: 'אהבת קריאה',    sub: 'כמה אתה/את אוהב/ת לקרוא?',           next: 'ממשיכים! ❤️'  },
+  { id: 'loveSlider', color: '#E74C3C', icon: '❤️', title: 'אוהב/ת ספרים?', sub: 'כמה אתה/את אוהב/ת לקרוא?',           next: 'ממשיכים! ❤️'  },
   { id: 'goal',       color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                       next: 'סיימתי! 🎉'   },
 ];
 

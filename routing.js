@@ -882,6 +882,7 @@ function _renderTeacherClassContent(club, memberships, clubId) {
             : `לפני ${Math.floor(days / 30)} חודשים`;
         }
         const podium = ['tcd-gold','tcd-silver','tcd-bronze'][i] || '';
+        const safeName = name.replace(/'/g, "\\'");
         return `
           <div class="tcd-member-row ${podium}">
             <span class="tcd-m-pos">${posIcons[i] || (i + 1)}</span>
@@ -894,6 +895,7 @@ function _renderTeacherClassContent(club, memberships, clubId) {
               <strong class="tcd-m-mins">${mins}</strong>
               <span class="tcd-m-lbl">דק'</span>
             </div>
+            <button class="tcd-m-delete" onclick="removeClubMember('${clubId}','${m.userId}','${safeName}')" title="הסר מהמועדון">🗑️</button>
           </div>`;
       }).join('')
     : '<p class="class-empty">אין חברים פעילים במועדון 📚</p>';
@@ -937,6 +939,14 @@ function _renderTeacherClassContent(club, memberships, clubId) {
     </div>`;
 }
 
+async function removeClubMember(clubId, userId, name) {
+  if (!confirm(`להסיר את ${name} מהמועדון?\nהפעולה אינה הפיכה.`)) return;
+  if (typeof fbRemoveClubMember !== 'function') return;
+  const ok = await fbRemoveClubMember(clubId, userId);
+  if (!ok) { alert('שגיאה בהסרה — נסה/י שוב'); return; }
+  showTeacherClassScreen();
+}
+
 async function editClubGoal(clubId, currentTarget) {
   const raw = prompt(`יעד קריאה חדש (דקות):\nנוכחי: ${currentTarget}`, currentTarget);
   if (!raw || isNaN(Number(raw)) || Number(raw) <= 0) return;
@@ -973,7 +983,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
-  enterReadingSession, showTeacherClassScreen, editClubGoal,
+  enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,
 });

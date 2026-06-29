@@ -1296,6 +1296,8 @@ label { font-weight: 700; font-size: 1rem; }
 .tcd-m-stat   { text-align: center; flex-shrink: 0; }
 .tcd-m-mins   { font-size: 1.15rem; font-weight: 900; color: var(--green); display: block; line-height: 1; }
 .tcd-m-lbl    { font-size: .68rem; color: var(--muted); display: block; }
+.tcd-m-delete { background: none; border: none; font-size: 1rem; cursor: pointer; opacity: .35; padding: 4px; border-radius: 6px; flex-shrink: 0; transition: opacity .15s; }
+.tcd-m-delete:hover { opacity: 1; }
 
 
 body.nav-visible .booki-nav { display: flex; }

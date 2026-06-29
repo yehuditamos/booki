@@ -214,10 +214,21 @@ async function _doJoin(clubId, name, invitationCode = null) {
   const userId = (typeof ensureStudentAuth === 'function')
     ? await ensureStudentAuth()
     : (localStorage.getItem('booki_tmp_uid') || ('user_' + Math.random().toString(36).slice(2, 11)));
+  const errEl = document.getElementById('join-name-error') || document.getElementById('join-error-msg');
   if (!userId) {
-    console.error('[_doJoin] לא הצלחנו לקבל userId — ביטול');
+    console.error('[_doJoin] ensureStudentAuth returned null — Anonymous Auth may be disabled');
+    if (errEl) errEl.textContent = 'שגיאה בהתחברות — אנא בדוק/י חיבור לאינטרנט';
     return;
   }
+
+  // Verify Firebase Auth state matches the returned userId
+  const authUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+  if (!authUser || authUser.uid !== userId) {
+    console.error('[_doJoin] Auth mismatch:', { authUid: authUser?.uid, userId });
+    if (errEl) errEl.textContent = 'שגיאה באימות — אנא רענן/י את הדף ונסה/י שוב';
+    return;
+  }
+
   localStorage.setItem('booki_tmp_uid', userId);
 
   // שלב 2: תביעת / יצירת חברות — חובה לפני מעבר
@@ -226,8 +237,10 @@ async function _doJoin(clubId, name, invitationCode = null) {
       ? await fbClaimInvitation(invitationCode, userId)
       : { success: false };
     if (!result.success) {
-      const errEl = document.getElementById('join-name-error') || document.getElementById('join-error-msg');
-      if (errEl) errEl.textContent = 'שגיאה בהתחברות — נסה שוב';
+      const reason = result.reason;
+      if (errEl) errEl.textContent = reason === 'membership-error'
+        ? 'שגיאת הרשאות — ייתכן שהאימות האנונימי אינו מופעל ב-Firebase'
+        : 'שגיאה בהתחברות — נסה/י שוב';
       return;
     }
   } else {

@@ -550,6 +550,23 @@ async function fbAddClubMembership(clubId, member) {
   }
 }
 
+/** מסיר תלמיד ממועדון (מחיקה פיזית — requires isTeacher). */
+async function fbRemoveClubMember(clubId, userId) {
+  if (!_db() || !clubId || !userId) return false;
+  try {
+    await _db().collection('clubs').doc(clubId)
+      .collection('memberships').doc(userId).delete();
+    const _dec = (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
+      ? firebase.firestore.FieldValue.increment(-1) : -1;
+    _db().collection('clubs').doc(clubId)
+      .update({ memberCount: _dec }).catch(() => {});
+    return true;
+  } catch (e) {
+    console.warn('[firebase-clubs] fbRemoveClubMember error:', e);
+    return false;
+  }
+}
+
 async function fbLoadClubMembership(clubId, userId) {
   if (!_db()) return null;
   try {
@@ -689,6 +706,15 @@ async function fbClaimInvitation(code, userId) {
       invitationId: code,
     });
 
+    // Verify membership actually exists — fbAddClubMembership silently returns false on permission errors
+    const memberSnap = await _db()
+      .collection('clubs').doc(inv.clubId)
+      .collection('memberships').doc(userId).get();
+    if (!memberSnap.exists) {
+      console.warn('[firebase-clubs] fbClaimInvitation: membership not created — Anonymous Auth may be disabled');
+      return { success: false, reason: 'membership-error' };
+    }
+
     return { success: true, clubId: inv.clubId };
   } catch (e) {
     console.warn('[firebase-clubs] fbClaimInvitation error:', e);
@@ -801,6 +827,7 @@ Object.assign(window, {
   fbGetClubAvatars,
   fbUpdateMemberAvatar,
   fbAddClubMembership,
+  fbRemoveClubMember,
   fbLoadClubMembership,
   fbLoadClubMemberships,
   fbUpdateMembershipStats,
