@@ -1,16 +1,11 @@
 /**
- * student-profile.js — Student Personalization Wizard + "For You" Recommendations
+ * student-profile.js — Student Personalization Wizard v3
  *
- * זרימה:
- *   _enterPersonalHome → profile.onboardingComplete && !personalizationComplete
- *   → showProfileWizard() → step 1 (avatar) → step 2 (questions)
- *   → _wizardSubmit() → save → completion screen → button → _enterPersonalHome
- *
- * המלצות:
- *   showLibrary() → renderForYouSection() → buildRecommendations()
+ * זרימה: showProfileWizard → 8 מסכים (שאלה אחת כל אחד) → מסך כרטיס קורא → ספרייה
+ * המלצות: showLibrary → renderForYouSection → buildRecommendations
  */
 
-// ─── Avatar Catalog (14 categories, auto-deduped) ──────────────────────────
+// ─── Avatar Catalog ───────────────────────────────────────────────────────────
 
 const _RAW_AVATAR_CATALOG = [
   { category: '🐾 חיות', emojis: [
@@ -70,17 +65,15 @@ const _RAW_AVATAR_CATALOG = [
   ]},
 ];
 
-// Deduplicate: first category wins for any emoji that appears more than once
 const _seen = new Set();
 const AVATAR_CATALOG = _RAW_AVATAR_CATALOG.map(cat => ({
   ...cat,
   emojis: cat.emojis.filter(e => _seen.has(e) ? false : (_seen.add(e), true)),
 }));
-
 const PROFILE_AVATARS = AVATAR_CATALOG.flatMap(c => c.emojis);
 const _AVATAR_INDEX   = new Map(PROFILE_AVATARS.map((e, i) => [e, i]));
 
-// ─── Topics → Story Tags ──────────────────────────────────────────────────────
+// ─── Topic & Character Type Maps ──────────────────────────────────────────────
 
 const TOPIC_TAG_MAP = {
   funny:      ['מצחיק', 'הומור', 'צחוק'],
@@ -96,8 +89,6 @@ const TOPIC_TAG_MAP = {
   comics:     ['קומיקס', 'הומור', 'מצחיק'],
 };
 
-// ─── Character Type → Story Tags ─────────────────────────────────────────────
-
 const CHARACTER_TAG_MAP = {
   animals:     ['חיות', 'טבע'],
   robots:      ['טכנולוגיה', 'מדע', 'עתיד'],
@@ -111,6 +102,19 @@ const CHARACTER_TAG_MAP = {
   monsters:    ['מפלצות', 'מצחיק', 'הומור'],
 };
 
+// ─── Step Definitions ─────────────────────────────────────────────────────────
+
+const WIZARD_STEPS = [
+  { id: 'name',                  color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                                next: 'זה אני! 😊',   auto: false },
+  { id: 'avatar',                color: '#9B59B6', icon: '🌟', title: 'הדמות שלי',     sub: 'בחר/י דמות שתייצג אותך',                next: 'בחרתי! ✨',     auto: false },
+  { id: 'grade',                 color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                    next: 'ממשיכים! 📚',  auto: true  },
+  { id: 'readingLevel',          color: '#27AE60', icon: '💪', title: 'הרגשה שלי',     sub: 'איך אתה מרגיש עם קריאה?',               next: 'ממשיכים! 💪',  auto: true  },
+  { id: 'favoriteTopics',        color: '#E74C3C', icon: '❤️', title: 'מה אני אוהב',  sub: 'מה אתה הכי אוהב לקרוא?',                next: 'ממשיכים! ❤️',  auto: false },
+  { id: 'favoriteCharacterType', color: '#E67E22', icon: '🦸', title: 'דמות אהובה',    sub: 'איזה סוג דמות אתה הכי אוהב?',            next: 'ממשיכים! 🦸',  auto: true  },
+  { id: 'preferredReadingTime',  color: '#1ABC9C', icon: '⏱️', title: 'זמן קריאה',     sub: 'כמה זמן אתה אוהב לקרוא?',               next: 'ממשיכים! ⏱️', auto: true  },
+  { id: 'goal',                  color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                         next: 'סיימתי! 🎉',   auto: false },
+];
+
 // ─── Wizard State ─────────────────────────────────────────────────────────────
 
 let _wizardUserId       = null;
@@ -119,16 +123,21 @@ let _wizardExisting     = {};
 let _wizardAnswers      = {};
 let _wizardTakenAvatars = new Set();
 let _wizardFinalProfile = null;
+let _wizardStepIndex    = 0;
 
-// ─── Entry Point ─────────────────────────────────────────────────────────────
+// ─── Entry Point ──────────────────────────────────────────────────────────────
 
 async function showProfileWizard(userId, clubId, existingProfile) {
   _wizardUserId       = userId;
   _wizardClubId       = clubId;
   _wizardExisting     = existingProfile || {};
-  _wizardAnswers      = { favoriteTopics: [] };
+  _wizardAnswers      = {
+    name:           existingProfile?.name || '',
+    favoriteTopics: [],
+  };
   _wizardTakenAvatars = new Set();
   _wizardFinalProfile = null;
+  _wizardStepIndex    = 0;
 
   if (typeof setNavVisible === 'function') setNavVisible(false);
   if (typeof showScreen   === 'function') showScreen('screen-profile-wizard');
@@ -138,256 +147,333 @@ async function showProfileWizard(userId, clubId, existingProfile) {
     _wizardTakenAvatars = new Set(taken);
   }
 
-  _renderStep1();
+  _renderWizardStep(false);
 }
 
-// ─── Step 1: Avatar ───────────────────────────────────────────────────────────
+// ─── Progress ─────────────────────────────────────────────────────────────────
 
-function _renderStep1() {
+function _updateProgress() {
+  const total   = WIZARD_STEPS.length;
+  const current = _wizardStepIndex + 1;
+  const pct     = Math.round((current / total) * 100);
+  const fill    = document.getElementById('wizard-progress-fill');
+  const label   = document.getElementById('wizard-progress-label');
+  if (fill)  fill.style.width  = pct + '%';
+  if (label) label.textContent = `${current} מתוך ${total}`;
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+
+function _wizardNext() {
+  const step  = WIZARD_STEPS[_wizardStepIndex];
+  const errEl = document.getElementById('wiz-error');
+  if (errEl) errEl.textContent = '';
+
+  if (!_isStepValid(step.id)) {
+    if (errEl) errEl.textContent = _stepErrMsg(step.id);
+    return;
+  }
+
+  if (_wizardStepIndex < WIZARD_STEPS.length - 1) {
+    _wizardStepIndex++;
+    _renderWizardStep(false);
+  } else {
+    _wizardSubmit();
+  }
+}
+
+function _wizardBack() {
+  if (_wizardStepIndex > 0) {
+    _wizardStepIndex--;
+    _renderWizardStep(true);
+  }
+}
+
+function _isStepValid(id) {
+  switch (id) {
+    case 'name':                  return (_wizardAnswers.name || '').trim().length > 0;
+    case 'avatar':                return !!_wizardAnswers.avatar;
+    case 'grade':                 return !!_wizardAnswers.grade;
+    case 'readingLevel':          return !!_wizardAnswers.readingLevel;
+    case 'favoriteTopics':        return (_wizardAnswers.favoriteTopics?.length > 0);
+    case 'favoriteCharacterType': return !!_wizardAnswers.favoriteCharacterType;
+    case 'preferredReadingTime':  return !!_wizardAnswers.preferredReadingTime;
+    case 'goal':                  return !!_wizardAnswers.goal;
+    default: return true;
+  }
+}
+
+function _stepErrMsg(id) {
+  return ({
+    name:                  'כתוב/י את שמך כדי להמשיך',
+    avatar:                'בחר/י דמות כדי להמשיך',
+    grade:                 'בחר/י את הכיתה שלך',
+    readingLevel:          'ספר/י לנו איך אתה מרגיש',
+    favoriteTopics:        'בחר/י לפחות תחום אחד',
+    favoriteCharacterType: 'בחר/י סוג דמות',
+    preferredReadingTime:  'בחר/י זמן קריאה',
+    goal:                  'בחר/י מטרה',
+  })[id] || '';
+}
+
+// ─── Step Renderer ────────────────────────────────────────────────────────────
+
+function _renderWizardStep(goingBack) {
+  _updateProgress();
   const container = document.getElementById('wizard-content');
   if (!container) return;
 
-  const titleEl    = document.getElementById('wizard-screen-title');
-  const subtitleEl = document.getElementById('wizard-screen-subtitle');
-  if (titleEl)    titleEl.textContent    = '👋 קצת עלייך';
-  if (subtitleEl) subtitleEl.textContent = 'בחר/י דמות שתייצג אותך במועדון';
+  const step    = WIZARD_STEPS[_wizardStepIndex];
+  const hasBack = _wizardStepIndex > 0;
+  const isLast  = _wizardStepIndex === WIZARD_STEPS.length - 1;
+  const valid   = _isStepValid(step.id);
+  const showBtn = !step.auto || valid;
+
+  // Slide animation
+  container.classList.remove('wiz-anim-next', 'wiz-anim-back');
+  void container.offsetWidth;
+  container.classList.add(goingBack ? 'wiz-anim-back' : 'wiz-anim-next');
 
   container.innerHTML = `
-    <div class="wizard-step">
-      <div class="avatar-sections" id="avatar-grid"></div>
-      <p id="avatar-taken-msg" class="avatar-taken-msg" style="display:none">
-        הדמות הזו כבר תפוסה במועדון — בחר/י אחרת
-      </p>
-      <div class="wizard-actions">
-        <button id="btn-wizard-next" class="btn-giant btn-green wizard-btn"
-                onclick="_wizardStep1Next()" disabled>
-          המשך ←
-        </button>
+    <div class="wiz-step">
+      <div class="wiz-top-row">
+        ${hasBack ? `<button class="wiz-back-btn" onclick="_wizardBack()">← חזרה</button>` : '<div></div>'}
+      </div>
+      <div class="wiz-hero">
+        <div class="wiz-step-icon" style="color:${step.color}">${step.icon}</div>
+        <h2 class="wiz-step-title">${step.title}</h2>
+        <p class="wiz-step-sub">${step.sub}</p>
+      </div>
+      <div class="wiz-body">
+        ${_buildStepBody(step.id)}
+      </div>
+      <div class="wiz-footer">
+        <p id="wiz-error" class="wiz-error"></p>
+        ${showBtn ? `<button id="wiz-next-btn" class="wiz-next-btn"
+                             style="--wiz-btn-color:${step.color}"
+                             onclick="_wizardNext()"
+                             ${valid ? '' : 'disabled'}>
+                      ${step.next}
+                    </button>` : ''}
       </div>
     </div>`;
 
-  _renderAvatarGrid();
+  // Post-render hooks
+  if (step.id === 'name') {
+    const input = document.getElementById('wiz-name-input');
+    if (input) {
+      input.addEventListener('input', e => {
+        _wizardAnswers.name = e.target.value;
+        const btn = document.getElementById('wiz-next-btn');
+        if (btn) btn.disabled = e.target.value.trim().length === 0;
+      });
+      setTimeout(() => input.focus(), 80);
+    }
+  }
+  if (step.id === 'avatar') _refreshAvatarBtn();
 }
 
-function _renderAvatarGrid() {
-  const container = document.getElementById('avatar-grid');
-  if (!container) return;
+// ─── Step Body Builders ───────────────────────────────────────────────────────
 
-  container.innerHTML = AVATAR_CATALOG.map(cat => {
-    const buttons = cat.emojis.map(emoji => {
+function _buildStepBody(id) {
+  switch (id) {
+    case 'name':                  return _bodyName();
+    case 'avatar':                return _bodyAvatar();
+    case 'grade':                 return _bodyGrade();
+    case 'readingLevel':          return _bodyReadingLevel();
+    case 'favoriteTopics':        return _bodyTopics();
+    case 'favoriteCharacterType': return _bodyCharType();
+    case 'preferredReadingTime':  return _bodyReadingTime();
+    case 'goal':                  return _bodyGoal();
+    default: return '';
+  }
+}
+
+function _bodyName() {
+  const val = _wizardAnswers.name || '';
+  return `<input id="wiz-name-input" class="wiz-name-input" type="text"
+                  placeholder="שם פרטי" value="${val}" maxlength="30"
+                  autocomplete="off" autocorrect="off" spellcheck="false" />`;
+}
+
+function _bodyAvatar() {
+  const sections = AVATAR_CATALOG.map(cat => {
+    const btns = cat.emojis.map(emoji => {
       const idx   = _AVATAR_INDEX.get(emoji);
       const taken = _wizardTakenAvatars.has(emoji);
+      const sel   = _wizardAnswers.avatar === emoji;
       if (idx === undefined) return '';
-      return `<button class="avatar-opt${taken ? ' avatar-taken' : ''}"
-                      data-idx="${idx}"
-                      onclick="_selectAvatar(${idx})"
+      return `<button class="avatar-opt${taken ? ' avatar-taken' : ''}${sel ? ' selected' : ''}"
+                      data-idx="${idx}" onclick="_selectAvatar(${idx})"
                       ${taken ? 'disabled title="תפוס"' : ''}>${emoji}</button>`;
     }).join('');
-
     return `<div class="avatar-section">
       <div class="avatar-cat-label">${cat.category}</div>
-      <div class="avatar-grid">${buttons}</div>
+      <div class="avatar-grid">${btns}</div>
     </div>`;
   }).join('');
+  return `<div class="avatar-sections">${sections}</div>`;
+}
+
+function _bodyGrade() {
+  return `<div class="wiz-grade-row">
+    ${['א','ב','ג'].map(g => `
+      <button class="wiz-grade-btn${_wizardAnswers.grade === g ? ' selected' : ''}"
+              onclick="_pickSingle(this,'grade','${g}')">
+        ${g}'
+      </button>`).join('')}
+  </div>`;
+}
+
+function _bodyReadingLevel() {
+  return [
+    { v: 'easy',     e: '😊', l: 'אני קורא/ת בקלות'  },
+    { v: 'ok',       e: '🙂', l: 'אני מסתדר/ת'        },
+    { v: 'hard',     e: '😅', l: 'לפעמים קשה לי'      },
+    { v: 'beginner', e: '❤️', l: 'אני רק מתחיל/ה'    },
+  ].map(o => _cardBtn(o, 'readingLevel')).join('');
+}
+
+function _bodyTopics() {
+  const sel = new Set(_wizardAnswers.favoriteTopics || []);
+  const chips = [
+    { v: 'funny',      l: '😂 מצחיק'      },
+    { v: 'adventure',  l: '⚔️ הרפתקאות'   },
+    { v: 'animals',    l: '🐾 חיות'        },
+    { v: 'magic',      l: '🪄 קסמים'       },
+    { v: 'space',      l: '🚀 חלל'         },
+    { v: 'science',    l: '🔬 מדע'         },
+    { v: 'dinosaurs',  l: '🦕 דינוזאורים'  },
+    { v: 'sports',     l: '⚽ ספורט'       },
+    { v: 'friendship', l: '🤝 חברות'       },
+    { v: 'family',     l: '🏠 משפחה'       },
+    { v: 'comics',     l: '💬 קומיקס'      },
+  ].map(o => `<button class="wiz-chip${sel.has(o.v) ? ' selected' : ''}"
+                       onclick="_toggleTopic(this,'${o.v}')">${o.l}</button>`).join('');
+  return `<div class="wiz-chips-wrap">${chips}</div>
+          <p class="wiz-hint-text">אפשר לבחור כמה שרוצים</p>`;
+}
+
+function _bodyCharType() {
+  return [
+    { v: 'animals',     e: '🐶', l: 'חיות'              },
+    { v: 'robots',      e: '🤖', l: 'רובוטים'           },
+    { v: 'kids',        e: '🧒', l: 'ילדים'             },
+    { v: 'princesses',  e: '👸', l: 'נסיכות'            },
+    { v: 'superheroes', e: '🦸', l: 'גיבורי על'         },
+    { v: 'dinosaurs',   e: '🦖', l: 'דינוזאורים'        },
+    { v: 'dragons',     e: '🐉', l: 'דרקונים'           },
+    { v: 'astronauts',  e: '🚀', l: 'אסטרונאוטים'       },
+    { v: 'wizards',     e: '🧙', l: 'קוסמים'            },
+    { v: 'monsters',    e: '👾', l: 'מפלצות מצחיקות'    },
+  ].map(o => _cardBtn(o, 'favoriteCharacterType')).join('');
+}
+
+function _bodyReadingTime() {
+  return [
+    { v: 5,  e: '⚡', l: "5 דקות"   },
+    { v: 10, e: '📖', l: "10 דקות"  },
+    { v: 15, e: '📚', l: "15 דקות"  },
+    { v: 20, e: '🌟', l: "20+ דקות" },
+  ].map(o => _cardBtn(o, 'preferredReadingTime')).join('');
+}
+
+function _bodyGoal() {
+  return [
+    { v: 'daily',   e: '📅', l: 'לקרוא כל יום'        },
+    { v: 'improve', e: '📈', l: 'להשתפר בקריאה'       },
+    { v: 'long',    e: '📚', l: 'לקרוא ספרים ארוכים'  },
+    { v: 'stars',   e: '⭐', l: 'לצבור כוכבים'        },
+    { v: 'compete', e: '🏆', l: 'לנצח בטבלת המובילים' },
+  ].map(o => _cardBtn(o, 'goal')).join('');
+}
+
+function _cardBtn(o, field) {
+  const sel = String(_wizardAnswers[field]) === String(o.v);
+  return `<button class="wiz-card-opt${sel ? ' selected' : ''}"
+                  onclick="_pickSingle(this,'${field}',${typeof o.v === 'number' ? o.v : `'${o.v}'`})">
+    <span class="wiz-card-emoji">${o.e}</span>
+    <span class="wiz-card-label">${o.l}</span>
+  </button>`;
+}
+
+// ─── Interaction Handlers ─────────────────────────────────────────────────────
+
+function _pickSingle(btn, field, rawValue) {
+  const value = isNaN(Number(rawValue)) ? rawValue : Number(rawValue);
+  _wizardAnswers[field] = value;
+
+  document.querySelectorAll('.wiz-card-opt, .wiz-grade-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+
+  const nextBtn = document.getElementById('wiz-next-btn');
+  if (nextBtn) nextBtn.disabled = false;
+
+  const step = WIZARD_STEPS[_wizardStepIndex];
+  if (step?.auto) setTimeout(_wizardNext, 380);
 }
 
 function _selectAvatar(idx) {
-  const emoji    = PROFILE_AVATARS[idx];
-  const takenMsg = document.getElementById('avatar-taken-msg');
-  const nextBtn  = document.getElementById('btn-wizard-next');
-
-  if (_wizardTakenAvatars.has(emoji)) {
-    if (takenMsg) takenMsg.style.display = '';
-    return;
-  }
-  if (takenMsg) takenMsg.style.display = 'none';
+  const emoji = PROFILE_AVATARS[idx];
+  if (_wizardTakenAvatars.has(emoji)) return;
 
   document.querySelectorAll('.avatar-opt.selected').forEach(b => b.classList.remove('selected'));
   const btn = document.querySelector(`.avatar-opt[data-idx="${idx}"]`);
   if (btn) btn.classList.add('selected');
 
   _wizardAnswers.avatar = emoji;
-  if (nextBtn) nextBtn.disabled = false;
+  _refreshAvatarBtn();
 }
 
-function _wizardStep1Next() {
-  if (!_wizardAnswers.avatar) return;
-  _renderStep2();
+function _refreshAvatarBtn() {
+  const btn = document.getElementById('wiz-next-btn');
+  if (!btn) return;
+  if (_wizardAnswers.avatar) {
+    btn.disabled     = false;
+    btn.textContent  = `${_wizardAnswers.avatar} בחרתי!`;
+  } else {
+    btn.disabled     = true;
+    btn.textContent  = 'בחרתי ✨';
+  }
 }
 
-// ─── Step 2: Questions ────────────────────────────────────────────────────────
-
-function _renderStep2() {
-  const container = document.getElementById('wizard-content');
-  if (!container) return;
-
-  const subtitleEl = document.getElementById('wizard-screen-subtitle');
-  if (subtitleEl) subtitleEl.textContent = 'כך נוכל להמליץ לך סיפורים מושלמים';
-
-  container.innerHTML = `
-    <div class="wizard-step wizard-step-q">
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">באיזו כיתה אני?</div>
-        <div class="wizard-opts-row">
-          ${['א','ב','ג'].map(g =>
-            `<button class="wizard-opt" data-group="grade" data-val="${g}"
-                     onclick="_pickOpt(this,'grade')">${g}'</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">איך אני מרגיש/ה עם קריאה?</div>
-        <div class="wizard-opts-col">
-          ${[
-            {v:'easy',     l:'😊 אני קורא/ת בקלות'},
-            {v:'ok',       l:'🙂 אני מסתדר/ת'},
-            {v:'hard',     l:'😅 לפעמים קשה לי'},
-            {v:'beginner', l:'❤️ אני רק מתחיל/ה'},
-          ].map(o =>
-            `<button class="wizard-opt" data-group="readingLevel" data-val="${o.v}"
-                     onclick="_pickOpt(this,'readingLevel')">${o.l}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">מה אני הכי אוהב לקרוא? <span class="wizard-multi-hint">(אפשר כמה)</span></div>
-        <div class="wizard-opts-wrap">
-          ${[
-            {v:'funny',      l:'😂 מצחיק'},
-            {v:'adventure',  l:'⚔️ הרפתקאות'},
-            {v:'animals',    l:'🐾 חיות'},
-            {v:'magic',      l:'🪄 קסמים'},
-            {v:'space',      l:'🚀 חלל'},
-            {v:'science',    l:'🔬 מדע'},
-            {v:'dinosaurs',  l:'🦕 דינוזאורים'},
-            {v:'sports',     l:'⚽ ספורט'},
-            {v:'friendship', l:'🤝 חברות'},
-            {v:'family',     l:'🏠 משפחה'},
-            {v:'comics',     l:'💬 קומיקס'},
-          ].map(o =>
-            `<button class="wizard-opt wizard-opt-multi" data-val="${o.v}"
-                     onclick="_toggleTopic(this)">${o.l}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">איזה סוג דמות אני הכי אוהב?</div>
-        <div class="wizard-opts-wrap">
-          ${[
-            {v:'animals',     l:'🐶 חיות'},
-            {v:'robots',      l:'🤖 רובוטים'},
-            {v:'kids',        l:'🧒 ילדים'},
-            {v:'princesses',  l:'👸 נסיכות'},
-            {v:'superheroes', l:'🦸 גיבורי על'},
-            {v:'dinosaurs',   l:'🦖 דינוזאורים'},
-            {v:'dragons',     l:'🐉 דרקונים'},
-            {v:'astronauts',  l:'🚀 אסטרונאוטים'},
-            {v:'wizards',     l:'🧙 קוסמים'},
-            {v:'monsters',    l:'👾 מפלצות מצחיקות'},
-          ].map(o =>
-            `<button class="wizard-opt wizard-opt-multi" data-group="favoriteCharacterType" data-val="${o.v}"
-                     onclick="_pickOpt(this,'favoriteCharacterType')">${o.l}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">כמה זמן אני אוהב לקרוא?</div>
-        <div class="wizard-opts-row">
-          ${[
-            {v:5,  l:"5 דק'"},
-            {v:10, l:"10 דק'"},
-            {v:15, l:"15 דק'"},
-            {v:20, l:"20+ דק'"},
-          ].map(o =>
-            `<button class="wizard-opt" data-group="preferredReadingTime" data-val="${o.v}"
-                     onclick="_pickOpt(this,'preferredReadingTime')">${o.l}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <div class="wizard-q">
-        <div class="wizard-q-label">מה המטרה שלי?</div>
-        <div class="wizard-opts-col">
-          ${[
-            {v:'daily',   l:'📅 לקרוא כל יום'},
-            {v:'improve', l:'📈 להשתפר בקריאה'},
-            {v:'long',    l:'📚 לקרוא ספרים ארוכים'},
-            {v:'stars',   l:'⭐ לצבור כוכבים'},
-            {v:'compete', l:'🏆 לנצח בטבלת המובילים'},
-          ].map(o =>
-            `<button class="wizard-opt" data-group="goal" data-val="${o.v}"
-                     onclick="_pickOpt(this,'goal')">${o.l}</button>`
-          ).join('')}
-        </div>
-      </div>
-
-      <p id="wizard-error" class="auth-error"></p>
-      <div class="wizard-actions">
-        <button class="btn-giant btn-green wizard-btn" onclick="_wizardSubmit()">סיום ✓</button>
-      </div>
-    </div>`;
-
-  _wizardAnswers.favoriteTopics = [];
-}
-
-function _pickOpt(btn, group) {
-  document.querySelectorAll(`.wizard-opt[data-group="${group}"]`)
-    .forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  const val = btn.dataset.val;
-  _wizardAnswers[group] = isNaN(Number(val)) ? val : Number(val);
-}
-
-function _toggleTopic(btn) {
+function _toggleTopic(btn, value) {
   btn.classList.toggle('selected');
   if (!Array.isArray(_wizardAnswers.favoriteTopics)) _wizardAnswers.favoriteTopics = [];
-  const val = btn.dataset.val;
   if (btn.classList.contains('selected')) {
-    if (!_wizardAnswers.favoriteTopics.includes(val)) _wizardAnswers.favoriteTopics.push(val);
+    if (!_wizardAnswers.favoriteTopics.includes(value)) _wizardAnswers.favoriteTopics.push(value);
   } else {
-    _wizardAnswers.favoriteTopics = _wizardAnswers.favoriteTopics.filter(t => t !== val);
+    _wizardAnswers.favoriteTopics = _wizardAnswers.favoriteTopics.filter(t => t !== value);
   }
+  const nextBtn = document.getElementById('wiz-next-btn');
+  if (nextBtn) nextBtn.disabled = _wizardAnswers.favoriteTopics.length === 0;
 }
 
+// ─── Submit ───────────────────────────────────────────────────────────────────
+
 async function _wizardSubmit() {
-  const errEl = document.getElementById('wizard-error');
+  const errEl = document.getElementById('wiz-error');
   if (errEl) errEl.textContent = '';
 
-  if (!_wizardAnswers.grade) {
-    if (errEl) errEl.textContent = 'יש לבחור כיתה'; return;
-  }
-  if (!_wizardAnswers.readingLevel) {
-    if (errEl) errEl.textContent = 'יש לבחור רמת קריאה'; return;
-  }
-  if (!(Number(_wizardAnswers.preferredReadingTime) > 0)) {
-    if (errEl) errEl.textContent = "יש לבחור זמן קריאה"; return;
-  }
-  if (!_wizardAnswers.goal) {
-    if (errEl) errEl.textContent = 'יש לבחור מטרה'; return;
-  }
-  if (!_wizardAnswers.favoriteTopics?.length) {
-    if (errEl) errEl.textContent = 'יש לבחור לפחות תחום עניין אחד'; return;
-  }
+  const name = (_wizardAnswers.name || '').trim();
+  if (!name) { if (errEl) errEl.textContent = 'שם חסר'; return; }
 
-  const submitBtn = document.querySelector('#wizard-content .wizard-btn:last-child');
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'שומר...'; }
+  const btn = document.getElementById('wiz-next-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
 
   const now = new Date().toISOString();
   const profileData = {
-    avatar:                   _wizardAnswers.avatar,
-    grade:                    _wizardAnswers.grade,
-    readingLevel:             _wizardAnswers.readingLevel,
-    favoriteTopics:           _wizardAnswers.favoriteTopics,
-    favoriteCharacterType:    _wizardAnswers.favoriteCharacterType || null,
-    preferredReadingTime:     Number(_wizardAnswers.preferredReadingTime),
-    goal:                     _wizardAnswers.goal,
-    personalizationComplete:  true,
-    updatedAt:                now,
+    name,
+    avatar:                  _wizardAnswers.avatar,
+    grade:                   _wizardAnswers.grade,
+    readingLevel:            _wizardAnswers.readingLevel,
+    favoriteTopics:          _wizardAnswers.favoriteTopics || [],
+    favoriteCharacterType:   _wizardAnswers.favoriteCharacterType || null,
+    preferredReadingTime:    Number(_wizardAnswers.preferredReadingTime),
+    goal:                    _wizardAnswers.goal,
+    onboardingComplete:      true,
+    personalizationComplete: true,
+    updatedAt:               now,
   };
   if (!_wizardExisting?.createdAt) profileData.createdAt = now;
 
@@ -400,7 +486,10 @@ async function _wizardSubmit() {
     }
   } catch (e) {
     if (errEl) errEl.textContent = 'שגיאה בשמירה: ' + e.message;
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'סיום ✓'; }
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = WIZARD_STEPS[WIZARD_STEPS.length - 1].next;
+    }
     return;
   }
 
@@ -410,33 +499,54 @@ async function _wizardSubmit() {
     emoji: _wizardAnswers.avatar,
   };
   window._studentPersonalization = _wizardFinalProfile;
-
   _showWizardComplete();
 }
 
 // ─── Completion Screen ────────────────────────────────────────────────────────
 
+const _TOPIC_LABELS = {
+  funny:'😂 מצחיק', adventure:'⚔️ הרפתקאות', animals:'🐾 חיות',
+  magic:'🪄 קסמים', space:'🚀 חלל', science:'🔬 מדע',
+  dinosaurs:'🦕 דינוזאורים', sports:'⚽ ספורט',
+  friendship:'🤝 חברות', family:'🏠 משפחה', comics:'💬 קומיקס',
+};
+
 function _showWizardComplete() {
   const container = document.getElementById('wizard-content');
   if (!container) return;
 
-  const titleEl    = document.getElementById('wizard-screen-title');
-  const subtitleEl = document.getElementById('wizard-screen-subtitle');
-  if (titleEl)    titleEl.textContent    = '';
-  if (subtitleEl) subtitleEl.textContent = '';
+  const fill  = document.getElementById('wizard-progress-fill');
+  const label = document.getElementById('wizard-progress-label');
+  if (fill)  { fill.style.width = '100%'; fill.style.background = 'linear-gradient(90deg,#F39C12,#E74C3C)'; }
+  if (label) label.textContent = '🎉 הכל מוכן!';
 
-  const avatar = _wizardAnswers.avatar || '⭐';
+  const avatar  = _wizardAnswers.avatar || '⭐';
+  const name    = (_wizardAnswers.name || '').trim();
+  const grade   = _wizardAnswers.grade ? `כיתה ${_wizardAnswers.grade}'` : '';
+  const topicTags = (_wizardAnswers.favoriteTopics || [])
+    .map(t => _TOPIC_LABELS[t]).filter(Boolean)
+    .map(l => `<span class="wiz-topic-tag">${l}</span>`)
+    .join('');
+
+  container.classList.remove('wiz-anim-next', 'wiz-anim-back');
+  void container.offsetWidth;
+  container.classList.add('wiz-anim-next');
 
   container.innerHTML = `
-    <div class="wizard-complete">
-      <div class="wizard-complete-avatar">${avatar}</div>
-      <h2 class="wizard-complete-title">🎉 איזה כיף להכיר אותך!</h2>
-      <p class="wizard-complete-text">
-        הכנתי במיוחד בשבילך סיפורים שמתאימים בדיוק לך.<br>
-        מוכן/ה לקרוא?
+    <div class="wiz-complete">
+      <div class="wiz-complete-burst">🎉 ✨ 🎊</div>
+      <h2 class="wiz-complete-title">כרטיס הקורא שלך מוכן!</h2>
+      <div class="wiz-reader-card">
+        <div class="wiz-card-avatar">${avatar}</div>
+        <div class="wiz-card-name">${name}</div>
+        ${grade ? `<div class="wiz-card-grade">${grade}</div>` : ''}
+        ${topicTags ? `<div class="wiz-card-topics">${topicTags}</div>` : ''}
+      </div>
+      <p class="wiz-complete-text">
+        הכנתי במיוחד בשבילך סיפורים שמתאימים בדיוק לך ✨
       </p>
-      <button class="btn-giant btn-green wizard-btn" onclick="_enterPersonalHomeFromWizard()">
-        ✨ לסיפורים שלי
+      <button class="wiz-next-btn wiz-start-btn" onclick="_enterPersonalHomeFromWizard()">
+        בואו נתחיל לקרוא! ✨
       </button>
     </div>`;
 }
@@ -449,15 +559,6 @@ function _enterPersonalHomeFromWizard() {
 
 // ─── Recommendation Engine ────────────────────────────────────────────────────
 
-/**
- * מחזיר עד maxResults סיפורים מותאמים אישית לפרופיל.
- * פונקציה טהורה — ללא קריאות Firestore.
- *
- * ציון:
- *   +3 לכל התאמת תג לנושא מועדף
- *   +2 לכל התאמת תג לסוג דמות מועדף
- *   +2 אם זמן הקריאה קרוב תוך 2 דקות, +1 תוך 5 דקות
- */
 function buildRecommendations(profile, allStories, readIds, maxResults = 6) {
   if (!profile?.personalizationComplete || !Array.isArray(allStories)) return [];
 
@@ -474,14 +575,11 @@ function buildRecommendations(profile, allStories, readIds, maxResults = 6) {
     .map(s => {
       const storyMins = (s.pages || []).reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0);
       const storyTags = new Set(s.tags || []);
-
       let score = 0;
       for (const tag of topicTags) { if (storyTags.has(tag)) score += 3; }
       for (const tag of charTags)  { if (storyTags.has(tag)) score += 2; }
-      const timeDiff = Math.abs(storyMins - targetMins);
-      if (timeDiff <= 2)      score += 2;
-      else if (timeDiff <= 5) score += 1;
-
+      const diff = Math.abs(storyMins - targetMins);
+      if (diff <= 2) score += 2; else if (diff <= 5) score += 1;
       return { ...s, _score: score, _mins: Math.ceil(storyMins) };
     })
     .filter(s => s._score > 0)
@@ -489,17 +587,13 @@ function buildRecommendations(profile, allStories, readIds, maxResults = 6) {
     .slice(0, maxResults);
 }
 
-/** מרנדר את section "במיוחד בשבילך" בראש הספרייה. */
 function renderForYouSection() {
   const section = document.getElementById('for-you-section');
   const listEl  = document.getElementById('for-you-list');
   if (!section || !listEl) return;
 
   const profile = window._studentPersonalization;
-  if (!profile?.personalizationComplete) {
-    section.style.display = 'none';
-    return;
-  }
+  if (!profile?.personalizationComplete) { section.style.display = 'none'; return; }
 
   const studentData = window.currentStudentData;
   const histArr     = Array.isArray(studentData?.history) ? studentData.history : [];
@@ -507,13 +601,13 @@ function renderForYouSection() {
     histArr.filter(h => h?.type === 'app').flatMap(h => [h.storyId, h.legacyId]).filter(Boolean)
   );
 
-  const allStories  = typeof getAllStories === 'function' ? getAllStories() : [];
-  const recommended = buildRecommendations(profile, allStories, readIds);
+  const recommended = buildRecommendations(
+    profile,
+    typeof getAllStories === 'function' ? getAllStories() : [],
+    readIds
+  );
 
-  if (!recommended.length) {
-    section.style.display = 'none';
-    return;
-  }
+  if (!recommended.length) { section.style.display = 'none'; return; }
 
   listEl.innerHTML = recommended.map(s =>
     `<button class="story-card for-you-card" onclick="startStory('${s.id}')">
@@ -527,18 +621,17 @@ function renderForYouSection() {
       <span class="new-badge">קרא →</span>
     </button>`
   ).join('');
-
   section.style.display = '';
 }
 
-// ─── חשיפה גלובלית ───────────────────────────────────────────────────────────
+// ─── Global Exports ───────────────────────────────────────────────────────────
 
-window.showProfileWizard           = showProfileWizard;
-window._selectAvatar               = _selectAvatar;
-window._wizardStep1Next            = _wizardStep1Next;
-window._pickOpt                    = _pickOpt;
-window._toggleTopic                = _toggleTopic;
-window._wizardSubmit               = _wizardSubmit;
+window.showProfileWizard            = showProfileWizard;
+window._selectAvatar                = _selectAvatar;
+window._wizardNext                  = _wizardNext;
+window._wizardBack                  = _wizardBack;
+window._pickSingle                  = _pickSingle;
+window._toggleTopic                 = _toggleTopic;
 window._enterPersonalHomeFromWizard = _enterPersonalHomeFromWizard;
-window.buildRecommendations        = buildRecommendations;
-window.renderForYouSection         = renderForYouSection;
+window.buildRecommendations         = buildRecommendations;
+window.renderForYouSection          = renderForYouSection;

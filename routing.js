@@ -586,8 +586,8 @@ function _enterPersonalHome(userId, profile) {
     return;
   }
 
-  // Personalization wizard — מוצג אחרי onboarding, פעם אחת בלבד
-  if (profile?.onboardingComplete && !profile?.personalizationComplete) {
+  // Personalization wizard — מוצג לכל מי שלא השלים פרסונליזציה (כולל משתמשים חדשים)
+  if (!profile?.personalizationComplete) {
     if (typeof showProfileWizard === 'function') {
       showProfileWizard(userId, _activeClubId || null, profile);
       return;
