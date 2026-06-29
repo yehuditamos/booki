@@ -687,13 +687,13 @@ label { font-weight: 700; font-size: 1rem; }
 /* Hero */
 .wiz-hero { text-align: center; padding: 10px 24px 18px; }
 .wiz-step-icon {
-  font-size: 3.5rem; line-height: 1.1; margin-bottom: 8px;
+  font-size: 4.5rem; line-height: 1.1; margin-bottom: 10px;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.1));
 }
 .wiz-step-title {
-  font-size: 1.6rem; font-weight: 900; color: #1a1a2e; margin: 0 0 4px;
+  font-size: 1.8rem; font-weight: 900; color: #1a1a2e; margin: 0 0 6px;
 }
-.wiz-step-sub { font-size: .95rem; color: #777; margin: 0; }
+.wiz-step-sub { font-size: 1.05rem; color: #777; margin: 0; }
 
 /* Body */
 .wiz-body {
@@ -723,9 +723,9 @@ label { font-weight: 700; font-size: 1rem; }
 /* Grade buttons */
 .wiz-grade-row { display: flex; gap: 12px; justify-content: center; padding: 8px 0; }
 .wiz-grade-btn {
-  flex: 1; max-width: 110px; padding: 22px 8px;
-  font-size: 1.9rem; font-weight: 900; font-family: inherit;
-  border: 3px solid #eee; border-radius: 20px;
+  flex: 1; max-width: 120px; padding: 26px 8px;
+  font-size: 2.2rem; font-weight: 900; font-family: inherit;
+  border: 3px solid #eee; border-radius: 22px;
   background: #fafafa; cursor: pointer; transition: all .18s; color: #1a1a2e;
 }
 .wiz-grade-btn:hover  { border-color: #27AE60; background: #f0fff4; }
@@ -736,8 +736,8 @@ label { font-weight: 700; font-size: 1rem; }
 
 /* Card options */
 .wiz-card-opt {
-  display: flex; align-items: center; gap: 14px;
-  padding: 15px 18px; border: 3px solid #eee; border-radius: 16px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px; border: 3px solid #eee; border-radius: 18px;
   background: #fafafa; cursor: pointer; transition: all .16s;
   font-family: inherit; width: 100%; text-align: right;
 }
@@ -746,8 +746,8 @@ label { font-weight: 700; font-size: 1rem; }
   border-color: #27AE60; background: #e8f8ee;
   box-shadow: 0 2px 12px rgba(39,174,96,.18);
 }
-.wiz-card-emoji { font-size: 1.65rem; flex-shrink: 0; }
-.wiz-card-label { font-size: .98rem; font-weight: 700; color: #1a1a2e; }
+.wiz-card-emoji { font-size: 2.1rem; flex-shrink: 0; }
+.wiz-card-label { font-size: 1.05rem; font-weight: 700; color: #1a1a2e; }
 
 /* Topic chips */
 .wiz-chips-wrap { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -763,8 +763,8 @@ label { font-weight: 700; font-size: 1rem; }
 
 /* Next button */
 .wiz-next-btn {
-  width: 100%; padding: 17px 24px;
-  font-size: 1.08rem; font-weight: 800; font-family: inherit;
+  width: 100%; padding: 20px 24px;
+  font-size: 1.18rem; font-weight: 800; font-family: inherit;
   border: none; border-radius: 16px;
   background: var(--wiz-btn-color, #27AE60);
   color: #fff; cursor: pointer;
@@ -1080,12 +1080,94 @@ label { font-weight: 700; font-size: 1rem; }
 .td-empty      { text-align: center; padding: 40px 20px; color: var(--muted); }
 .td-empty p    { margin-bottom: 20px; }
 .td-loading    { text-align: center; color: var(--muted); padding: 20px; }
-.teacher-club-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.teacher-club-card {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: box-shadow .18s, border-color .18s;
+}
+.teacher-club-card:hover  { box-shadow: 0 4px 20px rgba(0,0,0,.13); border-color: var(--green); }
+.teacher-club-card:active { transform: scale(.98); }
 .tc-emoji { font-size: 2rem; }
 .tc-info  { flex: 1; }
 .tc-name  { display: block; font-weight: 800; font-size: 1rem; }
 .tc-meta  { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; }
 .btn-small { padding: 8px 14px; border-radius: 8px; font-size: .85rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; }
+.btn-tc-delete {
+  background: none; border: 1.5px solid #ddd; color: var(--muted);
+  border-radius: 8px; padding: 6px 9px; font-size: .9rem;
+  cursor: pointer; transition: border-color .15s, color .15s;
+  line-height: 1;
+}
+.btn-tc-delete:hover { border-color: var(--red); color: var(--red); background: #fff0ee; }
+
+/* ─── Teacher Club Screen ────────────────────────────────────── */
+.tc-body { padding: 20px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
+.tc-hero { text-align: center; padding: 12px 0 4px; }
+.tc-hero-emoji { font-size: 5rem; line-height: 1; }
+.tc-class-card {
+  display: flex; align-items: center; gap: 16px;
+  background: #fff; border: 2px solid var(--green);
+  border-radius: 18px; padding: 20px 22px;
+  box-shadow: 0 4px 18px rgba(39,174,96,.15);
+  cursor: pointer; width: 100%; text-align: right;
+  font-family: inherit; transition: box-shadow .18s, transform .12s;
+}
+.tc-class-card:hover  { box-shadow: 0 6px 24px rgba(39,174,96,.25); }
+.tc-class-card:active { transform: scale(.97); }
+.tc-card-icon  { font-size: 3rem; }
+.tc-card-text  { display: flex; flex-direction: column; gap: 4px; }
+.tc-card-title { font-size: 1.3rem; font-weight: 900; color: var(--text); }
+.tc-card-sub   { font-size: .9rem; color: var(--muted); }
+.tc-read-btn   { margin-top: 4px; }
+
+/* ─── Class Screen / Member List ──────────────────────────────── */
+.class-loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1.1rem; }
+.class-empty   { text-align: center; padding: 30px; color: var(--muted); }
+.class-goal-card {
+  margin: 16px 16px 4px;
+  background: #fff; border-radius: 16px;
+  padding: 18px 18px 14px;
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--border);
+}
+.class-goal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.class-goal-label { font-weight: 800; font-size: 1rem; }
+.btn-edit-goal {
+  background: none; border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 4px 10px; font-size: .8rem; cursor: pointer;
+  color: var(--muted); font-family: inherit; transition: border-color .15s, color .15s;
+}
+.btn-edit-goal:hover { border-color: var(--orange); color: var(--orange); }
+.class-goal-nums { font-size: .95rem; margin-bottom: 8px; color: var(--muted); }
+.class-goal-nums strong { font-size: 1.4rem; color: var(--text); font-weight: 900; }
+.class-goal-track {
+  background: #f0f0f0; border-radius: 99px; height: 12px; overflow: hidden;
+}
+.class-goal-fill {
+  background: linear-gradient(90deg, var(--green2), var(--green));
+  height: 100%; border-radius: 99px;
+  transition: width .6s ease;
+}
+.class-goal-pct { text-align: left; font-size: .82rem; color: var(--muted); margin-top: 4px; font-weight: 700; }
+
+.class-members-list { padding: 8px 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+.class-member-row {
+  display: flex; align-items: center; gap: 12px;
+  background: #fff; border-radius: 14px; padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.class-m-avatar { font-size: 1.8rem; flex-shrink: 0; }
+.class-m-info   { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.class-m-name   { font-weight: 800; font-size: .95rem; }
+.class-m-sub    { font-size: .78rem; color: var(--muted); }
+.class-m-stats  { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.class-m-mins   { font-weight: 700; font-size: .85rem; color: var(--green); }
+
 
 body.nav-visible .booki-nav { display: flex; }
 

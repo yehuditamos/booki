@@ -331,7 +331,8 @@ async function showClubDashboard(clubId, userId, profile) {
   const readerRow = document.getElementById('club-dash-reader-row');
   if (readerRow) {
     if (profile?.name) {
-      readerRow.textContent = `👤 ${profile.name} קורא/ת עכשיו`;
+      const av = profile.avatar || profile.emoji || '📚';
+      readerRow.textContent = `${av} ${profile.name} קורא/ת עכשיו`;
       readerRow.style.display = '';
     } else {
       readerRow.style.display = 'none';
@@ -492,7 +493,7 @@ function _renderFirebaseMemberGrid(grid, memberships, clubId) {
   }
   grid.innerHTML = active.map(m => `
     <button class="profile-card" onclick="selectProfile('${m.userId}', '${clubId}')">
-      <span class="profile-avatar">${m.emoji || '📚'}</span>
+      <span class="profile-avatar">${m.emoji || m.avatar || '📚'}</span>
       <span class="profile-name">${m.name || m.userId}</span>
     </button>`).join('');
 }
@@ -711,15 +712,17 @@ async function _renderTeacherClubs(uid) {
     return;
   }
   list.innerHTML = clubs.map(c => `
-    <div class="teacher-club-card">
+    <div class="teacher-club-card" role="button" tabindex="0"
+         onclick="enterTeacherClub('${c.id}')"
+         onkeydown="if(event.key==='Enter')enterTeacherClub('${c.id}')">
       <span class="tc-emoji">${c.emoji || '📚'}</span>
       <div class="tc-info">
         <span class="tc-name">${c.name || c.id}</span>
         <span class="tc-meta" data-member-count="${c.id}">👥 ...</span>
       </div>
-      <div class="tc-actions">
-        <button class="btn-small btn-green" onclick="enterTeacherClub('${c.id}')">כנסי ←</button>
-        <button class="btn-small" style="background:#dc3545;color:#fff" onclick="confirmDeleteClub('${c.id}','${(c.name || c.id).replace(/'/g, "\\'")}')">מחק</button>
+      <div class="tc-actions" onclick="event.stopPropagation()">
+        <button class="btn-tc-delete" title="מחק מועדון"
+                onclick="confirmDeleteClub('${c.id}','${(c.name || c.id).replace(/'/g, "\\'")}')">🗑</button>
       </div>
     </div>`).join('');
 
@@ -756,7 +759,119 @@ async function confirmDeleteClub(clubId, clubName) {
 function enterTeacherClub(clubId) {
   _activeClubId        = clubId;
   window.currentClubId = clubId;
-  if (typeof showWhoReads === 'function') showWhoReads(clubId);
+  _showTeacherClub(clubId);
+}
+
+async function _showTeacherClub(clubId) {
+  showScreen('screen-teacher-club');
+  const nameEl  = document.getElementById('tc-club-name');
+  const emojiEl = document.getElementById('tc-club-emoji');
+  if (nameEl)  nameEl.textContent  = '...';
+  if (emojiEl) emojiEl.textContent = '';
+  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  if (nameEl)  nameEl.textContent  = club?.name  || clubId;
+  if (emojiEl) emojiEl.textContent = club?.emoji || '📚';
+}
+
+function enterReadingSession() {
+  if (_activeClubId && typeof showWhoReads === 'function') showWhoReads(_activeClubId);
+}
+
+// ─── Teacher Class Screen ─────────────────────────────────────────────────────
+
+function _classGoBack() {
+  showScreen(window._classReturnScreen || 'screen-main');
+}
+
+async function showTeacherClassScreen() {
+  const clubId = _activeClubId;
+  if (!clubId) return;
+
+  window._classReturnScreen = 'screen-teacher-club';
+  const titleEl = document.getElementById('class-screen-title');
+  if (titleEl) titleEl.textContent = '👨‍👩‍👧‍👦 הכיתה שלנו';
+
+  const contentEl = document.getElementById('class-content');
+  if (contentEl) contentEl.innerHTML = '<p class="class-loading">טוען נתוני כיתה...</p>';
+  showScreen('screen-class');
+
+  const [club, memberships] = await Promise.all([
+    typeof fbLoadClub === 'function'            ? fbLoadClub(clubId)            : Promise.resolve(null),
+    typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+  ]);
+
+  _renderTeacherClassContent(club, memberships, clubId);
+}
+
+function _renderTeacherClassContent(club, memberships, clubId) {
+  const content = document.getElementById('class-content');
+  if (!content) return;
+
+  const goalTarget   = club?.goal?.target || 1500;
+  const now          = new Date();
+  const active       = memberships.filter(m => m.status !== 'left');
+  const sorted       = [...active].sort((a, b) =>
+    (b.cachedStats?.totalMinutes || 0) - (a.cachedStats?.totalMinutes || 0));
+  const totalMins    = active.reduce((s, m) => s + (m.cachedStats?.totalMinutes || 0), 0);
+  const pct          = Math.min(100, Math.round((totalMins / goalTarget) * 100));
+
+  const goalHtml = `
+    <div class="class-goal-card">
+      <div class="class-goal-header">
+        <span class="class-goal-label">🎯 יעד הקריאה</span>
+        <button class="btn-edit-goal" onclick="editClubGoal('${clubId}',${goalTarget})">✏️ ערוך</button>
+      </div>
+      <div class="class-goal-nums">
+        <strong>${Math.round(totalMins)}</strong><span> / ${goalTarget} דקות</span>
+      </div>
+      <div class="class-goal-track">
+        <div class="class-goal-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="class-goal-pct">${pct}%</div>
+    </div>`;
+
+  const membersHtml = sorted.length
+    ? sorted.map(m => {
+        const avatar  = m.emoji || m.avatar || '📚';
+        const name    = m.name  || m.userId || '—';
+        const mins    = Math.round(m.cachedStats?.totalMinutes || 0);
+        const lastAt  = m.cachedStats?.lastReadAt;
+        let dot = '⚪', lastStr = 'לא קרא/ה עדיין';
+        if (lastAt) {
+          const days = Math.floor((now - new Date(lastAt)) / 864e5);
+          dot = days <= 7 ? '🟢' : days <= 30 ? '🟡' : '🔴';
+          lastStr = days === 0 ? 'היום'
+            : days === 1   ? 'אתמול'
+            : days <= 7    ? `לפני ${days} ימים`
+            : days <= 30   ? `לפני ${Math.floor(days / 7)} שבועות`
+            : `לפני ${Math.floor(days / 30)} חודשים`;
+        }
+        return `
+          <div class="class-member-row">
+            <span class="class-m-avatar">${avatar}</span>
+            <div class="class-m-info">
+              <span class="class-m-name">${name}</span>
+              <span class="class-m-sub">${lastStr}</span>
+            </div>
+            <div class="class-m-stats">
+              <span class="class-m-mins">${mins} דק'</span>
+              <span>${dot}</span>
+            </div>
+          </div>`;
+      }).join('')
+    : '<p class="class-empty">אין חברים פעילים במועדון</p>';
+
+  content.innerHTML = goalHtml + `<div class="class-members-list">${membersHtml}</div>`;
+}
+
+async function editClubGoal(clubId, currentTarget) {
+  const raw = prompt(`יעד קריאה חדש (דקות):\nנוכחי: ${currentTarget}`, currentTarget);
+  if (!raw || isNaN(Number(raw)) || Number(raw) <= 0) return;
+  const target = Math.round(Number(raw));
+  if (typeof fbSaveClub === 'function') {
+    await fbSaveClub(clubId, { goal: { type: 'minutes', target, period: 'year' } });
+  }
+  showTeacherClassScreen();
 }
 
 function goToTeacherArea() {
@@ -785,4 +900,5 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
+  enterReadingSession, showTeacherClassScreen, editClubGoal, _classGoBack,
 });

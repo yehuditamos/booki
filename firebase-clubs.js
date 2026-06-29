@@ -481,7 +481,7 @@ async function fbUpdateMemberAvatar(clubId, userId, avatar) {
   try {
     await _db().collection('clubs').doc(clubId)
       .collection('memberships').doc(userId)
-      .update({ avatar });
+      .set({ emoji: avatar, avatar }, { merge: true });
   } catch (e) {
     console.warn('[firebase-clubs] fbUpdateMemberAvatar:', e.message);
   }

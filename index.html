@@ -261,8 +261,8 @@
 <section id="screen-class" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
-      <h2>🏆 הכיתה שלנו</h2>
+      <button class="btn-back" onclick="_classGoBack()">חזרה →</button>
+      <h2 id="class-screen-title">👨‍👩‍👧‍👦 הכיתה שלנו</h2>
     </div>
   </div>
   <div id="class-content" class="class-content"></div>
@@ -379,6 +379,29 @@
   <div class="td-body">
     <button class="btn-giant btn-green td-new-club" onclick="showCreateClub()">🌳 יצירת מועדון חדש</button>
     <div id="td-clubs-list" class="td-clubs-list"></div>
+  </div>
+</section>
+
+<!-- ══ Teacher Club Screen ═════════════════════════════════════════ -->
+<section id="screen-teacher-club" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showTeacherDashboard(window._currentTeacher)">חזרה →</button>
+      <h2 id="tc-club-name">המועדון שלי</h2>
+    </div>
+  </div>
+  <div class="tc-body">
+    <div class="tc-hero">
+      <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
+    </div>
+    <button class="tc-class-card" onclick="showTeacherClassScreen()">
+      <span class="tc-card-icon">👨‍👩‍👧‍👦</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">הכיתה שלנו</span>
+        <span class="tc-card-sub">כל חברי המועדון ›</span>
+      </div>
+    </button>
+    <button class="btn-giant btn-green tc-read-btn" onclick="enterReadingSession()">📖 פתח לקריאה</button>
   </div>
 </section>
 

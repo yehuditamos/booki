@@ -467,6 +467,7 @@ function showReaderCard() {
 // ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
 
 function showClassView() {
+  window._classReturnScreen = 'screen-main';
   showScreen('screen-class');
   const contentEl = document.getElementById('class-content');
   if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
