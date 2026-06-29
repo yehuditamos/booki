@@ -101,10 +101,7 @@ async function track(eventName, props = {}) {
             }, { merge: true }).catch(() => {});
           }
 
-          // עדכון סטטיסטיקות חברות ב-Firebase (מקור האמת)
-          if (props.clubId && props.userId && typeof fbUpdateMembershipStats === 'function') {
-            fbUpdateMembershipStats(props.clubId, props.userId, { minutes: props.minutes }).catch(() => {});
-          }
+          // fbUpdateMembershipStats — נקרא ישירות מ-finishAppReading/submitBookReading (awaited)
         }
         break;
     }

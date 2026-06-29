@@ -596,9 +596,10 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   try {
     await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
       cachedStats: {
-        totalMinutes:  inc(delta.minutes  || 0),
+        totalMinutes:  inc(delta.minutes || 0),
         totalSessions: inc(1),
-        totalPoints:   inc(delta.minutes  || 0),
+        totalPoints:   inc(delta.points  || delta.minutes || 0),
+        totalBooks:    inc(delta.books   || 0),
         lastReadAt:    _now(),
       },
       updatedAt: _now(),

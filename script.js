@@ -298,6 +298,11 @@ async function finishAppReading() {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes, points,
     }).catch(() => {});
   }
+  // מקור האמת — awaited כדי שכרטיס הקורא יראה נתונים עדכניים מיד
+  if (window.currentClubId && !Number.isInteger(currentStudentId)
+      && typeof fbUpdateMembershipStats === 'function') {
+    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points });
+  }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes,
@@ -374,6 +379,11 @@ async function submitBookReading() {
       pagesRead: bookData.pages || null, minutes, points,
     }).catch(() => {});
   }
+  // מקור האמת — awaited
+  if (window.currentClubId && !Number.isInteger(currentStudentId)
+      && typeof fbUpdateMembershipStats === 'function') {
+    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, books: 1 });
+  }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
       type: 'book', storyId: null, storyTitle: bookData.title, minutes,
@@ -447,10 +457,11 @@ async function showReaderCard() {
 
   const enriched = {
     ...s,
-    totalMinutes: Math.max(cs.totalMinutes || 0, s.totalMinutes || 0),
-    appMinutes:   appMins || s.appMinutes  || 0,
-    bookMinutes:  bkMins  || s.bookMinutes || 0,
-    points:       Math.max(cs.totalPoints || 0, s.points || 0),
+    // Single source of truth: Firestore cachedStats (aggregate) → session fallback
+    totalMinutes: cs.totalMinutes || (appMins + bkMins),
+    appMinutes:   appMins,
+    bookMinutes:  bkMins,
+    points:       cs.totalPoints  || (appMins + bkMins),
     history:      sorted,
   };
 
