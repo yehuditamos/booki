@@ -107,7 +107,6 @@ const CHARACTER_TAG_MAP = {
 const WIZARD_STEPS = [
   { id: 'name',       color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                            next: '🚀 בוא נתחיל!'  },
   { id: 'avatar',     color: '#9B59B6', icon: '🎨', title: 'הדמות שלי',     sub: '🎨 איזו דמות אני רוצה שתופיע ליד השם שלי?', next: 'בחרתי! ✨'    },
-  { id: 'grade',      color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                  next: 'ממשיכים! 📚'  },
   { id: 'niqqudPref', color: '#27AE60', icon: '📖', title: 'איך אני קורא',   sub: 'איך אתה/את קורא/ת בדרך כלל?',        next: 'ממשיכים! 📖'  },
   { id: 'loveSlider', color: '#E74C3C', icon: '❤️', title: 'אהבת קריאה',    sub: 'כמה אתה/את אוהב/ת לקרוא?',           next: 'ממשיכים! ❤️'  },
   { id: 'goal',       color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                       next: 'סיימתי! 🎉'   },
@@ -213,7 +212,6 @@ function _isStepValid(id) {
   switch (id) {
     case 'name':       return (_wizardAnswers.name || '').trim().length > 0;
     case 'avatar':     return !!_wizardAnswers.avatar;
-    case 'grade':      return !!_wizardAnswers.grade;
     case 'niqqudPref': return !!_wizardAnswers.niqqudPref;
     case 'loveSlider': return true;
     case 'goal':       return !!_wizardAnswers.goal;
@@ -225,7 +223,6 @@ function _stepErrMsg(id) {
   return ({
     name:       'כתוב/י את שמך כדי להמשיך',
     avatar:     'בחר/י דמות כדי להמשיך',
-    grade:      'בחר/י את הכיתה שלך',
     niqqudPref: 'בחר/י איך אתה/את קורא/ת',
     loveSlider: '',
     goal:       'בחר/י מטרה',
@@ -315,7 +312,6 @@ function _buildStepBody(id) {
   switch (id) {
     case 'name':       return _bodyName();
     case 'avatar':     return _bodyAvatar();
-    case 'grade':      return _bodyGrade();
     case 'niqqudPref': return _bodyNiqqud();
     case 'loveSlider': return _bodyLoveSlider();
     case 'goal':       return _bodyGoal();
@@ -365,16 +361,6 @@ function _bodyAvatarGrid(catIndex) {
   }).join('');
   return `<p class="avatar-cat-title">${cat.category}</p>
           <div class="avatar-grid-lg">${btns}</div>`;
-}
-
-function _bodyGrade() {
-  return `<div class="wiz-grade-row">
-    ${['א','ב','ג','ד','ה','ו'].map(g => `
-      <button class="wiz-grade-btn${_wizardAnswers.grade === g ? ' selected' : ''}"
-              onclick="_pickSingle(this,'grade','${g}')">
-        ${g}'
-      </button>`).join('')}
-  </div>`;
 }
 
 function _bodyNiqqud() {
@@ -431,7 +417,7 @@ function _pickSingle(btn, field, rawValue) {
   const value = isNaN(Number(rawValue)) ? rawValue : Number(rawValue);
   _wizardAnswers[field] = value;
 
-  document.querySelectorAll('.wiz-card-opt, .wiz-grade-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.wiz-card-opt').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
 
   const nextBtn = document.getElementById('wiz-next-btn');
@@ -487,7 +473,6 @@ async function _wizardSubmit() {
     name,
     avatar:                  _wizardAnswers.avatar,
     emoji:                   _wizardAnswers.avatar,
-    grade:                   _wizardAnswers.grade,
     niqqudPref:              _wizardAnswers.niqqudPref || null,
     niqqudLevel:             _wizardAnswers.niqqudPref || null, // alias for onboarding compat
     loveOfReading:           _wizardAnswers.loveSlider ?? 5,

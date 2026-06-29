@@ -235,6 +235,15 @@ function goClubs() {
   showScreen('screen-club-select');
 }
 
+/** חזרה מ-screen-club-select: לעמוד הסטודנט אם כבר ב-device mode, אחרת ל-who-reads */
+function goBackFromClubSelect() {
+  if (_clubSelectMode === 'user') {
+    showScreen('screen-who-reads');
+  } else {
+    showScreen('screen-main');
+  }
+}
+
 /** בחירת מועדון לאחר זיהוי משתמש (מועדונים מרובים) */
 function _showClubSelectForUser(userId, profile, userClubs) {
   _clubSelectMode = 'user';
@@ -930,7 +939,7 @@ Object.assign(window, {
   // Club selection
   goClubs, pickClub,
   // Nav
-  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin, goBackToJoinEntry,
+  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin, goBackToJoinEntry, goBackFromClubSelect,
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
