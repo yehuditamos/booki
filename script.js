@@ -558,41 +558,73 @@ async function _renderNewClubView(clubId) {
   const contentEl = document.getElementById('class-content');
   if (!contentEl) return;
 
-  const memberships = typeof fbLoadClubMemberships === 'function'
-    ? await fbLoadClubMemberships(clubId) : [];
+  // Single source of truth: same queries the teacher's class dashboard uses
+  const [club, memberships] = await Promise.all([
+    typeof fbLoadClub          === 'function' ? fbLoadClub(clubId)          : Promise.resolve(null),
+    typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+  ]);
 
-  if (!memberships.length) {
+  const goalTarget = club?.goal?.target || 1500;
+  const active = memberships
+    .filter(m => m.status !== 'left')
+    .map(m => ({
+      name:          m.name  || m.userId || '—',
+      emoji:         m.emoji || '📚',
+      totalMinutes:  m.cachedStats?.totalMinutes  || 0,
+      totalPoints:   m.cachedStats?.totalPoints   || 0,
+      totalSessions: m.cachedStats?.totalSessions || 0,
+    }))
+    .sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+  if (!active.length) {
     contentEl.innerHTML = '<div style="text-align:center;padding:2rem;color:#888">אין חברים רשומים עדיין 📚</div>';
     return;
   }
 
-  const withStats = memberships
-    .filter(m => m.status !== 'left')
-    .map(m => ({
-      userId:       m.userId,
-      name:         m.name  || m.userId,
-      emoji:        m.emoji || '📚',
-      points:       m.cachedStats?.totalPoints  || 0,
-      totalMinutes: m.cachedStats?.totalMinutes || 0,
-    }))
-    .sort((a, b) => b.points - a.points);
-
-  const totalMins = withStats.reduce((sum, m) => sum + m.totalMinutes, 0);
-  const posIcons  = ['🥇', '🥈', '🥉'];
+  const totalMins     = active.reduce((s, m) => s + m.totalMinutes,  0);
+  const totalSessions = active.reduce((s, m) => s + m.totalSessions, 0);
+  const leaves        = Math.floor(totalMins / 100);
+  const fruits        = Math.floor(totalMins / 500);
+  const blooming      = totalMins >= goalTarget;
+  const pct           = Math.min(100, Math.round((totalMins / goalTarget) * 100));
+  const remaining     = Math.max(0, goalTarget - totalMins);
+  const posIcons      = ['🥇', '🥈', '🥉'];
+  const rowCls        = ['leader-first', 'leader-second', 'leader-third'];
 
   contentEl.innerHTML = `
     <div class="class-hero">
       <div class="class-big-tree">🌳</div>
+      <div class="tree-leaves">${'🍃'.repeat(Math.min(leaves, 20))}</div>
+      <div class="tree-fruits">${'🍎'.repeat(Math.min(fruits, 10))}</div>
+      ${blooming ? '<div class="tree-bloom">🌸🌸🌸 העץ פרח! 🌸🌸🌸</div>' : ''}
       <span class="total-num">${totalMins}</span>
-      <span class="total-lbl">דקות קריאה</span>
+      <span class="total-lbl">דקות קריאה כיתתיות!</span>
+      <div class="class-tree-legend">
+        <span>🍃 כל 100 דק׳ = עלה</span>
+        <span>🍎 כל 500 דק׳ = פרי</span>
+      </div>
     </div>
-    <div class="class-leaderboard">
-      ${withStats.slice(0, 10).map((m, i) => `
-        <div class="leaderboard-row${i < 3 ? ' ' + ['leader-first', 'leader-second', 'leader-third'][i] : ''}">
-          <span class="lb-pos">${posIcons[i] || (i + 1)}</span>
-          <span class="lb-emoji">${m.emoji}</span>
-          <span class="lb-name">${m.name}</span>
-          <span class="lb-pts">${m.points} נק׳</span>
+    <div class="class-stats-row">
+      <div class="class-stat"><span>📖</span><strong>${totalSessions}</strong><span>סיפורים</span></div>
+      <div class="class-stat"><span>🍃</span><strong>${leaves}</strong><span>עלים</span></div>
+      <div class="class-stat"><span>🍎</span><strong>${fruits}</strong><span>פירות</span></div>
+      <div class="class-stat"><span>👥</span><strong>${active.length}</strong><span>חברים</span></div>
+    </div>
+    <div class="goal-section">
+      <p>🎯 יעד הכיתה: <strong>${goalTarget}</strong> דקות · <strong>${pct}%</strong> הושלמו
+        ${remaining > 0 ? `· עוד <strong>${remaining}</strong> דק׳` : ' · 🎉 הגענו!'}</p>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
+      </div>
+    </div>
+    <div class="leaderboard">
+      <h3>🏆 10 הקוראים המובילים</h3>
+      ${active.slice(0, 10).map((m, i) => `
+        <div class="leader-row ${rowCls[i] || ''}">
+          <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
+          <span class="leader-avatar">${m.emoji}</span>
+          <span class="leader-name">${m.name}</span>
+          <span class="leader-pts">${m.totalMinutes} דק׳</span>
         </div>`).join('')}
     </div>`;
 }
