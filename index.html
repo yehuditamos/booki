@@ -373,7 +373,7 @@
     <p id="td-teacher-name" class="td-subtitle"></p>
   </div>
   <div class="td-body">
-    <button class="btn-giant btn-green td-new-club" onclick="showCreateClub()">🌳 יצירת מועדון חדש</button>
+    <button class="btn-td-secondary" onclick="showCreateClub()">+ יצירת מועדון חדש</button>
     <div id="td-clubs-list" class="td-clubs-list"></div>
   </div>
 </section>
@@ -394,10 +394,10 @@
       <span class="tc-card-icon">👨‍👩‍👧‍👦</span>
       <div class="tc-card-text">
         <span class="tc-card-title">הכיתה שלנו</span>
-        <span class="tc-card-sub">כל חברי המועדון ›</span>
+        <span class="tc-card-sub">דשבורד ניהול ובקרה</span>
       </div>
     </button>
-    <button class="btn-giant btn-green tc-read-btn" onclick="enterReadingSession()">📖 פתח לקריאה</button>
+    <button class="btn-giant btn-green tc-read-btn" onclick="showTeacherClassScreen()">👥 חברי המועדון</button>
   </div>
 </section>
 
@@ -883,8 +883,8 @@
 <!-- ══ Tab Bar — 2 עוגני ניווט ════════════════════════════════════ -->
 <nav id="booki-nav" class="booki-nav" data-tab="" aria-label="ניווט ראשי">
   <button class="booki-tab" data-for="clubs" onclick="goClubs()">
-    <span class="btab-icon">🏘️</span>
-    <span class="btab-label">המועדונים שלי</span>
+    <span class="btab-icon">👨‍👩‍👧‍👦</span>
+    <span class="btab-label">הכיתה שלי</span>
   </button>
   <button class="booki-tab" data-for="reader" onclick="goWhoReads()">
     <span class="btab-icon">📖</span>

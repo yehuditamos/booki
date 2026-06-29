@@ -1156,24 +1156,34 @@ label { font-weight: 700; font-size: 1rem; }
 .td-subtitle   { font-size: .9rem; color: var(--muted); text-align: center; margin: 0; padding: 4px 0 8px; }
 .btn-logout    { background: none; border: 1.5px solid var(--muted); color: var(--muted); border-radius: 8px; padding: 6px 12px; font-size: .8rem; cursor: pointer; font-family: inherit; }
 .td-body       { padding: 16px; }
-.td-new-club   { margin-bottom: 20px; }
-.td-clubs-list { display: flex; flex-direction: column; gap: 10px; }
+.td-clubs-list { display: flex; flex-direction: column; gap: 14px; }
 .td-empty      { text-align: center; padding: 40px 20px; color: var(--muted); }
 .td-empty p    { margin-bottom: 20px; }
 .td-loading    { text-align: center; color: var(--muted); padding: 20px; }
-.teacher-club-card {
-  display: flex; align-items: center; gap: 12px;
-  background: #fff; border: 1.5px solid var(--border);
-  border-radius: 14px; padding: 14px 16px;
-  box-shadow: var(--shadow-sm);
-  cursor: pointer; transition: box-shadow .18s, border-color .18s;
+/* "יצירת מועדון חדש" — secondary, unobtrusive */
+.btn-td-secondary {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 12px 18px; margin-bottom: 18px;
+  background: none; border: 2px dashed #ccc; border-radius: 14px;
+  color: #888; font-size: .95rem; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  transition: border-color .15s, color .15s;
 }
-.teacher-club-card:hover  { box-shadow: 0 4px 20px rgba(0,0,0,.13); border-color: var(--green); }
-.teacher-club-card:active { transform: scale(.98); }
-.tc-emoji { font-size: 2rem; }
-.tc-info  { flex: 1; }
-.tc-name  { display: block; font-weight: 800; font-size: 1rem; }
-.tc-meta  { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.btn-td-secondary:hover { border-color: var(--green); color: var(--green); }
+/* Club cards — larger, dashboard feel */
+.teacher-club-card {
+  display: flex; align-items: center; gap: 16px;
+  background: #fff; border: 2px solid var(--border);
+  border-radius: 20px; padding: 20px 22px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.09);
+  cursor: pointer; transition: box-shadow .18s, border-color .18s, transform .12s;
+}
+.teacher-club-card:hover  { box-shadow: 0 8px 28px rgba(39,174,96,.18); border-color: var(--green); transform: translateY(-2px); }
+.teacher-club-card:active { transform: scale(.98); box-shadow: 0 3px 10px rgba(0,0,0,.1); }
+.tc-emoji { font-size: 2.8rem; line-height: 1; flex-shrink: 0; }
+.tc-info  { flex: 1; min-width: 0; }
+.tc-name  { display: block; font-weight: 900; font-size: 1.1rem; }
+.tc-meta  { display: block; font-size: .85rem; color: var(--muted); margin-top: 4px; }
 .btn-small { padding: 8px 14px; border-radius: 8px; font-size: .85rem; font-weight: 700; cursor: pointer; border: none; font-family: inherit; }
 .btn-tc-delete {
   background: none; border: 1.5px solid #ddd; color: var(--muted);
@@ -1206,48 +1216,85 @@ label { font-weight: 700; font-size: 1rem; }
 /* ─── Class Screen / Member List ──────────────────────────────── */
 .class-loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1.1rem; }
 .class-empty   { text-align: center; padding: 30px; color: var(--muted); }
-.class-goal-card {
-  margin: 16px 16px 4px;
-  background: #fff; border-radius: 16px;
-  padding: 18px 18px 14px;
-  box-shadow: var(--shadow-sm);
-  border: 1.5px solid var(--border);
-}
-.class-goal-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px;
-}
+/* Legacy goal card (kept for backward compat) */
+.class-goal-card { margin: 0; background: #fff; border-radius: 16px; padding: 18px 18px 14px; box-shadow: var(--shadow-sm); border: 1.5px solid var(--border); }
+.class-goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .class-goal-label { font-weight: 800; font-size: 1rem; }
-.btn-edit-goal {
-  background: none; border: 1.5px solid var(--border); border-radius: 8px;
-  padding: 4px 10px; font-size: .8rem; cursor: pointer;
-  color: var(--muted); font-family: inherit; transition: border-color .15s, color .15s;
-}
+.btn-edit-goal { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: .8rem; cursor: pointer; color: var(--muted); font-family: inherit; transition: border-color .15s, color .15s; }
 .btn-edit-goal:hover { border-color: var(--orange); color: var(--orange); }
 .class-goal-nums { font-size: .95rem; margin-bottom: 8px; color: var(--muted); }
 .class-goal-nums strong { font-size: 1.4rem; color: var(--text); font-weight: 900; }
-.class-goal-track {
-  background: #f0f0f0; border-radius: 99px; height: 12px; overflow: hidden;
-}
-.class-goal-fill {
-  background: linear-gradient(90deg, var(--green2), var(--green));
-  height: 100%; border-radius: 99px;
-  transition: width .6s ease;
-}
+.class-goal-track { background: #f0f0f0; border-radius: 99px; height: 12px; overflow: hidden; }
+.class-goal-fill { background: linear-gradient(90deg, var(--green2), var(--green)); height: 100%; border-radius: 99px; transition: width .6s ease; }
 .class-goal-pct { text-align: left; font-size: .82rem; color: var(--muted); margin-top: 4px; font-weight: 700; }
-
-.class-members-list { padding: 8px 12px 20px; display: flex; flex-direction: column; gap: 10px; }
-.class-member-row {
-  display: flex; align-items: center; gap: 12px;
-  background: #fff; border-radius: 14px; padding: 12px 14px;
-  box-shadow: var(--shadow-sm);
-}
+.class-members-list { padding: 8px 0 20px; display: flex; flex-direction: column; gap: 10px; }
+.class-member-row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow-sm); }
 .class-m-avatar { font-size: 1.8rem; flex-shrink: 0; }
 .class-m-info   { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .class-m-name   { font-weight: 800; font-size: .95rem; }
 .class-m-sub    { font-size: .78rem; color: var(--muted); }
 .class-m-stats  { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .class-m-mins   { font-weight: 700; font-size: .85rem; color: var(--green); }
+
+/* ─── Teacher Class Dashboard (tcd-*) — Dashboard redesign ─── */
+.tcd-stats-row {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+}
+.tcd-stat-card {
+  background: #fff; border-radius: 16px; padding: 16px 10px;
+  text-align: center; box-shadow: 0 3px 14px rgba(0,0,0,.07);
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.tcd-stat-icon { font-size: 1.6rem; line-height: 1; }
+.tcd-stat-num  { font-size: 1.7rem; font-weight: 900; color: var(--text); line-height: 1.1; }
+.tcd-stat-lbl  { font-size: .72rem; color: var(--muted); font-weight: 600; }
+
+.tcd-goal-card {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: 20px; padding: 20px 22px;
+  box-shadow: 0 4px 20px rgba(39,174,96,.14);
+  border: 1.5px solid rgba(39,174,96,.25);
+}
+.tcd-goal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.tcd-goal-label { font-weight: 800; font-size: 1rem; color: #1a5c35; }
+.tcd-goal-nums  { margin-bottom: 12px; line-height: 1; }
+.tcd-goal-done  { font-size: 2.2rem; font-weight: 900; color: #1a5c35; }
+.tcd-goal-sep   { font-size: 1.1rem; color: #4a8c5c; margin: 0 4px; }
+.tcd-goal-target { font-size: 1rem; color: #4a8c5c; }
+.tcd-progress-track {
+  background: rgba(255,255,255,.7); border-radius: 99px;
+  height: 16px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
+}
+.tcd-progress-fill {
+  background: linear-gradient(90deg, #27AE60, #8BC34A);
+  height: 100%; border-radius: 99px; transition: width .6s ease;
+}
+.tcd-goal-pct { text-align: left; font-size: .85rem; color: #2d7a40; margin-top: 6px; font-weight: 700; }
+
+.tcd-leaderboard {
+  background: #fff; border-radius: 20px; padding: 20px 18px 12px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.07);
+}
+.tcd-lb-title { font-size: 1.05rem; font-weight: 900; margin-bottom: 14px; color: var(--text); }
+.tcd-member-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 14px; margin-bottom: 8px;
+  background: #f9f9f9;
+}
+.tcd-gold   { background: linear-gradient(135deg, #FFF9C4, #FFE082); }
+.tcd-silver { background: linear-gradient(135deg, #F5F5F5, #CFD8DC); }
+.tcd-bronze { background: linear-gradient(135deg, #FFF3E0, #FFCC80); }
+.tcd-m-pos    { font-size: 1.3rem; min-width: 28px; text-align: center; flex-shrink: 0; }
+.tcd-m-avatar { font-size: 1.5rem; flex-shrink: 0; }
+.tcd-m-info   { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tcd-m-name   { font-weight: 800; font-size: .95rem; }
+.tcd-m-last   { font-size: .75rem; color: var(--muted); }
+.tcd-m-stat   { text-align: center; flex-shrink: 0; }
+.tcd-m-mins   { font-size: 1.15rem; font-weight: 900; color: var(--green); display: block; line-height: 1; }
+.tcd-m-lbl    { font-size: .68rem; color: var(--muted); display: block; }
 
 
 body.nav-visible .booki-nav { display: flex; }

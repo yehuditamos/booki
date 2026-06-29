@@ -850,36 +850,28 @@ function _renderTeacherClassContent(club, memberships, clubId) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
-  const goalTarget   = club?.goal?.target || 1500;
-  const now          = new Date();
-  const active       = memberships.filter(m => m.status !== 'left');
-  const sorted       = [...active].sort((a, b) =>
+  const goalTarget = club?.goal?.target || 1500;
+  const now        = new Date();
+  const active     = memberships.filter(m => m.status !== 'left');
+  const sorted     = [...active].sort((a, b) =>
     (b.cachedStats?.totalMinutes || 0) - (a.cachedStats?.totalMinutes || 0));
-  const totalMins    = active.reduce((s, m) => s + (m.cachedStats?.totalMinutes || 0), 0);
-  const pct          = Math.min(100, Math.round((totalMins / goalTarget) * 100));
+  const totalMins  = active.reduce((s, m) => s + (m.cachedStats?.totalMinutes || 0), 0);
+  const pct        = Math.min(100, Math.round((totalMins / goalTarget) * 100));
 
-  const goalHtml = `
-    <div class="class-goal-card">
-      <div class="class-goal-header">
-        <span class="class-goal-label">🎯 יעד הקריאה</span>
-        <button class="btn-edit-goal" onclick="editClubGoal('${clubId}',${goalTarget})">✏️ ערוך</button>
-      </div>
-      <div class="class-goal-nums">
-        <strong>${Math.round(totalMins)}</strong><span> / ${goalTarget} דקות</span>
-      </div>
-      <div class="class-goal-track">
-        <div class="class-goal-fill" style="width:${pct}%"></div>
-      </div>
-      <div class="class-goal-pct">${pct}%</div>
-    </div>`;
+  const readersThisWeek = active.filter(m => {
+    const lastAt = m.cachedStats?.lastReadAt;
+    return lastAt && (now - new Date(lastAt)) / 864e5 <= 7;
+  }).length;
+
+  const posIcons = ['🥇', '🥈', '🥉'];
 
   const membersHtml = sorted.length
-    ? sorted.map(m => {
+    ? sorted.map((m, i) => {
         const avatar  = m.emoji || m.avatar || '📚';
         const name    = m.name  || m.userId || '—';
         const mins    = Math.round(m.cachedStats?.totalMinutes || 0);
         const lastAt  = m.cachedStats?.lastReadAt;
-        let dot = '⚪', lastStr = 'לא קרא/ה עדיין';
+        let dot = '⚪', lastStr = 'טרם קרא/ה';
         if (lastAt) {
           const days = Math.floor((now - new Date(lastAt)) / 864e5);
           dot = days <= 7 ? '🟢' : days <= 30 ? '🟡' : '🔴';
@@ -889,22 +881,60 @@ function _renderTeacherClassContent(club, memberships, clubId) {
             : days <= 30   ? `לפני ${Math.floor(days / 7)} שבועות`
             : `לפני ${Math.floor(days / 30)} חודשים`;
         }
+        const podium = ['tcd-gold','tcd-silver','tcd-bronze'][i] || '';
         return `
-          <div class="class-member-row">
-            <span class="class-m-avatar">${avatar}</span>
-            <div class="class-m-info">
-              <span class="class-m-name">${name}</span>
-              <span class="class-m-sub">${lastStr}</span>
+          <div class="tcd-member-row ${podium}">
+            <span class="tcd-m-pos">${posIcons[i] || (i + 1)}</span>
+            <span class="tcd-m-avatar">${avatar}</span>
+            <div class="tcd-m-info">
+              <span class="tcd-m-name">${name}</span>
+              <span class="tcd-m-last">${dot} ${lastStr}</span>
             </div>
-            <div class="class-m-stats">
-              <span class="class-m-mins">${mins} דק'</span>
-              <span>${dot}</span>
+            <div class="tcd-m-stat">
+              <strong class="tcd-m-mins">${mins}</strong>
+              <span class="tcd-m-lbl">דק'</span>
             </div>
           </div>`;
       }).join('')
-    : '<p class="class-empty">אין חברים פעילים במועדון</p>';
+    : '<p class="class-empty">אין חברים פעילים במועדון 📚</p>';
 
-  content.innerHTML = goalHtml + `<div class="class-members-list">${membersHtml}</div>`;
+  content.innerHTML = `
+    <div class="tcd-stats-row">
+      <div class="tcd-stat-card">
+        <span class="tcd-stat-icon">👥</span>
+        <strong class="tcd-stat-num">${active.length}</strong>
+        <span class="tcd-stat-lbl">חברים</span>
+      </div>
+      <div class="tcd-stat-card">
+        <span class="tcd-stat-icon">⏱️</span>
+        <strong class="tcd-stat-num">${Math.round(totalMins)}</strong>
+        <span class="tcd-stat-lbl">דקות קריאה</span>
+      </div>
+      <div class="tcd-stat-card">
+        <span class="tcd-stat-icon">🟢</span>
+        <strong class="tcd-stat-num">${readersThisWeek}</strong>
+        <span class="tcd-stat-lbl">קראו השבוע</span>
+      </div>
+    </div>
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">🎯 יעד הכיתה</span>
+        <button class="btn-edit-goal" onclick="editClubGoal('${clubId}',${goalTarget})">✏️ ערוך</button>
+      </div>
+      <div class="tcd-goal-nums">
+        <span class="tcd-goal-done">${Math.round(totalMins)}</span>
+        <span class="tcd-goal-sep"> / </span>
+        <span class="tcd-goal-target">${goalTarget} דק'</span>
+      </div>
+      <div class="tcd-progress-track">
+        <div class="tcd-progress-fill" style="width:${pct}%"></div>
+      </div>
+      <div class="tcd-goal-pct">${pct}% הושלמו</div>
+    </div>
+    <div class="tcd-leaderboard">
+      <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
+      ${membersHtml}
+    </div>`;
 }
 
 async function editClubGoal(clubId, currentTarget) {

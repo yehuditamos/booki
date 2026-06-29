@@ -402,66 +402,128 @@ function launchConfetti() {
 
 // ─── כרטיס קורא ─────────────────────────────────────────────────────
 
-function showReaderCard() {
-  const s    = currentStudentData || loadStudentLocal(currentStudentId || 0);
-  const rank = getRank(s.totalMinutes);
-  const next = getNextRank(s.totalMinutes);
-  const pct  = next ? Math.min(100, Math.round((s.totalMinutes / next.min) * 100)) : 100;
+async function showReaderCard() {
+  const s = currentStudentData || loadStudentLocal(currentStudentId || 0);
+  showScreen('screen-reader-card');
+
+  // Legacy path (numeric id) — data already in memory/localStorage, render immediately
+  if (typeof s.id === 'number') {
+    _renderReaderCardContent(s);
+    return;
+  }
+
+  // New-student path — Firestore is the single source of truth for cross-device sync
+  const contentEl = document.getElementById('reader-card-content');
+  if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
+
+  const userId = s.id;
+  const clubId = window.currentClubId
+    || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
+
+  const [membership, sessions] = await Promise.all([
+    (clubId && typeof fbLoadClubMembership === 'function')
+      ? fbLoadClubMembership(clubId, userId)
+      : Promise.resolve(null),
+    (typeof fbLoadUserSessions === 'function')
+      ? fbLoadUserSessions(userId)
+      : Promise.resolve([]),
+  ]);
+
+  const cs      = membership?.cachedStats || {};
+  const sorted  = (sessions || []).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const appMins = sorted.filter(r => r.type === 'app').reduce((t, r) => t + (r.minutes || 0), 0);
+  const bkMins  = sorted.filter(r => r.type !== 'app').reduce((t, r) => t + (r.minutes || 0), 0);
+
+  const enriched = {
+    ...s,
+    totalMinutes: cs.totalMinutes ?? (appMins + bkMins),
+    appMinutes:   appMins,
+    bookMinutes:  bkMins,
+    points:       cs.totalPoints  ?? (cs.totalMinutes ?? 0),
+    history:      sorted,
+  };
+
+  // Refresh localStorage cache so next visit on this device is instant
+  window.currentStudentData = { ...window.currentStudentData, ...enriched };
+  if (typeof saveStudentLocal === 'function') {
+    saveStudentLocal({ ...enriched, history: sorted.slice(0, 50) });
+  }
+
+  _renderReaderCardContent(enriched);
+}
+
+function _renderReaderCardContent(s) {
+  const mins = s.totalMinutes || 0;
+  const pts  = s.points       || 0;
+  const rank = getRank(mins);
+  const next = getNextRank(mins);
+  const pct  = next ? Math.min(100, Math.round((mins / next.min) * 100)) : 100;
 
   const progressSection = next
     ? `<div class="progress-card">
-         <p>עוד <strong>${next.min - s.totalMinutes}</strong> דקות לדרגה הבאה:
+         <p>עוד <strong>${next.min - mins}</strong> דקות לדרגה הבאה:
             <span style="color:${next.color}">${next.icon} ${next.name}</span></p>
          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
        </div>`
     : `<div class="max-rank">🌟 הגעת לדרגה הגבוהה ביותר! 🌟</div>`;
 
-  const histItems = [...s.history].reverse().slice(0, 10).map(h => `
-    <div class="history-item">
-      <span class="history-icon">${h.type === 'app' ? '📱' : '📖'}</span>
-      <div>
-        <span class="history-title">${h.type === 'app' ? h.storyTitle : h.title}</span>
-        <span class="history-meta">${h.date} · ${h.minutes} דקות · +${h.points} נק׳</span>
-      </div>
-    </div>`).join('');
+  const history = Array.isArray(s.history) ? s.history : [];
+  const histItems = history.slice(0, 10).map(h => {
+    const isApp   = h.type === 'app';
+    // Firestore sessions: storyTitle (app) / bookTitle (book); legacy: h.title (book)
+    const title   = isApp ? (h.storyTitle || '') : (h.bookTitle || h.title || '');
+    const dateLbl = h.date    || '';
+    const minLbl  = (h.minutes ?? 0) + ' דקות';
+    const ptsLbl  = '+' + (h.points ?? 0) + ' נק׳';
+    return `
+      <div class="history-item">
+        <span class="history-icon">${isApp ? '📱' : '📖'}</span>
+        <div>
+          ${title ? `<span class="history-title">${title}</span>` : ''}
+          <span class="history-meta">${[dateLbl, minLbl, ptsLbl].filter(Boolean).join(' · ')}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // s.emoji is set for new students; STUDENT_EMOJIS[s.id] for legacy (numeric index)
+  const avatar = s.emoji || (typeof STUDENT_EMOJIS !== 'undefined' ? STUDENT_EMOJIS[s.id] : '') || '📚';
 
   document.getElementById('reader-card-content').innerHTML = `
     <div class="card-hero">
-      <div class="card-avatar">${STUDENT_EMOJIS[s.id]}</div>
-      <div class="card-name">${s.name}</div>
+      <div class="card-avatar">${avatar}</div>
+      <div class="card-name">${s.name || ''}</div>
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
     <div class="stats-grid">
       <div class="stat-box">
         <span class="stat-icon-big">⏱️</span>
-        <span class="stat-num">${s.totalMinutes}</span>
+        <span class="stat-num">${mins}</span>
         <span class="stat-lbl">דקות סה״כ</span>
       </div>
       <div class="stat-box stat-box-highlight">
         <span class="stat-icon-big">⭐</span>
-        <span class="stat-num">${s.points}</span>
+        <span class="stat-num">${pts}</span>
         <span class="stat-lbl">נקודות</span>
       </div>
       <div class="stat-box">
         <span class="stat-icon-big">📱</span>
-        <span class="stat-num">${s.appMinutes}</span>
+        <span class="stat-num">${s.appMinutes || 0}</span>
         <span class="stat-lbl">דק׳ באפליקציה</span>
       </div>
       <div class="stat-box">
         <span class="stat-icon-big">📚</span>
-        <span class="stat-num">${s.bookMinutes}</span>
+        <span class="stat-num">${s.bookMinutes || 0}</span>
         <span class="stat-lbl">דק׳ מספרים</span>
       </div>
     </div>
     ${progressSection}
-    ${s.history.length > 0
+    ${history.length > 0
       ? `<div class="history-section">
            <h3>היסטוריית קריאה</h3>
            <div class="history-list">${histItems}</div>
          </div>`
       : '<p class="no-history">עדיין לא קראת — התחל/י עכשיו! 📚</p>'}
   `;
-  showScreen('screen-reader-card');
 }
 
 // ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
