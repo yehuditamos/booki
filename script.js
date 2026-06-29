@@ -293,6 +293,11 @@ async function finishAppReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  if (typeof fbSaveReadingSession === 'function') {
+    fbSaveReadingSession(currentStudentId, {
+      type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes, points,
+    }).catch(() => {});
+  }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes,
@@ -363,6 +368,12 @@ async function submitBookReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  if (typeof fbSaveReadingSession === 'function') {
+    fbSaveReadingSession(currentStudentId, {
+      type: 'book', bookTitle: bookData.title, bookAuthor: bookData.author || null,
+      pagesRead: bookData.pages || null, minutes, points,
+    }).catch(() => {});
+  }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
       type: 'book', storyId: null, storyTitle: bookData.title, minutes,
@@ -408,7 +419,7 @@ async function showReaderCard() {
 
   // Legacy path (numeric id) — data already in memory/localStorage, render immediately
   if (typeof s.id === 'number') {
-    _renderReaderCardContent(s);
+    _renderReaderCardContent({ ...s, history: [...(s.history || [])].reverse() });
     return;
   }
 
@@ -436,10 +447,10 @@ async function showReaderCard() {
 
   const enriched = {
     ...s,
-    totalMinutes: cs.totalMinutes ?? (appMins + bkMins),
-    appMinutes:   appMins,
-    bookMinutes:  bkMins,
-    points:       cs.totalPoints  ?? (cs.totalMinutes ?? 0),
+    totalMinutes: Math.max(cs.totalMinutes || 0, s.totalMinutes || 0),
+    appMinutes:   appMins || s.appMinutes  || 0,
+    bookMinutes:  bkMins  || s.bookMinutes || 0,
+    points:       Math.max(cs.totalPoints || 0, s.points || 0),
     history:      sorted,
   };
 
@@ -522,7 +533,10 @@ function _renderReaderCardContent(s) {
            <h3>היסטוריית קריאה</h3>
            <div class="history-list">${histItems}</div>
          </div>`
-      : '<p class="no-history">עדיין לא קראת — התחל/י עכשיו! 📚</p>'}
+      : `<div class="no-history-wrap">
+           <button class="btn-rc-read" onclick="showLibrary()">📱 לקריאה באפליקציה</button>
+           <p class="no-history">עדיין לא קראת — התחל/י עכשיו!</p>
+         </div>`}
   `;
 }
 
