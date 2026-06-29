@@ -17,6 +17,8 @@ let _pendingClubId = null;  // direct join via ?club= link
 
 function showJoinClub() {
   if (typeof track === 'function') track('join_club_started');
+  // Pre-authenticate anonymously so auth is ready before name submission
+  if (typeof ensureStudentAuth === 'function') ensureStudentAuth().catch(() => {});
   _renderSeedClubs();
   const input = document.getElementById('join-code-input');
   if (input) input.value = '';

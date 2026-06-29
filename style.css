@@ -148,6 +148,14 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .btn-menu.btn-teal   { background: linear-gradient(145deg, var(--teal2), var(--teal)); }
 .btn-icon  { font-size: 2.6rem; }
 .btn-label { font-size: 1rem; text-align: center; line-height: 1.3; }
+/* Primary actions — bigger and more vibrant */
+.btn-menu-primary { min-height: 160px; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.btn-menu-primary .btn-icon  { font-size: 3rem; }
+.btn-menu-primary .btn-label { font-size: 1.05rem; }
+/* Secondary actions — smaller, quieter */
+.btn-menu-secondary { min-height: 84px; padding: 18px 12px; gap: 8px; opacity: .88; }
+.btn-menu-secondary .btn-icon  { font-size: 1.7rem; }
+.btn-menu-secondary .btn-label { font-size: .85rem; }
 
 /* ─── LIBRARY ───────────────────────────────────────────────────── */
 .library-tabs { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin-top: 8px; padding-bottom: 4px; }
@@ -820,7 +828,32 @@ label { font-weight: 700; font-size: 1rem; }
 .wiz-complete-text { color: #777; font-size: .92rem; line-height: 1.6; margin: 0; }
 .wiz-start-btn { --wiz-btn-color: #27AE60; }
 
-/* Avatar grid */
+/* Avatar — category picker */
+.avatar-cat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 0;
+}
+.avatar-cat-btn {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8f8f8; border: 2px solid #eee; border-radius: 14px;
+  padding: 12px 14px; font-family: inherit; cursor: pointer;
+  transition: background .15s, border-color .15s; text-align: start;
+}
+.avatar-cat-btn:hover { background: #eef6ee; border-color: var(--green, #27AE60); }
+.avatar-cat-emoji { font-size: 2.2rem; flex-shrink: 0; }
+.avatar-cat-name  { font-size: .88rem; font-weight: 700; color: #333; line-height: 1.2; }
+.avatar-cat-title { font-size: 1rem; font-weight: 700; color: #555; text-align: center; margin: 0 0 10px; }
+/* Avatar — emoji grid (large) */
+.avatar-grid-lg   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.avatar-opt-lg {
+  font-size: 2.4rem; line-height: 1; padding: 10px;
+  border: 3px solid transparent; border-radius: 12px;
+  background: #f8f8f8; cursor: pointer;
+  transition: border-color .12s, transform .1s, background .1s;
+}
+.avatar-opt-lg:hover    { border-color: var(--green); transform: scale(1.1); }
+.avatar-opt-lg.selected { border-color: var(--green); background: #e8f8ee; transform: scale(1.1); }
+.avatar-opt-lg.avatar-taken { opacity: .28; cursor: not-allowed; }
+/* Legacy avatar grid (kept for backward compat) */
 .avatar-sections { display: flex; flex-direction: column; gap: 18px; }
 .avatar-cat-label {
   font-size: .75rem; font-weight: 700; color: var(--muted);
@@ -837,6 +870,30 @@ label { font-weight: 700; font-size: 1rem; }
 .avatar-opt:hover    { border-color: var(--green); transform: scale(1.08); }
 .avatar-opt.selected { border-color: var(--green); background: #e8f8ee; transform: scale(1.12); }
 .avatar-opt.avatar-taken { opacity: .28; cursor: not-allowed; }
+
+/* Niqqud step */
+.wiz-niqqud-opt { flex-direction: column; gap: 6px; min-height: 80px; }
+.wiz-niqqud-example { font-size: 1.5rem; font-weight: 700; direction: rtl; color: #333; letter-spacing: .03em; }
+
+/* Love-of-reading slider */
+.wiz-slider-wrap { padding: 12px 8px 4px; }
+.wiz-slider-emoji-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 1.8rem; text-align: center; line-height: 1.2; }
+.wiz-slider-emoji-row small { font-size: .7rem; color: #999; display: block; }
+.wiz-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 10px; border-radius: 5px;
+  background: linear-gradient(90deg, var(--green, #27AE60), var(--green2, #8BC34A));
+  cursor: pointer; outline: none;
+}
+.wiz-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #fff; border: 3px solid var(--green, #27AE60);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15); cursor: pointer;
+}
+.wiz-slider-value-display { text-align: center; margin-top: 16px; }
+.wiz-slider-value { font-size: 3rem; font-weight: 900; color: var(--green, #27AE60); line-height: 1; }
+.wiz-slider-scale { font-size: .9rem; color: #aaa; margin-right: 4px; }
 
 /* ─── "במיוחד בשבילך" ────────────────────────────────────────── */
 

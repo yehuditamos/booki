@@ -105,25 +105,24 @@ const CHARACTER_TAG_MAP = {
 // ─── Step Definitions ─────────────────────────────────────────────────────────
 
 const WIZARD_STEPS = [
-  { id: 'name',                  color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                                next: 'זה אני! 😊'   },
-  { id: 'avatar',                color: '#9B59B6', icon: '🌟', title: 'הדמות שלי',     sub: 'בחר/י דמות שתייצג אותך',                next: 'בחרתי! ✨'    },
-  { id: 'grade',                 color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                    next: 'ממשיכים! 📚'  },
-  { id: 'readingLevel',          color: '#27AE60', icon: '💪', title: 'הרגשה שלי',     sub: 'איך אתה מרגיש עם קריאה?',               next: 'ממשיכים! 💪'  },
-  { id: 'favoriteTopics',        color: '#E74C3C', icon: '❤️', title: 'מה אני אוהב',  sub: 'מה אתה הכי אוהב לקרוא?',                next: 'ממשיכים! ❤️'  },
-  { id: 'favoriteCharacterType', color: '#E67E22', icon: '🦸', title: 'דמות אהובה',    sub: 'איזה סוג דמות אתה הכי אוהב?',            next: 'ממשיכים! 🦸'  },
-  { id: 'preferredReadingTime',  color: '#1ABC9C', icon: '⏱️', title: 'זמן קריאה',     sub: 'כמה זמן אתה אוהב לקרוא?',               next: 'ממשיכים! ⏱️' },
-  { id: 'goal',                  color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                         next: 'סיימתי! 🎉'   },
+  { id: 'name',       color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                            next: '🚀 בוא נתחיל!'  },
+  { id: 'avatar',     color: '#9B59B6', icon: '🎨', title: 'הדמות שלי',     sub: '🎨 איזו דמות אני רוצה שתופיע ליד השם שלי?', next: 'בחרתי! ✨'    },
+  { id: 'grade',      color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                  next: 'ממשיכים! 📚'  },
+  { id: 'niqqudPref', color: '#27AE60', icon: '📖', title: 'איך אני קורא',   sub: 'איך אתה/את קורא/ת בדרך כלל?',        next: 'ממשיכים! 📖'  },
+  { id: 'loveSlider', color: '#E74C3C', icon: '❤️', title: 'אהבת קריאה',    sub: 'כמה אתה/את אוהב/ת לקרוא?',           next: 'ממשיכים! ❤️'  },
+  { id: 'goal',       color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                       next: 'סיימתי! 🎉'   },
 ];
 
 // ─── Wizard State ─────────────────────────────────────────────────────────────
 
-let _wizardUserId       = null;
-let _wizardClubId       = null;
-let _wizardExisting     = {};
-let _wizardAnswers      = {};
-let _wizardTakenAvatars = new Set();
-let _wizardFinalProfile = null;
-let _wizardStepIndex    = 0;
+let _wizardUserId         = null;
+let _wizardClubId         = null;
+let _wizardExisting       = {};
+let _wizardAnswers        = {};
+let _wizardTakenAvatars   = new Set();
+let _wizardFinalProfile   = null;
+let _wizardStepIndex      = 0;
+let _wizardAvatarCatIndex = -1; // -1 = show categories, ≥0 = show grid for that cat
 
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
@@ -135,9 +134,10 @@ async function showProfileWizard(userId, clubId, existingProfile) {
     name:           existingProfile?.name || '',
     favoriteTopics: [],
   };
-  _wizardTakenAvatars = new Set();
-  _wizardFinalProfile = null;
-  _wizardStepIndex    = 0;
+  _wizardTakenAvatars   = new Set();
+  _wizardFinalProfile   = null;
+  _wizardStepIndex      = 0;
+  _wizardAvatarCatIndex = -1;
 
   if (typeof setNavVisible === 'function') setNavVisible(false);
   if (typeof showScreen   === 'function') showScreen('screen-profile-wizard');
@@ -186,6 +186,13 @@ function _wizardNext() {
 }
 
 function _wizardBack() {
+  // Avatar sub-navigation: from emoji grid → back to category list
+  if (WIZARD_STEPS[_wizardStepIndex]?.id === 'avatar' && _wizardAvatarCatIndex >= 0) {
+    _wizardAvatarCatIndex = -1;
+    const bodyEl = document.getElementById('wiz-step-body');
+    if (bodyEl) bodyEl.innerHTML = _bodyAvatar();
+    return;
+  }
   if (_wizardStepIndex > 0) {
     _wizardStepIndex--;
     _renderWizardStep(true);
@@ -204,28 +211,24 @@ function _wizardExit() {
 
 function _isStepValid(id) {
   switch (id) {
-    case 'name':                  return (_wizardAnswers.name || '').trim().length > 0;
-    case 'avatar':                return !!_wizardAnswers.avatar;
-    case 'grade':                 return !!_wizardAnswers.grade;
-    case 'readingLevel':          return !!_wizardAnswers.readingLevel;
-    case 'favoriteTopics':        return (_wizardAnswers.favoriteTopics?.length > 0);
-    case 'favoriteCharacterType': return !!_wizardAnswers.favoriteCharacterType;
-    case 'preferredReadingTime':  return !!_wizardAnswers.preferredReadingTime;
-    case 'goal':                  return !!_wizardAnswers.goal;
+    case 'name':       return (_wizardAnswers.name || '').trim().length > 0;
+    case 'avatar':     return !!_wizardAnswers.avatar;
+    case 'grade':      return !!_wizardAnswers.grade;
+    case 'niqqudPref': return !!_wizardAnswers.niqqudPref;
+    case 'loveSlider': return true;
+    case 'goal':       return !!_wizardAnswers.goal;
     default: return true;
   }
 }
 
 function _stepErrMsg(id) {
   return ({
-    name:                  'כתוב/י את שמך כדי להמשיך',
-    avatar:                'בחר/י דמות כדי להמשיך',
-    grade:                 'בחר/י את הכיתה שלך',
-    readingLevel:          'ספר/י לנו איך אתה מרגיש',
-    favoriteTopics:        'בחר/י לפחות תחום אחד',
-    favoriteCharacterType: 'בחר/י סוג דמות',
-    preferredReadingTime:  'בחר/י זמן קריאה',
-    goal:                  'בחר/י מטרה',
+    name:       'כתוב/י את שמך כדי להמשיך',
+    avatar:     'בחר/י דמות כדי להמשיך',
+    grade:      'בחר/י את הכיתה שלך',
+    niqqudPref: 'בחר/י איך אתה/את קורא/ת',
+    loveSlider: '',
+    goal:       'בחר/י מטרה',
   })[id] || '';
 }
 
@@ -240,10 +243,18 @@ function _renderWizardStep(goingBack) {
   const backFn    = _wizardStepIndex === 0 ? '_wizardExit()' : '_wizardBack()';
 
   // ניקוי תשובת השלב — כל כניסה מתחילה נקייה (חריג: שם נשמר לפרה-פיל)
-  if (step.id === 'favoriteTopics') {
-    _wizardAnswers.favoriteTopics = [];
-  } else if (step.id !== 'name') {
-    delete _wizardAnswers[step.id];
+  if (step.id !== 'name') delete _wizardAnswers[step.id];
+
+  // איפוס sub-navigation של avatar כשיוצאים מהשלב
+  if (step.id !== 'avatar') _wizardAvatarCatIndex = -1;
+
+  // כותרת דינמית לשלב השם — מותאמת אישית אם שם כבר קיים
+  const existingName = (_wizardAnswers.name || '').trim();
+  let displayTitle = step.title;
+  let displaySub   = step.sub;
+  if (step.id === 'name' && existingName) {
+    displayTitle = `👋 היי ${existingName}!`;
+    displaySub   = `יש עוד <strong>${existingName}</strong> בכיתה? אפשר להוסיף שם משפחה:`;
   }
 
   // Slide animation
@@ -251,8 +262,14 @@ function _renderWizardStep(goingBack) {
   void container.offsetWidth;
   container.classList.add(goingBack ? 'wiz-anim-back' : 'wiz-anim-next');
 
-  // שלב השם: הכפתור מופעל אם יש שם קיים; שאר השלבים — מושבת עד בחירה
-  const nameReady = step.id === 'name' && (_wizardAnswers.name || '').trim().length > 0;
+  // כפתור "הבא": מופעל מיד לשם (אם קיים) ו-slider; מושבת לשאר עד בחירה
+  let btnEnabled = false;
+  if (step.id === 'name') {
+    btnEnabled = existingName.length > 0;
+  } else if (step.id === 'loveSlider') {
+    btnEnabled = true;
+    if (!_wizardAnswers.loveSlider) _wizardAnswers.loveSlider = 5;
+  }
 
   container.innerHTML = `
     <div class="wiz-step">
@@ -261,10 +278,10 @@ function _renderWizardStep(goingBack) {
       </div>
       <div class="wiz-hero">
         <div class="wiz-step-icon" style="color:${step.color}">${step.icon}</div>
-        <h2 class="wiz-step-title">${step.title}</h2>
-        <p class="wiz-step-sub">${step.sub}</p>
+        <h2 class="wiz-step-title">${displayTitle}</h2>
+        <p class="wiz-step-sub">${displaySub}</p>
       </div>
-      <div class="wiz-body">
+      <div class="wiz-body" id="wiz-step-body">
         ${_buildStepBody(step.id)}
       </div>
       <div class="wiz-footer">
@@ -272,13 +289,13 @@ function _renderWizardStep(goingBack) {
         <button id="wiz-next-btn" class="wiz-next-btn"
                 style="--wiz-btn-color:${step.color}"
                 onclick="_wizardNext()"
-                ${nameReady ? '' : 'disabled'}>
+                ${btnEnabled ? '' : 'disabled'}>
           ${step.next}
         </button>
       </div>
     </div>`;
 
-  // Post-render: שלב השם
+  // Post-render hooks
   if (step.id === 'name') {
     const input = document.getElementById('wiz-name-input');
     if (input) {
@@ -287,7 +304,7 @@ function _renderWizardStep(goingBack) {
         const btn = document.getElementById('wiz-next-btn');
         if (btn) btn.disabled = e.target.value.trim().length === 0;
       });
-      setTimeout(() => input.focus(), 80);
+      if (!existingName) setTimeout(() => input.focus(), 80);
     }
   }
 }
@@ -296,47 +313,63 @@ function _renderWizardStep(goingBack) {
 
 function _buildStepBody(id) {
   switch (id) {
-    case 'name':                  return _bodyName();
-    case 'avatar':                return _bodyAvatar();
-    case 'grade':                 return _bodyGrade();
-    case 'readingLevel':          return _bodyReadingLevel();
-    case 'favoriteTopics':        return _bodyTopics();
-    case 'favoriteCharacterType': return _bodyCharType();
-    case 'preferredReadingTime':  return _bodyReadingTime();
-    case 'goal':                  return _bodyGoal();
+    case 'name':       return _bodyName();
+    case 'avatar':     return _bodyAvatar();
+    case 'grade':      return _bodyGrade();
+    case 'niqqudPref': return _bodyNiqqud();
+    case 'loveSlider': return _bodyLoveSlider();
+    case 'goal':       return _bodyGoal();
     default: return '';
   }
 }
 
 function _bodyName() {
-  const val = _wizardAnswers.name || '';
+  const val      = _wizardAnswers.name || '';
+  const existing = val.trim();
+  if (existing) {
+    return `
+      <input id="wiz-name-input" class="wiz-name-input" type="text"
+             placeholder="${existing}" value="${val}" maxlength="40"
+             autocomplete="off" autocorrect="off" spellcheck="false" />
+      <p class="wiz-hint-text">אם אין עוד ${existing} בכיתה — לחץ/י ישירות על 🚀 בוא נתחיל!</p>`;
+  }
   return `<input id="wiz-name-input" class="wiz-name-input" type="text"
-                  placeholder="שם פרטי" value="${val}" maxlength="30"
-                  autocomplete="off" autocorrect="off" spellcheck="false" />`;
+                  placeholder="שם פרטי" value="" maxlength="40"
+                  autocomplete="given-name" autocorrect="off" spellcheck="false" />`;
 }
 
 function _bodyAvatar() {
-  const sections = AVATAR_CATALOG.map(cat => {
-    const btns = cat.emojis.map(emoji => {
-      const idx   = _AVATAR_INDEX.get(emoji);
-      const taken = _wizardTakenAvatars.has(emoji);
-      const sel   = _wizardAnswers.avatar === emoji;
-      if (idx === undefined) return '';
-      return `<button class="avatar-opt${taken ? ' avatar-taken' : ''}${sel ? ' selected' : ''}"
-                      data-idx="${idx}" onclick="_selectAvatar(${idx})"
-                      ${taken ? 'disabled title="תפוס"' : ''}>${emoji}</button>`;
-    }).join('');
-    return `<div class="avatar-section">
-      <div class="avatar-cat-label">${cat.category}</div>
-      <div class="avatar-grid">${btns}</div>
-    </div>`;
+  // שלב א — רשימת קטגוריות גדולות
+  return `<div class="avatar-cat-grid">` +
+    AVATAR_CATALOG.map((cat, i) => {
+      const repr = cat.emojis.find(e => !_wizardTakenAvatars.has(e)) || cat.emojis[0];
+      return `<button class="avatar-cat-btn" onclick="_selectAvatarCat(${i})">
+        <span class="avatar-cat-emoji">${repr}</span>
+        <span class="avatar-cat-name">${cat.category}</span>
+      </button>`;
+    }).join('') +
+  `</div>`;
+}
+
+function _bodyAvatarGrid(catIndex) {
+  // שלב ב — גריד אמוג׳ים גדולים מהקטגוריה שנבחרה
+  const cat  = AVATAR_CATALOG[catIndex];
+  const btns = cat.emojis.map(emoji => {
+    const idx   = _AVATAR_INDEX.get(emoji);
+    const taken = _wizardTakenAvatars.has(emoji);
+    const sel   = _wizardAnswers.avatar === emoji;
+    if (idx === undefined) return '';
+    return `<button class="avatar-opt-lg${taken ? ' avatar-taken' : ''}${sel ? ' selected' : ''}"
+                    data-idx="${idx}" onclick="_selectAvatar(${idx})"
+                    ${taken ? 'disabled title="תפוס"' : ''}>${emoji}</button>`;
   }).join('');
-  return `<div class="avatar-sections">${sections}</div>`;
+  return `<p class="avatar-cat-title">${cat.category}</p>
+          <div class="avatar-grid-lg">${btns}</div>`;
 }
 
 function _bodyGrade() {
   return `<div class="wiz-grade-row">
-    ${['א','ב','ג'].map(g => `
+    ${['א','ב','ג','ד','ה','ו'].map(g => `
       <button class="wiz-grade-btn${_wizardAnswers.grade === g ? ' selected' : ''}"
               onclick="_pickSingle(this,'grade','${g}')">
         ${g}'
@@ -344,66 +377,42 @@ function _bodyGrade() {
   </div>`;
 }
 
-function _bodyReadingLevel() {
+function _bodyNiqqud() {
   return [
-    { v: 'easy',     e: '😊', l: 'אני קורא/ת בקלות'  },
-    { v: 'ok',       e: '🙂', l: 'אני מסתדר/ת'        },
-    { v: 'hard',     e: '😅', l: 'לפעמים קשה לי'      },
-    { v: 'beginner', e: '❤️', l: 'אני רק מתחיל/ה'    },
-  ].map(o => _cardBtn(o, 'readingLevel')).join('');
+    { v: 'full',    e: 'בְּרֵאשִׁית', l: 'עם ניקוד מלא'   },
+    { v: 'partial', e: 'בְּראשית',    l: 'גם וגם'          },
+    { v: 'none',    e: 'בראשית',     l: 'ללא ניקוד'       },
+  ].map(o => `
+    <button class="wiz-card-opt wiz-niqqud-opt${_wizardAnswers.niqqudPref === o.v ? ' selected' : ''}"
+            onclick="_pickSingle(this,'niqqudPref','${o.v}')">
+      <span class="wiz-niqqud-example">${o.e}</span>
+      <span class="wiz-card-label">${o.l}</span>
+    </button>`).join('');
 }
 
-function _bodyTopics() {
-  const sel = new Set(_wizardAnswers.favoriteTopics || []);
-  const chips = [
-    { v: 'funny',      l: '😂 מצחיק'      },
-    { v: 'adventure',  l: '⚔️ הרפתקאות'   },
-    { v: 'animals',    l: '🐾 חיות'        },
-    { v: 'magic',      l: '🪄 קסמים'       },
-    { v: 'space',      l: '🚀 חלל'         },
-    { v: 'science',    l: '🔬 מדע'         },
-    { v: 'dinosaurs',  l: '🦕 דינוזאורים'  },
-    { v: 'sports',     l: '⚽ ספורט'       },
-    { v: 'friendship', l: '🤝 חברות'       },
-    { v: 'family',     l: '🏠 משפחה'       },
-    { v: 'comics',     l: '💬 קומיקס'      },
-  ].map(o => `<button class="wiz-chip${sel.has(o.v) ? ' selected' : ''}"
-                       onclick="_toggleTopic(this,'${o.v}')">${o.l}</button>`).join('');
-  return `<div class="wiz-chips-wrap">${chips}</div>
-          <p class="wiz-hint-text">אפשר לבחור כמה שרוצים</p>`;
-}
-
-function _bodyCharType() {
-  return [
-    { v: 'animals',     e: '🐶', l: 'חיות'              },
-    { v: 'robots',      e: '🤖', l: 'רובוטים'           },
-    { v: 'kids',        e: '🧒', l: 'ילדים'             },
-    { v: 'princesses',  e: '👸', l: 'נסיכות'            },
-    { v: 'superheroes', e: '🦸', l: 'גיבורי על'         },
-    { v: 'dinosaurs',   e: '🦖', l: 'דינוזאורים'        },
-    { v: 'dragons',     e: '🐉', l: 'דרקונים'           },
-    { v: 'astronauts',  e: '🚀', l: 'אסטרונאוטים'       },
-    { v: 'wizards',     e: '🧙', l: 'קוסמים'            },
-    { v: 'monsters',    e: '👾', l: 'מפלצות מצחיקות'    },
-  ].map(o => _cardBtn(o, 'favoriteCharacterType')).join('');
-}
-
-function _bodyReadingTime() {
-  return [
-    { v: 5,  e: '⚡', l: "5 דקות"   },
-    { v: 10, e: '📖', l: "10 דקות"  },
-    { v: 15, e: '📚', l: "15 דקות"  },
-    { v: 20, e: '🌟', l: "20+ דקות" },
-  ].map(o => _cardBtn(o, 'preferredReadingTime')).join('');
+function _bodyLoveSlider() {
+  const val = _wizardAnswers.loveSlider || 5;
+  return `<div class="wiz-slider-wrap">
+    <div class="wiz-slider-emoji-row">
+      <span class="wiz-slider-emoji-end">😕<br><small>בכלל לא</small></span>
+      <span class="wiz-slider-emoji-end">🤩<br><small>מאוד!</small></span>
+    </div>
+    <input id="wiz-love-slider" type="range" min="1" max="10" step="1"
+           value="${val}" class="wiz-slider"
+           oninput="_updateLoveSlider(this.value)" />
+    <div class="wiz-slider-value-display">
+      <span id="wiz-love-value" class="wiz-slider-value">${val}</span>
+      <span class="wiz-slider-scale">/ 10</span>
+    </div>
+  </div>`;
 }
 
 function _bodyGoal() {
   return [
-    { v: 'daily',   e: '📅', l: 'לקרוא כל יום'        },
-    { v: 'improve', e: '📈', l: 'להשתפר בקריאה'       },
-    { v: 'long',    e: '📚', l: 'לקרוא ספרים ארוכים'  },
+    { v: 'more',    e: '📈', l: 'לקרוא יותר'          },
+    { v: 'improve', e: '✨', l: 'להשתפר בקריאה'       },
     { v: 'stars',   e: '⭐', l: 'לצבור כוכבים'        },
-    { v: 'compete', e: '🏆', l: 'לנצח בטבלת המובילים' },
+    { v: 'long',    e: '📚', l: 'לקרוא ספרים ארוכים'  },
   ].map(o => _cardBtn(o, 'goal')).join('');
 }
 
@@ -447,16 +456,18 @@ function _selectAvatar(idx) {
   }
 }
 
-function _toggleTopic(btn, value) {
-  btn.classList.toggle('selected');
-  if (!Array.isArray(_wizardAnswers.favoriteTopics)) _wizardAnswers.favoriteTopics = [];
-  if (btn.classList.contains('selected')) {
-    if (!_wizardAnswers.favoriteTopics.includes(value)) _wizardAnswers.favoriteTopics.push(value);
-  } else {
-    _wizardAnswers.favoriteTopics = _wizardAnswers.favoriteTopics.filter(t => t !== value);
-  }
+function _selectAvatarCat(catIndex) {
+  _wizardAvatarCatIndex = catIndex;
+  const bodyEl = document.getElementById('wiz-step-body');
+  if (bodyEl) bodyEl.innerHTML = _bodyAvatarGrid(catIndex);
+}
+
+function _updateLoveSlider(val) {
+  _wizardAnswers.loveSlider = Number(val);
+  const valEl  = document.getElementById('wiz-love-value');
+  if (valEl) valEl.textContent = val;
   const nextBtn = document.getElementById('wiz-next-btn');
-  if (nextBtn) nextBtn.disabled = _wizardAnswers.favoriteTopics.length === 0;
+  if (nextBtn) nextBtn.disabled = false;
 }
 
 // ─── Submit ───────────────────────────────────────────────────────────────────
@@ -475,12 +486,13 @@ async function _wizardSubmit() {
   const profileData = {
     name,
     avatar:                  _wizardAnswers.avatar,
+    emoji:                   _wizardAnswers.avatar,
     grade:                   _wizardAnswers.grade,
-    readingLevel:            _wizardAnswers.readingLevel,
-    favoriteTopics:          _wizardAnswers.favoriteTopics || [],
-    favoriteCharacterType:   _wizardAnswers.favoriteCharacterType || null,
-    preferredReadingTime:    Number(_wizardAnswers.preferredReadingTime),
+    niqqudPref:              _wizardAnswers.niqqudPref || null,
+    niqqudLevel:             _wizardAnswers.niqqudPref || null, // alias for onboarding compat
+    loveOfReading:           _wizardAnswers.loveSlider ?? 5,
     goal:                    _wizardAnswers.goal,
+    favoriteTopics:          [],  // kept for backward compat with buildRecommendations
     onboardingComplete:      true,
     personalizationComplete: true,
     updatedAt:               now,
@@ -642,7 +654,8 @@ window._wizardNext                  = _wizardNext;
 window._wizardBack                  = _wizardBack;
 window._wizardExit                  = _wizardExit;
 window._pickSingle                  = _pickSingle;
-window._toggleTopic                 = _toggleTopic;
+window._selectAvatarCat             = _selectAvatarCat;
+window._updateLoveSlider            = _updateLoveSlider;
 window._enterPersonalHomeFromWizard = _enterPersonalHomeFromWizard;
 window.buildRecommendations         = buildRecommendations;
 window.renderForYouSection          = renderForYouSection;
