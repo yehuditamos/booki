@@ -26,27 +26,23 @@
     <h1 class="splash-title">בּוּקִי<br><span class="splash-sub">יַעַר הַקְּרִיאָה</span></h1>
     <p class="splash-tagline">לקריאה מהנה, מדי יום 📖</p>
     <div class="splash-actions">
-      <button class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
-        <span class="sa-icon">👩‍🏫</span>
+      <button id="splash-btn-create" class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
+        <span class="sa-icon">🌳</span>
         <div class="sa-text">
-          <span class="sa-label">אני מורה</span>
-          <span class="sa-sub">כניסה לדשבורד / יצירת מועדון</span>
+          <span class="sa-label">יצירת מועדון חדש</span>
+          <span class="sa-sub">מורה? התחבר/י ליצירת מועדון קריאה</span>
         </div>
       </button>
       <button class="btn-splash-action btn-sa-reader" onclick="showWhoReads()">
         <span class="sa-icon">📖</span>
         <div class="sa-text">
-          <span class="sa-label">אני קורא</span>
-          <span class="sa-sub">כניסה לפרופיל קיים</span>
+          <span class="sa-label">מי קורא עכשיו?</span>
+          <span class="sa-sub">כניסה לקריאה</span>
         </div>
       </button>
-      <button class="btn-splash-action btn-sa-join" onclick="showJoinClub()">
-        <span class="sa-icon">🔑</span>
-        <div class="sa-text">
-          <span class="sa-label">יש לי קוד מועדון</span>
-          <span class="sa-sub">הצטרפות למועדון חדש</span>
-        </div>
-      </button>
+      <div class="splash-secondary-actions">
+        <button class="btn-splash-secondary" onclick="showJoinClub()">🔑 יש לי קוד מועדון</button>
+      </div>
     </div>
   </div>
 </section>

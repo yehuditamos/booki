@@ -12,6 +12,12 @@ let _clubCode  = '';
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 function showCreateClub() {
+  const teacher = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
+  if (!teacher) {
+    if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
+    else showScreen('screen-teacher-auth');
+    return;
+  }
   _newClub  = { type: null, name: '', emoji: '🌳', members: [] };
   _newClubId = null;
   _clubCode  = '';

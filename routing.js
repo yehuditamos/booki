@@ -153,6 +153,7 @@ function routeOnLoad() {
   }
 
   // לא מחובר — מסך פתיחה
+  _updateSplashForRole();
   showScreen('screen-splash');
 }
 
@@ -207,7 +208,15 @@ async function startReading() {
 function goHome() {
   setNavVisible(false);
   if (hasDeviceClubs()) showScreen('screen-home');
-  else showScreen('screen-splash');
+  else { _updateSplashForRole(); showScreen('screen-splash'); }
+}
+
+function _updateSplashForRole() {
+  const btn = document.getElementById('splash-btn-create');
+  if (!btn) return;
+  const isTeacher = typeof getCurrentTeacher === 'function' && !!getCurrentTeacher();
+  const isStudent = !!getActiveReader();
+  btn.style.display = (isStudent && !isTeacher) ? 'none' : '';
 }
 
 // ─── Club Select ──────────────────────────────────────────────────────────────
@@ -921,4 +930,5 @@ Object.assign(window, {
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
   enterReadingSession, showTeacherClassScreen, editClubGoal,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
+  _updateSplashForRole,
 });

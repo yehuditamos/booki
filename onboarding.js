@@ -352,8 +352,20 @@ function goHomeAfterOnboarding() {
 
 // חשיפה גלובלית
 if (typeof window !== 'undefined') {
+  window.showJoinClub         = showJoinClub;
   window.showJoinClubWithCode = showJoinClubWithCode;
   window.showJoinClubDirect   = showJoinClubDirect;
   window.submitJoinName       = submitJoinName;
   window.handleNameKeydown    = handleNameKeydown;
+  window.submitJoinCode       = submitJoinCode;
+  window.handleCodeKeydown    = handleCodeKeydown;
+  window.joinSeedClub         = joinSeedClub;
+  window.startOnboarding      = startOnboarding;
+  window.goHomeAfterOnboarding = goHomeAfterOnboarding;
+  window.toggleInterest       = toggleInterest;
+  window.finishInterests      = finishInterests;
+  window.selectGrade          = selectGrade;
+  window.selectReadingLevel   = selectReadingLevel;
+  window.selectNiqqudLevel    = selectNiqqudLevel;
+  window.startProfile         = startProfile;
 }

@@ -291,7 +291,24 @@ label { font-weight: 700; font-size: 1rem; }
 
 .btn-sa-create { background: #fff; color: var(--text); }
 .btn-sa-reader { background: rgba(255,255,255,.28); color: #fff; border: 2px solid rgba(255,255,255,.6); }
-.btn-sa-join   { background: rgba(255,255,255,.18); color: #fff; border: 2px solid rgba(255,255,255,.5); }
+
+.splash-secondary-actions { text-align: center; margin-top: 2px; }
+.btn-splash-secondary {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,.45);
+  color: rgba(255,255,255,.85);
+  border-radius: 12px;
+  padding: 10px 26px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, border-color .15s;
+}
+.btn-splash-secondary:hover {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.75);
+}
 
 .sa-icon  { font-size: 2.2rem; flex-shrink: 0; }
 .sa-text  { display: flex; flex-direction: column; gap: 2px; }
