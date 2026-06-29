@@ -695,8 +695,8 @@ label { font-weight: 700; font-size: 1rem; }
   padding: 6px 16px 0; min-height: 40px;
 }
 .wiz-back-btn {
-  background: none; border: none; font-size: .88rem; font-weight: 700;
-  color: #bbb; cursor: pointer; padding: 6px 4px; font-family: inherit;
+  background: none; border: none; font-size: .9rem; font-weight: 700;
+  color: #888; cursor: pointer; padding: 6px 4px; font-family: inherit;
   transition: color .15s;
 }
 .wiz-back-btn:hover { color: var(--green, #27AE60); }
@@ -908,8 +908,15 @@ label { font-weight: 700; font-size: 1rem; }
 .welcome-hint    { font-size: .95rem; margin-top: 10px; opacity: .75; }
 
 /* ─── Onboarding Steps ───────────────────────────────────────── */
-.onboard-header   { padding: 20px 16px 0; }
-.onboard-step     { font-size: .82rem; color: var(--muted); font-weight: 600; margin-bottom: 8px; text-align: center; }
+.onboard-header   { padding: 16px 16px 0; }
+.ob-back-row      { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ob-back-btn      {
+  background: none; border: none; font-size: .85rem; font-weight: 700;
+  color: #888; cursor: pointer; padding: 4px 0; font-family: inherit;
+  transition: color .15s;
+}
+.ob-back-btn:hover { color: var(--green, #27AE60); }
+.onboard-step     { font-size: .82rem; color: var(--muted); font-weight: 600; margin: 0; text-align: center; }
 .onboard-progress { height: 6px; background: #e0e0e0; border-radius: 10px; overflow: hidden; }
 .onboard-fill     { height: 100%; background: linear-gradient(90deg, var(--green), var(--green2)); border-radius: 10px; transition: width .4s ease; }
 .onboard-question { font-size: 1.35rem; font-weight: 900; text-align: center; padding: 20px 20px 0; }

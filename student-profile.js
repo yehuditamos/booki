@@ -192,6 +192,16 @@ function _wizardBack() {
   }
 }
 
+function _wizardExit() {
+  if (_wizardClubId && typeof showWhoReads === 'function') {
+    showWhoReads(_wizardClubId);
+  } else if (typeof goHome === 'function') {
+    goHome();
+  } else {
+    showScreen('screen-splash');
+  }
+}
+
 function _isStepValid(id) {
   switch (id) {
     case 'name':                  return (_wizardAnswers.name || '').trim().length > 0;
@@ -226,8 +236,8 @@ function _renderWizardStep(goingBack) {
   const container = document.getElementById('wizard-content');
   if (!container) return;
 
-  const step    = WIZARD_STEPS[_wizardStepIndex];
-  const hasBack = _wizardStepIndex > 0;
+  const step      = WIZARD_STEPS[_wizardStepIndex];
+  const backFn    = _wizardStepIndex === 0 ? '_wizardExit()' : '_wizardBack()';
 
   // ניקוי תשובת השלב — כל כניסה מתחילה נקייה (חריג: שם נשמר לפרה-פיל)
   if (step.id === 'favoriteTopics') {
@@ -247,7 +257,7 @@ function _renderWizardStep(goingBack) {
   container.innerHTML = `
     <div class="wiz-step">
       <div class="wiz-top-row">
-        ${hasBack ? `<button class="wiz-back-btn" onclick="_wizardBack()">← חזרה</button>` : '<div></div>'}
+        <button class="wiz-back-btn" onclick="${backFn}">חזרה →</button>
       </div>
       <div class="wiz-hero">
         <div class="wiz-step-icon" style="color:${step.color}">${step.icon}</div>
@@ -630,6 +640,7 @@ window.showProfileWizard            = showProfileWizard;
 window._selectAvatar                = _selectAvatar;
 window._wizardNext                  = _wizardNext;
 window._wizardBack                  = _wizardBack;
+window._wizardExit                  = _wizardExit;
 window._pickSingle                  = _pickSingle;
 window._toggleTopic                 = _toggleTopic;
 window._enterPersonalHomeFromWizard = _enterPersonalHomeFromWizard;

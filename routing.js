@@ -657,7 +657,13 @@ function switchReader() {
 }
 
 function goBackFromJoin() {
-  if (hasDeviceClubs()) routeOnLoad(); else showScreen('screen-splash');
+  if (_activeClubId) showScreen('screen-who-reads');
+  else if (hasDeviceClubs()) showScreen('screen-home');
+  else { _updateSplashForRole(); showScreen('screen-splash'); }
+}
+
+function goBackToJoinEntry() {
+  showScreen('screen-join-entry');
 }
 
 // ─── כלי פיתוח (קונסול) ──────────────────────────────────────────────────────
@@ -924,7 +930,7 @@ Object.assign(window, {
   // Club selection
   goClubs, pickClub,
   // Nav
-  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin,
+  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin, goBackToJoinEntry,
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,

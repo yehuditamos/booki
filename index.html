@@ -27,10 +27,10 @@
     <p class="splash-tagline">לקריאה מהנה, מדי יום 📖</p>
     <div class="splash-actions">
       <button id="splash-btn-create" class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
-        <span class="sa-icon">🌳</span>
+        <span class="sa-icon">👩‍🏫</span>
         <div class="sa-text">
-          <span class="sa-label">יצירת מועדון חדש</span>
-          <span class="sa-sub">מורה? התחבר/י ליצירת מועדון קריאה</span>
+          <span class="sa-label">התחברות למורה / הקמת מועדון חדש</span>
+          <span class="sa-sub">כניסה למורה קיימת או פתיחת מועדון חדש</span>
         </div>
       </button>
       <button class="btn-splash-action btn-sa-reader" onclick="showWhoReads()">
@@ -586,7 +586,7 @@
 <section id="screen-join-name" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="goBackFromJoin()">חזרה →</button>
+      <button class="btn-back" onclick="goBackToJoinEntry()">חזרה →</button>
       <h2>ברוכים הבאים!</h2>
     </div>
   </div>
@@ -619,7 +619,10 @@
 <!-- ══ אונבורדינג — כיתה ═══════════════════════════════════════════ -->
 <section id="screen-onboard-grade" class="screen">
   <div class="onboard-header">
-    <p class="onboard-step">שלב 1 מתוך 4</p>
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-join-welcome')">חזרה →</button>
+      <p class="onboard-step">שלב 1 מתוך 4</p>
+    </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:25%"></div></div>
   </div>
   <p class="onboard-question">באיזו כיתה אתה/את?</p>
@@ -648,7 +651,10 @@
 <!-- ══ אונבורדינג — רמת קריאה ════════════════════════════════════ -->
 <section id="screen-onboard-reading" class="screen">
   <div class="onboard-header">
-    <p class="onboard-step">שלב 2 מתוך 4</p>
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-grade')">חזרה →</button>
+      <p class="onboard-step">שלב 2 מתוך 4</p>
+    </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:50%"></div></div>
   </div>
   <p class="onboard-question">איך אתה/את קורא/ת?</p>
@@ -680,7 +686,10 @@
 <!-- ══ אונבורדינג — ניקוד ══════════════════════════════════════════ -->
 <section id="screen-onboard-niqqud" class="screen">
   <div class="onboard-header">
-    <p class="onboard-step">שלב 3 מתוך 4</p>
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-reading')">חזרה →</button>
+      <p class="onboard-step">שלב 3 מתוך 4</p>
+    </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:75%"></div></div>
   </div>
   <p class="onboard-question">מה עדיף לך לקרוא?</p>
@@ -703,7 +712,10 @@
 <!-- ══ אונבורדינג — תחומי עניין ══════════════════════════════════ -->
 <section id="screen-onboard-interests" class="screen">
   <div class="onboard-header">
-    <p class="onboard-step">שלב 4 מתוך 4</p>
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-niqqud')">חזרה →</button>
+      <p class="onboard-step">שלב 4 מתוך 4</p>
+    </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:100%"></div></div>
   </div>
   <p class="onboard-question">מה אתה/את אוהב/ת לקרוא? <small>(עד 3)</small></p>
