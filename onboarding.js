@@ -208,7 +208,7 @@ async function submitJoinName() {
 }
 
 async function _doJoin(clubId, name, invitationCode = null) {
-  // uid מ-Firebase Anonymous Auth — מאומת, עקבי בין סשנים
+  // שלב 1: אימות — חובה לפני הכל
   const userId = (typeof ensureStudentAuth === 'function')
     ? await ensureStudentAuth()
     : (localStorage.getItem('booki_tmp_uid') || ('user_' + Math.random().toString(36).slice(2, 11)));
@@ -218,8 +218,8 @@ async function _doJoin(clubId, name, invitationCode = null) {
   }
   localStorage.setItem('booki_tmp_uid', userId);
 
+  // שלב 2: תביעת / יצירת חברות — חובה לפני מעבר
   if (invitationCode) {
-    // קוד: תובע את ההזמנה (מוסיף חברות פנימית)
     const result = typeof fbClaimInvitation === 'function'
       ? await fbClaimInvitation(invitationCode, userId)
       : { success: false };
@@ -229,7 +229,6 @@ async function _doJoin(clubId, name, invitationCode = null) {
       return;
     }
   } else {
-    // קישור: מוסיף חברות ישירות
     if (typeof fbAddClubMembership === 'function') {
       await fbAddClubMembership(clubId, {
         userId, role: 'member', status: 'active', inviteSource: 'link', invitationId: null,
@@ -237,27 +236,27 @@ async function _doJoin(clubId, name, invitationCode = null) {
     }
   }
 
-  if (typeof fbGetOrCreateUserProfile === 'function') {
-    await fbGetOrCreateUserProfile(userId, { name, emoji: '📚' });
-  }
-
-  // שמור שם ואייקון ב-membership — מקור האמת ב-Firebase
-  if (typeof fbSetMemberName === 'function') {
-    await fbSetMemberName(clubId, userId, name, '📚');
-  }
-
-  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
-  if (typeof addDeviceClub === 'function') {
-    addDeviceClub({ clubId, type: club?.type ?? 'friends', name: club?.name ?? clubId, emoji: club?.emoji ?? '📚' });
-  }
-
-  if (typeof track === 'function') track('join_club_completed', { clubId });
+  // שלב 3: מעבר מיידי לאשף — לא מחכים לפעולות שאינן קריטיות
   _ob = { userId, name, clubId, grade: null, readingLevel: null, niqqudLevel: null, interests: [] };
+  if (typeof track === 'function') track('join_club_completed', { clubId });
 
   if (typeof window.enterPersonalHomeAfterJoin === 'function') {
     window.enterPersonalHomeAfterJoin(userId, name, clubId);
   } else {
     _showWelcome(name);
+  }
+
+  // שלב 4: פעולות רקע — לא חוסמות את המסך
+  // (האשף שומר פרופיל מלא בסיומו — fbGetOrCreateUserProfile מיותר כאן)
+  if (typeof fbSetMemberName === 'function') {
+    fbSetMemberName(clubId, userId, name, '📚').catch(() => {});
+  }
+  if (typeof fbLoadClub === 'function') {
+    fbLoadClub(clubId).then(club => {
+      if (typeof addDeviceClub === 'function') {
+        addDeviceClub({ clubId, type: club?.type ?? 'friends', name: club?.name ?? clubId, emoji: club?.emoji ?? '📚' });
+      }
+    }).catch(() => {});
   }
 }
 

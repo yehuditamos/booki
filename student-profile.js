@@ -105,14 +105,14 @@ const CHARACTER_TAG_MAP = {
 // ─── Step Definitions ─────────────────────────────────────────────────────────
 
 const WIZARD_STEPS = [
-  { id: 'name',                  color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                                next: 'זה אני! 😊',   auto: false },
-  { id: 'avatar',                color: '#9B59B6', icon: '🌟', title: 'הדמות שלי',     sub: 'בחר/י דמות שתייצג אותך',                next: 'בחרתי! ✨',     auto: false },
-  { id: 'grade',                 color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                    next: 'ממשיכים! 📚',  auto: true  },
-  { id: 'readingLevel',          color: '#27AE60', icon: '💪', title: 'הרגשה שלי',     sub: 'איך אתה מרגיש עם קריאה?',               next: 'ממשיכים! 💪',  auto: true  },
-  { id: 'favoriteTopics',        color: '#E74C3C', icon: '❤️', title: 'מה אני אוהב',  sub: 'מה אתה הכי אוהב לקרוא?',                next: 'ממשיכים! ❤️',  auto: false },
-  { id: 'favoriteCharacterType', color: '#E67E22', icon: '🦸', title: 'דמות אהובה',    sub: 'איזה סוג דמות אתה הכי אוהב?',            next: 'ממשיכים! 🦸',  auto: true  },
-  { id: 'preferredReadingTime',  color: '#1ABC9C', icon: '⏱️', title: 'זמן קריאה',     sub: 'כמה זמן אתה אוהב לקרוא?',               next: 'ממשיכים! ⏱️', auto: true  },
-  { id: 'goal',                  color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                         next: 'סיימתי! 🎉',   auto: false },
+  { id: 'name',                  color: '#F39C12', icon: '👋', title: 'שלום!',          sub: 'מה שמך?',                                next: 'זה אני! 😊'   },
+  { id: 'avatar',                color: '#9B59B6', icon: '🌟', title: 'הדמות שלי',     sub: 'בחר/י דמות שתייצג אותך',                next: 'בחרתי! ✨'    },
+  { id: 'grade',                 color: '#3498DB', icon: '📚', title: 'הכיתה שלי',     sub: 'באיזו כיתה אתה/את?',                    next: 'ממשיכים! 📚'  },
+  { id: 'readingLevel',          color: '#27AE60', icon: '💪', title: 'הרגשה שלי',     sub: 'איך אתה מרגיש עם קריאה?',               next: 'ממשיכים! 💪'  },
+  { id: 'favoriteTopics',        color: '#E74C3C', icon: '❤️', title: 'מה אני אוהב',  sub: 'מה אתה הכי אוהב לקרוא?',                next: 'ממשיכים! ❤️'  },
+  { id: 'favoriteCharacterType', color: '#E67E22', icon: '🦸', title: 'דמות אהובה',    sub: 'איזה סוג דמות אתה הכי אוהב?',            next: 'ממשיכים! 🦸'  },
+  { id: 'preferredReadingTime',  color: '#1ABC9C', icon: '⏱️', title: 'זמן קריאה',     sub: 'כמה זמן אתה אוהב לקרוא?',               next: 'ממשיכים! ⏱️' },
+  { id: 'goal',                  color: '#8E44AD', icon: '🎯', title: 'המטרה שלי',     sub: 'מה המטרה שלך?',                         next: 'סיימתי! 🎉'   },
 ];
 
 // ─── Wizard State ─────────────────────────────────────────────────────────────
@@ -142,12 +142,15 @@ async function showProfileWizard(userId, clubId, existingProfile) {
   if (typeof setNavVisible === 'function') setNavVisible(false);
   if (typeof showScreen   === 'function') showScreen('screen-profile-wizard');
 
-  if (clubId && typeof fbGetClubAvatars === 'function') {
-    const taken = await fbGetClubAvatars(clubId, userId);
-    _wizardTakenAvatars = new Set(taken);
-  }
-
+  // צייר שלב 1 מיד — לא מחכים ל-Firebase
   _renderWizardStep(false);
+
+  // טוען אווטארים תפוסים ברקע — נדרש רק לשלב 2
+  if (clubId && typeof fbGetClubAvatars === 'function') {
+    fbGetClubAvatars(clubId, userId)
+      .then(taken => { _wizardTakenAvatars = new Set(taken); })
+      .catch(() => {});
+  }
 }
 
 // ─── Progress ─────────────────────────────────────────────────────────────────
@@ -225,14 +228,21 @@ function _renderWizardStep(goingBack) {
 
   const step    = WIZARD_STEPS[_wizardStepIndex];
   const hasBack = _wizardStepIndex > 0;
-  const isLast  = _wizardStepIndex === WIZARD_STEPS.length - 1;
-  const valid   = _isStepValid(step.id);
-  const showBtn = !step.auto || valid;
+
+  // ניקוי תשובת השלב — כל כניסה מתחילה נקייה (חריג: שם נשמר לפרה-פיל)
+  if (step.id === 'favoriteTopics') {
+    _wizardAnswers.favoriteTopics = [];
+  } else if (step.id !== 'name') {
+    delete _wizardAnswers[step.id];
+  }
 
   // Slide animation
   container.classList.remove('wiz-anim-next', 'wiz-anim-back');
   void container.offsetWidth;
   container.classList.add(goingBack ? 'wiz-anim-back' : 'wiz-anim-next');
+
+  // שלב השם: הכפתור מופעל אם יש שם קיים; שאר השלבים — מושבת עד בחירה
+  const nameReady = step.id === 'name' && (_wizardAnswers.name || '').trim().length > 0;
 
   container.innerHTML = `
     <div class="wiz-step">
@@ -249,16 +259,16 @@ function _renderWizardStep(goingBack) {
       </div>
       <div class="wiz-footer">
         <p id="wiz-error" class="wiz-error"></p>
-        ${showBtn ? `<button id="wiz-next-btn" class="wiz-next-btn"
-                             style="--wiz-btn-color:${step.color}"
-                             onclick="_wizardNext()"
-                             ${valid ? '' : 'disabled'}>
-                      ${step.next}
-                    </button>` : ''}
+        <button id="wiz-next-btn" class="wiz-next-btn"
+                style="--wiz-btn-color:${step.color}"
+                onclick="_wizardNext()"
+                ${nameReady ? '' : 'disabled'}>
+          ${step.next}
+        </button>
       </div>
     </div>`;
 
-  // Post-render hooks
+  // Post-render: שלב השם
   if (step.id === 'name') {
     const input = document.getElementById('wiz-name-input');
     if (input) {
@@ -270,7 +280,6 @@ function _renderWizardStep(goingBack) {
       setTimeout(() => input.focus(), 80);
     }
   }
-  if (step.id === 'avatar') _refreshAvatarBtn();
 }
 
 // ─── Step Body Builders ───────────────────────────────────────────────────────
@@ -408,9 +417,7 @@ function _pickSingle(btn, field, rawValue) {
 
   const nextBtn = document.getElementById('wiz-next-btn');
   if (nextBtn) nextBtn.disabled = false;
-
-  const step = WIZARD_STEPS[_wizardStepIndex];
-  if (step?.auto) setTimeout(_wizardNext, 380);
+  // אין מעבר אוטומטי — הילד לוחץ על "המשך" בעצמו
 }
 
 function _selectAvatar(idx) {
@@ -422,18 +429,11 @@ function _selectAvatar(idx) {
   if (btn) btn.classList.add('selected');
 
   _wizardAnswers.avatar = emoji;
-  _refreshAvatarBtn();
-}
 
-function _refreshAvatarBtn() {
-  const btn = document.getElementById('wiz-next-btn');
-  if (!btn) return;
-  if (_wizardAnswers.avatar) {
-    btn.disabled     = false;
-    btn.textContent  = `${_wizardAnswers.avatar} בחרתי!`;
-  } else {
-    btn.disabled     = true;
-    btn.textContent  = 'בחרתי ✨';
+  const nextBtn = document.getElementById('wiz-next-btn');
+  if (nextBtn) {
+    nextBtn.disabled    = false;
+    nextBtn.textContent = `${emoji} בחרתי!`;
   }
 }
 
