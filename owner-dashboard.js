@@ -234,6 +234,9 @@ async function devReset() {
       : { ok: false, error: 'fbDevReset לא נמצא' };
 
     if (result.ok) {
+      if (typeof window.clearDeviceLocalCache === 'function') {
+        window.clearDeviceLocalCache();
+      }
       alert('✅ Reset הושלם:\n' + JSON.stringify(result.counts, null, 2));
       _odLoad(); // רענן את הדשבורד — Owner נשאר מחובר
     } else {

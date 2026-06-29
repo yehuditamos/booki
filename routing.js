@@ -655,13 +655,19 @@ function goBackFromJoin() {
 
 /** window.resetBookiDevice() — מנקה localStorage ומחזיר ל-screen-splash */
 window.resetBookiDevice = function() {
+  clearDeviceLocalCache();
+  console.log('[booki] ✅ resetBookiDevice — המכשיר אופס. מחזיר ל-splash...');
+  showScreen('screen-splash');
+};
+
+/** clearDeviceLocalCache() — מנקה כל ה-cache המקומי ללא ניווט */
+function clearDeviceLocalCache() {
   localStorage.removeItem(_DEVICE_KEY);
   localStorage.removeItem(_ACTIVE_READER_KEY);
   localStorage.removeItem('booki_tmp_uid');
   localStorage.removeItem('booki_migrated_fb_v2');
-  console.log('[booki] ✅ resetBookiDevice — המכשיר אופס. מחזיר ל-splash...');
-  showScreen('screen-splash');
-};
+}
+window.clearDeviceLocalCache = clearDeviceLocalCache;
 
 // ─── Bridge: כניסה ישירה למסך ראשי לאחר הצטרפות ──────────────────────────────
 
@@ -783,6 +789,15 @@ function _classGoBack() {
   showScreen(window._classReturnScreen || 'screen-main');
 }
 
+function _goBackToTeacherDashboard() {
+  showScreen('screen-teacher-dashboard');
+}
+
+function _goBackFromWhoReads() {
+  if (window._currentTeacher) showScreen('screen-teacher-club');
+  else goClubs();
+}
+
 async function showTeacherClassScreen() {
   const clubId = _activeClubId;
   if (!clubId) return;
@@ -900,5 +915,6 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
-  enterReadingSession, showTeacherClassScreen, editClubGoal, _classGoBack,
+  enterReadingSession, showTeacherClassScreen, editClubGoal,
+  _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
 });
