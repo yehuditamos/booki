@@ -127,7 +127,7 @@ function _updateClubCount() {
 
 // ─── App Routing ──────────────────────────────────────────────────────────────
 
-function routeOnLoad() {
+async function routeOnLoad() {
   if (typeof track === 'function') track('app_open');
   setNavVisible(false);
 
@@ -148,7 +148,21 @@ function routeOnLoad() {
   if (reader?.userId) {
     _activeClubId        = reader.clubId || null;
     window.currentClubId = reader.clubId || null;
-    _enterPersonalHome(reader.userId, reader);
+
+    // Firebase Auth הוא Source of Truth לזהות — לא localStorage.
+    // ממתינים לו לפני כניסה, כדי ש-currentStudentId ≡ firebase.auth().currentUser.uid.
+    const authUid = typeof ensureStudentAuth === 'function'
+      ? await ensureStudentAuth()
+      : null;
+    const userId = authUid || reader.userId;
+
+    if (authUid && authUid !== reader.userId) {
+      // ה-session שוחזר/נוצר עם UID שונה מהשמור — מסנכרנים את localStorage
+      setActiveReader({ ...reader, userId: authUid });
+      localStorage.setItem('booki_tmp_uid', authUid);
+    }
+
+    _enterPersonalHome(userId, reader);
     return;
   }
 

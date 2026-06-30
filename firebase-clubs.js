@@ -89,13 +89,6 @@ async function fbLoadUser(userId) {
 async function fbSaveUserProfile(userId, profile) {
   if (!_db()) return;
   try {
-    console.log('[AUTH-TRACE] fbSaveUserProfile →', {
-      firebaseCurrentUser: firebase.auth().currentUser,
-      authUid: firebase.auth().currentUser?.uid,
-      targetUserId: userId,
-      clubId: undefined,
-      isAnonymous: firebase.auth().currentUser?.isAnonymous,
-    });
     await _db().collection('users').doc(userId)
       .collection('profile').doc('main')
       .set({ ...profile, userId, updatedAt: _now() }, { merge: true });
@@ -176,13 +169,6 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
 async function fbSaveReadingSession(userId, session) {
   if (!_db()) return null;
   try {
-    console.log('[AUTH-TRACE] fbSaveReadingSession →', {
-      firebaseCurrentUser: firebase.auth().currentUser,
-      authUid: firebase.auth().currentUser?.uid,
-      targetUserId: userId,
-      clubId: undefined,
-      isAnonymous: firebase.auth().currentUser?.isAnonymous,
-    });
     const ref = _db().collection('users').doc(userId).collection('readingSessions').doc();
     const id = ref.id;
     const { clubId: _removed, ...cleanSession } = session; // מוודא שאין clubId
@@ -210,13 +196,6 @@ async function fbSaveReadingSession(userId, session) {
 async function fbLoadUserSessions(userId, opts = {}) {
   if (!_db()) return [];
   try {
-    console.log('[AUTH-TRACE] fbLoadUserSessions →', {
-      firebaseCurrentUser: firebase.auth().currentUser,
-      authUid: firebase.auth().currentUser?.uid,
-      targetUserId: userId,
-      clubId: undefined,
-      isAnonymous: firebase.auth().currentUser?.isAnonymous,
-    });
     let query = _db().collection('users').doc(userId).collection('readingSessions');
     if (opts.fromDate) query = query.where('date', '>=', opts.fromDate);
     if (opts.toDate)   query = query.where('date', '<=', opts.toDate);
@@ -502,13 +481,6 @@ async function fbGetClubAvatars(clubId, excludeUserId) {
 async function fbUpdateMemberAvatar(clubId, userId, avatar) {
   if (!_db() || !clubId || !userId) return;
   try {
-    console.log('[AUTH-TRACE] fbUpdateMemberAvatar →', {
-      firebaseCurrentUser: firebase.auth().currentUser,
-      authUid: firebase.auth().currentUser?.uid,
-      targetUserId: userId,
-      clubId,
-      isAnonymous: firebase.auth().currentUser?.isAnonymous,
-    });
     await _db().collection('clubs').doc(clubId)
       .collection('memberships').doc(userId)
       .set({ emoji: avatar, avatar }, { merge: true });
@@ -621,29 +593,8 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   if (!_db() || !clubId || !userId) return;
   const inc = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
     ? firebase.firestore.FieldValue.increment(n) : n;
-  const ref = _db().collection('clubs').doc(clubId).collection('memberships').doc(userId);
-
-  // ─── TRACE: stats before ─────────────────────────────────────────
-  console.group('[TRACE] fbUpdateMembershipStats');
-  console.log('delta (writing) =', JSON.stringify(delta));
-  console.log('FieldValue.incr =', typeof firebase !== 'undefined' && !!firebase.firestore?.FieldValue);
-  console.log('[AUTH-TRACE] fbUpdateMembershipStats →', {
-    firebaseCurrentUser: firebase.auth().currentUser,
-    authUid: firebase.auth().currentUser?.uid,
-    targetUserId: userId,
-    clubId,
-    isAnonymous: firebase.auth().currentUser?.isAnonymous,
-  });
   try {
-    const before = await ref.get();
-    console.log('stats BEFORE    =', JSON.stringify(before.exists ? before.data()?.cachedStats : 'doc does not exist'));
-  } catch (readErr) {
-    console.warn('stats BEFORE read failed:', readErr.message);
-  }
-  // ─────────────────────────────────────────────────────────────────
-
-  try {
-    await ref.set({
+    await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
       userId,
       clubId,
       status: 'active',
@@ -657,16 +608,9 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
       },
       updatedAt: _now(),
     }, { merge: true });
-
-    // ─── TRACE: stats after ──────────────────────────────────────
-    const after = await ref.get();
-    console.log('Firestore write = SUCCESS');
-    console.log('stats AFTER     =', JSON.stringify(after.exists ? after.data()?.cachedStats : 'missing?!'));
-    // ─────────────────────────────────────────────────────────────
   } catch (e) {
-    console.error('Firestore write = FAILED:', e.code, e.message);
+    console.error('[firebase-clubs] fbUpdateMembershipStats FAILED:', e.code, e.message, { clubId, userId });
   }
-  console.groupEnd();
 }
 
 async function fbSetMemberName(clubId, userId, name, emoji) {

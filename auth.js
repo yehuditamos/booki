@@ -48,39 +48,38 @@
 
   /**
    * מבטיח שיש auth פעיל לתלמיד — anonymous אם אין.
-   * מחזיר uid. לעולם לא זורק — Fallback ל-localStorage.
+   * ממתין ל-onAuthStateChanged לפני יצירת session חדש, כדי למנוע פיצול UID.
+   * Firebase Auth הוא Source of Truth — לעולם לא סומכים על localStorage לבדו.
    */
   async function ensureStudentAuth() {
     const a = _auth();
-    if (!a) {
-      console.warn('[AUTH-TRACE] _auth() returned null — Firebase not initialized');
-      return localStorage.getItem('booki_tmp_uid');
+    if (!a) return localStorage.getItem('booki_tmp_uid');
+
+    // Session פעיל — החזר מיד
+    if (a.currentUser) {
+      localStorage.setItem('booki_tmp_uid', a.currentUser.uid);
+      return a.currentUser.uid;
     }
 
-    const current = a.currentUser;
-    console.log('[AUTH-TRACE] ensureStudentAuth called', {
-      currentUser: current?.uid ?? null,
-      isAnonymous: current?.isAnonymous ?? null,
-      localStorage_uid: localStorage.getItem('booki_tmp_uid'),
-      willCallSignIn: !current,
+    // Firebase עדיין מאתחל ומשחזר session מ-IndexedDB — מחכים לו.
+    // אם נקרא ל-signInAnonymously לפני כן, ייווצר UID חדש שיגרום לפיצול.
+    const restored = await new Promise(resolve => {
+      const unsub = a.onAuthStateChanged(u => { unsub(); resolve(u); });
+      setTimeout(() => { unsub(); resolve(null); }, 5000);
     });
 
-    if (current) {
-      localStorage.setItem('booki_tmp_uid', current.uid);
-      return current.uid;
+    if (restored) {
+      localStorage.setItem('booki_tmp_uid', restored.uid);
+      return restored.uid;
     }
 
-    console.warn('[AUTH-TRACE] currentUser is null — calling signInAnonymously()');
+    // אין session כלל — תלמיד חדש או session שאבד לצמיתות
     try {
       const cred = await a.signInAnonymously();
-      console.log('[AUTH-TRACE] signInAnonymously SUCCESS — new uid:', cred.user.uid,
-        '| prev localStorage uid:', localStorage.getItem('booki_tmp_uid'),
-        '| SAME?', cred.user.uid === localStorage.getItem('booki_tmp_uid'));
       localStorage.setItem('booki_tmp_uid', cred.user.uid);
       return cred.user.uid;
     } catch (e) {
-      console.error('[AUTH-TRACE] signInAnonymously FAILED:', e.code, e.message,
-        '— falling back to localStorage uid:', localStorage.getItem('booki_tmp_uid'));
+      console.error('[auth] signInAnonymously failed:', e.code, e.message);
       return localStorage.getItem('booki_tmp_uid');
     }
   }
