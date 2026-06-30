@@ -52,20 +52,35 @@
    */
   async function ensureStudentAuth() {
     const a = _auth();
-    if (!a) return localStorage.getItem('booki_tmp_uid');
+    if (!a) {
+      console.warn('[AUTH-TRACE] _auth() returned null — Firebase not initialized');
+      return localStorage.getItem('booki_tmp_uid');
+    }
 
     const current = a.currentUser;
+    console.log('[AUTH-TRACE] ensureStudentAuth called', {
+      currentUser: current?.uid ?? null,
+      isAnonymous: current?.isAnonymous ?? null,
+      localStorage_uid: localStorage.getItem('booki_tmp_uid'),
+      willCallSignIn: !current,
+    });
+
     if (current) {
       localStorage.setItem('booki_tmp_uid', current.uid);
       return current.uid;
     }
 
+    console.warn('[AUTH-TRACE] currentUser is null — calling signInAnonymously()');
     try {
       const cred = await a.signInAnonymously();
+      console.log('[AUTH-TRACE] signInAnonymously SUCCESS — new uid:', cred.user.uid,
+        '| prev localStorage uid:', localStorage.getItem('booki_tmp_uid'),
+        '| SAME?', cred.user.uid === localStorage.getItem('booki_tmp_uid'));
       localStorage.setItem('booki_tmp_uid', cred.user.uid);
       return cred.user.uid;
     } catch (e) {
-      console.warn('[auth] signInAnonymously failed:', e.message);
+      console.error('[AUTH-TRACE] signInAnonymously FAILED:', e.code, e.message,
+        '— falling back to localStorage uid:', localStorage.getItem('booki_tmp_uid'));
       return localStorage.getItem('booki_tmp_uid');
     }
   }

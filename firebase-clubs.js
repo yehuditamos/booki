@@ -89,6 +89,13 @@ async function fbLoadUser(userId) {
 async function fbSaveUserProfile(userId, profile) {
   if (!_db()) return;
   try {
+    console.log('[AUTH-TRACE] fbSaveUserProfile →', {
+      firebaseCurrentUser: firebase.auth().currentUser,
+      authUid: firebase.auth().currentUser?.uid,
+      targetUserId: userId,
+      clubId: undefined,
+      isAnonymous: firebase.auth().currentUser?.isAnonymous,
+    });
     await _db().collection('users').doc(userId)
       .collection('profile').doc('main')
       .set({ ...profile, userId, updatedAt: _now() }, { merge: true });
@@ -169,6 +176,13 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
 async function fbSaveReadingSession(userId, session) {
   if (!_db()) return null;
   try {
+    console.log('[AUTH-TRACE] fbSaveReadingSession →', {
+      firebaseCurrentUser: firebase.auth().currentUser,
+      authUid: firebase.auth().currentUser?.uid,
+      targetUserId: userId,
+      clubId: undefined,
+      isAnonymous: firebase.auth().currentUser?.isAnonymous,
+    });
     const ref = _db().collection('users').doc(userId).collection('readingSessions').doc();
     const id = ref.id;
     const { clubId: _removed, ...cleanSession } = session; // מוודא שאין clubId
@@ -196,6 +210,13 @@ async function fbSaveReadingSession(userId, session) {
 async function fbLoadUserSessions(userId, opts = {}) {
   if (!_db()) return [];
   try {
+    console.log('[AUTH-TRACE] fbLoadUserSessions →', {
+      firebaseCurrentUser: firebase.auth().currentUser,
+      authUid: firebase.auth().currentUser?.uid,
+      targetUserId: userId,
+      clubId: undefined,
+      isAnonymous: firebase.auth().currentUser?.isAnonymous,
+    });
     let query = _db().collection('users').doc(userId).collection('readingSessions');
     if (opts.fromDate) query = query.where('date', '>=', opts.fromDate);
     if (opts.toDate)   query = query.where('date', '<=', opts.toDate);
@@ -481,6 +502,13 @@ async function fbGetClubAvatars(clubId, excludeUserId) {
 async function fbUpdateMemberAvatar(clubId, userId, avatar) {
   if (!_db() || !clubId || !userId) return;
   try {
+    console.log('[AUTH-TRACE] fbUpdateMemberAvatar →', {
+      firebaseCurrentUser: firebase.auth().currentUser,
+      authUid: firebase.auth().currentUser?.uid,
+      targetUserId: userId,
+      clubId,
+      isAnonymous: firebase.auth().currentUser?.isAnonymous,
+    });
     await _db().collection('clubs').doc(clubId)
       .collection('memberships').doc(userId)
       .set({ emoji: avatar, avatar }, { merge: true });
@@ -599,7 +627,13 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   console.group('[TRACE] fbUpdateMembershipStats');
   console.log('delta (writing) =', JSON.stringify(delta));
   console.log('FieldValue.incr =', typeof firebase !== 'undefined' && !!firebase.firestore?.FieldValue);
-  console.log('auth.uid        =', typeof firebase !== 'undefined' ? firebase.auth?.()?.currentUser?.uid : 'N/A');
+  console.log('[AUTH-TRACE] fbUpdateMembershipStats →', {
+    firebaseCurrentUser: firebase.auth().currentUser,
+    authUid: firebase.auth().currentUser?.uid,
+    targetUserId: userId,
+    clubId,
+    isAnonymous: firebase.auth().currentUser?.isAnonymous,
+  });
   try {
     const before = await ref.get();
     console.log('stats BEFORE    =', JSON.stringify(before.exists ? before.data()?.cachedStats : 'doc does not exist'));
