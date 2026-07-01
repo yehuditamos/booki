@@ -332,16 +332,20 @@ async function finishInterests() {
   if (!_ob.interests.length) return;
 
   if (typeof fbSaveUserProfile === 'function') {
-    await fbSaveUserProfile(_ob.userId, {
-      name:                  _ob.name,
-      emoji:                 '📚',
-      ageGroup:              _ob.grade,
-      readingLevel:          _ob.readingLevel,
-      niqqudLevel:           _ob.niqqudLevel,
-      interests:             [..._ob.interests],
-      onboardingComplete:    true,
-      onboardingCompletedAt: new Date().toISOString(),
-    });
+    try {
+      await fbSaveUserProfile(_ob.userId, {
+        name:                  _ob.name,
+        emoji:                 '📚',
+        ageGroup:              _ob.grade,
+        readingLevel:          _ob.readingLevel,
+        niqqudLevel:           _ob.niqqudLevel,
+        interests:             [..._ob.interests],
+        onboardingComplete:    true,
+        onboardingCompletedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('[onboarding] finishInterests: save failed:', e.message);
+    }
   }
 
   // עדכן שם ב-Firebase membership

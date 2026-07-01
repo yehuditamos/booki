@@ -468,6 +468,19 @@ async function _wizardSubmit() {
   const btn = document.getElementById('wiz-next-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
 
+  console.log('[wizard] מתחיל שמירת פרופיל:', { userId: _wizardUserId, name });
+
+  // Auth חייבת להיות מוקמת לפני כל כתיבה ל-Firestore
+  if (typeof ensureStudentAuth === 'function') {
+    try {
+      await ensureStudentAuth();
+      const authUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+      console.log('[wizard] auth:', authUser ? `uid=${authUser.uid}` : 'לא מחובר');
+    } catch (e) {
+      console.warn('[wizard] ensureStudentAuth נכשל:', e.message);
+    }
+  }
+
   const now = new Date().toISOString();
   const profileData = {
     name,
@@ -484,19 +497,30 @@ async function _wizardSubmit() {
   };
   if (!_wizardExisting?.createdAt) profileData.createdAt = now;
 
+  // timeout של 9 שניות — מגן מפני תקיעה ב-Firestore על רשת איטית
+  const _save = (p, ms = 9000) => Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('החיבור איטי — נסה/י שוב')), ms)),
+  ]);
+
+  const _restoreBtn = () => {
+    if (btn) { btn.disabled = false; btn.textContent = WIZARD_STEPS[WIZARD_STEPS.length - 1].next; }
+  };
+
   try {
     if (typeof fbSaveUserProfile === 'function') {
-      await fbSaveUserProfile(_wizardUserId, profileData);
+      console.log('[wizard] שומר פרופיל ב-Firestore...');
+      await _save(fbSaveUserProfile(_wizardUserId, profileData));
+      console.log('[wizard] פרופיל נשמר בהצלחה');
     }
     if (_wizardClubId && typeof fbUpdateMemberAvatar === 'function') {
-      await fbUpdateMemberAvatar(_wizardClubId, _wizardUserId, _wizardAnswers.avatar);
+      await _save(fbUpdateMemberAvatar(_wizardClubId, _wizardUserId, _wizardAnswers.avatar), 5000);
     }
+    console.log('[wizard] שמירה הושלמה — מעבר למסך הבא');
   } catch (e) {
-    if (errEl) errEl.textContent = 'שגיאה בשמירה: ' + e.message;
-    if (btn) {
-      btn.disabled    = false;
-      btn.textContent = WIZARD_STEPS[WIZARD_STEPS.length - 1].next;
-    }
+    console.error('[wizard] שגיאה בשמירה:', e.message);
+    if (errEl) errEl.textContent = e.message || 'שגיאה בשמירה — נסה/י שוב';
+    _restoreBtn();
     return;
   }
 

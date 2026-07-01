@@ -143,6 +143,12 @@ async function routeOnLoad() {
     return;
   }
 
+  // מסך ברוכים הבאים — פעם אחת לכל דפדפן
+  if (!localStorage.getItem('booki_welcome_shown')) {
+    showScreen('screen-welcome');
+    return;
+  }
+
   // קורא שמור — חזרה ישירה למסך הבית
   const reader = getActiveReader();
   if (reader?.userId) {
@@ -661,6 +667,7 @@ function _enterPersonalHome(userId, profile) {
   if (emojiEl) emojiEl.textContent = studentData.emoji || '📚';
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji });
   showScreen('screen-main');
+  _updateBugLabel();
 
   const backBar = document.getElementById('main-back-club-students');
   if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
@@ -674,6 +681,29 @@ function goWhoReads() {
     || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
   if (!clubId && !hasDeviceClubs()) return;
   showWhoReads(clubId);
+}
+
+function dismissWelcome() {
+  localStorage.setItem('booki_welcome_shown', '1');
+  routeOnLoad();
+}
+
+function openBugReport() {
+  const authUser  = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+  const isTeacher = authUser && !authUser.isAnonymous;
+  const name  = isTeacher
+    ? (authUser.displayName || authUser.email || 'מורה')
+    : (window.currentStudentData?.name || '');
+  const club  = _activeClubId || window.currentClubId || '';
+  const msg   = `היי יהודית, מצאתי באג בבוקי:\nשם: ${name}\nמועדון/כיתה: ${club}\nמה ניסיתי לעשות: \nמה קרה בפועל: \nצילום מסך אם יש:`;
+  window.open('https://wa.me/972525383871?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function _updateBugLabel() {
+  const el = document.getElementById('bug-report-label');
+  if (!el) return;
+  const user = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+  el.textContent = (user && !user.isAnonymous) ? 'דיווח על באג' : 'משהו לא עובד?';
 }
 
 /** החלף קורא */
@@ -818,6 +848,7 @@ async function confirmDeleteClub(clubId, clubName) {
 function enterTeacherClub(clubId) {
   _activeClubId        = clubId;
   window.currentClubId = clubId;
+  _updateBugLabel();
   _showTeacherClub(clubId);
 }
 
@@ -1028,7 +1059,8 @@ Object.assign(window, {
   getDeviceClubs, addDeviceClub, removeDeviceClub, addDeviceMember, updateDeviceClubStats,
   hasDeviceClubs, getClubsForUser,
   // Routing
-  routeOnLoad, showWhoReads, showClubDashboard, enterReadingFromDashboard,
+  routeOnLoad, dismissWelcome, openBugReport,
+  showWhoReads, showClubDashboard, enterReadingFromDashboard,
   // Profile selection
   selectProfile, selectLegacyProfile,
   // Club selection

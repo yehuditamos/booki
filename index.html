@@ -10,6 +10,24 @@
 </head>
 <body>
 
+<!-- ══ מסך ברוכים הבאים — חד-פעמי ═══════════════════════════════ -->
+<section id="screen-welcome" class="screen">
+  <div class="welcome-bg">
+    <div class="welcome-card">
+      <p class="welcome-wave">👋</p>
+      <h1 class="welcome-title">וולקאםםםם!</h1>
+      <h2 class="welcome-sub">ברוכים הבאים לבוקי 📚</h2>
+      <div class="welcome-body">
+        <p>בוקי נמצאת כרגע בגרסת ניסיון.</p>
+        <p>אם משהו לא עובד, נתקע או נראה מוזר — ממש נשמח לדעת.</p>
+        <p>בהמשך יש כפתור קטן לדיווח על תקלות, והוא שולח הודעה ישירות ליהודית.</p>
+        <p>תודה שאתם עוזרים לנו לשפר את בוקי ❤️</p>
+      </div>
+      <button class="btn-welcome-enter" onclick="dismissWelcome()">יאללה, נכנסים לבוקי ⬅️</button>
+    </div>
+  </div>
+</section>
+
 <!-- ══ מסך פתיחה ══════════════════════════════════════════════════ -->
 <section id="screen-splash" class="screen active">
   <div class="splash-bg">
@@ -915,6 +933,14 @@
     <span class="btab-label">מי קורא עכשיו?</span>
   </button>
 </nav>
+
+<!-- כפתור דיווח באג — קבוע בכל מסך -->
+<button id="btn-bug-report" class="btn-bug-report" onclick="openBugReport()">
+  🐞 <span id="bug-report-label">משהו לא עובד?</span>
+</button>
+
+<!-- קרדיט -->
+<div class="app-copyright">© כל הזכויות שמורות ליהודית עמוס</div>
 
 </body>
 </html>

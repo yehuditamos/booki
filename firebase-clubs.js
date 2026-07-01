@@ -93,7 +93,8 @@ async function fbSaveUserProfile(userId, profile) {
       .collection('profile').doc('main')
       .set({ ...profile, userId, updatedAt: _now() }, { merge: true });
   } catch (e) {
-    console.warn('[firebase-clubs] fbSaveUserProfile error:', e);
+    console.warn('[firebase-clubs] fbSaveUserProfile error:', e.code, e.message, { userId });
+    throw e;
   }
 }
 
@@ -128,7 +129,7 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
     onboardingComplete:    true,
     onboardingCompletedAt: _now(),
   };
-  await fbSaveUserProfile(userId, profile);
+  try { await fbSaveUserProfile(userId, profile); } catch (e) { console.warn('[firebase-clubs] fbGetOrCreateUserProfile: save failed:', e.message); }
   return profile;
 }
 
