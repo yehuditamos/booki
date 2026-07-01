@@ -661,6 +661,9 @@ function _enterPersonalHome(userId, profile) {
   if (emojiEl) emojiEl.textContent = studentData.emoji || '📚';
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji });
   showScreen('screen-main');
+
+  const backBar = document.getElementById('main-back-club-students');
+  if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
 }
 
 // ─── ניווט גלובלי ─────────────────────────────────────────────────────────────
@@ -676,7 +679,15 @@ function goWhoReads() {
 /** החלף קורא */
 function switchReader() {
   setNavVisible(false);
+  window._returnToClubStudents = false;
   routeOnLoad();
+}
+
+function goBackToClubStudents() {
+  window._returnToClubStudents = false;
+  const backBar = document.getElementById('main-back-club-students');
+  if (backBar) backBar.style.display = 'none';
+  showClubStudents();
 }
 
 function goBackFromJoin() {
@@ -957,6 +968,8 @@ async function showClubStudents() {
   const clubId = _activeClubId;
   if (!clubId) return;
 
+  window._returnToClubStudents = true;
+
   const grid  = document.getElementById('club-students-grid');
   const subEl = document.getElementById('club-students-name');
 
@@ -1025,7 +1038,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
-  showClubStudents,
+  showClubStudents, goBackToClubStudents,
   enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,
