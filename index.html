@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=1" />
 </head>
 <body>
 
@@ -405,11 +405,11 @@
     <button class="tc-class-card" onclick="showTeacherClassScreen()">
       <span class="tc-card-icon">👨‍👩‍👧‍👦</span>
       <div class="tc-card-text">
-        <span class="tc-card-title">הכיתה שלנו</span>
+        <span class="tc-card-title">דשבורד כיתתי</span>
         <span class="tc-card-sub">דשבורד ניהול ובקרה</span>
       </div>
     </button>
-    <button class="tc-class-card" onclick="showClubStudents()">
+    <button class="tc-class-card tc-class-card--sm" onclick="showClubStudents()">
       <span class="tc-card-icon">👨‍🎓</span>
       <div class="tc-card-text">
         <span class="tc-card-title">תלמידי המועדון</span>
@@ -785,46 +785,47 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="firebase.js"></script>
+<!-- גרסה מרכזית לCache Busting — עדכן v= בכל פריסה -->
+<script src="firebase.js?v=1"></script>
 
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
-<script src="data-club-types.js"></script>
-<script src="seed-clubs.js"></script>
-<script src="firebase-clubs.js"></script>
-<script src="auth.js"></script>
-<script src="analytics.js"></script>
+<script src="data-club-types.js?v=1"></script>
+<script src="seed-clubs.js?v=1"></script>
+<script src="firebase-clubs.js?v=1"></script>
+<script src="auth.js?v=1"></script>
+<script src="analytics.js?v=1"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
-<script src="data-libraries.js"></script>
-<script src="data-categories.js"></script>
+<script src="data-libraries.js?v=1"></script>
+<script src="data-categories.js?v=1"></script>
 
 <!-- תוכן: קובץ נפרד לכל ספרייה (סדר הטעינה אינו חשוב) -->
-<script src="content/stories-familiar.js"></script>
-<script src="content/stories-original.js"></script>
-<script src="content/stories-long.js"></script>
-<script src="content/stories-tanakh.js"></script>
-<script src="content/stories-folk.js"></script>
-<script src="content/stories-holidays.js"></script>
-<script src="content/stories-chazal.js"></script>
-<script src="content/stories-science.js"></script>
-<script src="content/stories-animals.js"></script>
-<script src="content/stories-history.js"></script>
-<script src="content/stories-adventure.js"></script>
-<script src="content/stories-booki.js"></script>
-<script src="content/stories-reading.js"></script>
+<script src="content/stories-familiar.js?v=1"></script>
+<script src="content/stories-original.js?v=1"></script>
+<script src="content/stories-long.js?v=1"></script>
+<script src="content/stories-tanakh.js?v=1"></script>
+<script src="content/stories-folk.js?v=1"></script>
+<script src="content/stories-holidays.js?v=1"></script>
+<script src="content/stories-chazal.js?v=1"></script>
+<script src="content/stories-science.js?v=1"></script>
+<script src="content/stories-animals.js?v=1"></script>
+<script src="content/stories-history.js?v=1"></script>
+<script src="content/stories-adventure.js?v=1"></script>
+<script src="content/stories-booki.js?v=1"></script>
+<script src="content/stories-reading.js?v=1"></script>
 
 <!-- אגרגטור + לוגיקה (חייבים לטעון אחרי כל קבצי content/) -->
-<script src="stories.js"></script>
+<script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js"></script>
-<script src="admin-setup.js"></script>
-<script src="onboarding.js"></script>
+<script src="routing.js?v=1"></script>
+<script src="admin-setup.js?v=1"></script>
+<script src="onboarding.js?v=1"></script>
 
-<script src="script.js"></script>
-<script src="owner-dashboard.js"></script>
-<script src="initial-setup.js"></script>
-<script src="student-profile.js"></script>
+<script src="script.js?v=1"></script>
+<script src="owner-dashboard.js?v=1"></script>
+<script src="initial-setup.js?v=1"></script>
+<script src="student-profile.js?v=1"></script>
 
 <!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
 <section id="screen-owner-dashboard" class="screen od-screen">

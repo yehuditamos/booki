@@ -1212,6 +1212,10 @@ label { font-weight: 700; font-size: 1rem; }
 .tc-card-text  { display: flex; flex-direction: column; gap: 4px; }
 .tc-card-title { font-size: 1.3rem; font-weight: 900; color: var(--text); }
 .tc-card-sub   { font-size: .9rem; color: var(--muted); }
+.tc-class-card--sm { padding: 12px 16px; border-radius: 14px; box-shadow: none; border-width: 1.5px; }
+.tc-class-card--sm .tc-card-icon  { font-size: 2rem; }
+.tc-class-card--sm .tc-card-title { font-size: 1.05rem; }
+.tc-class-card--sm .tc-card-sub   { font-size: .82rem; }
 
 /* ─── Class Screen / Member List ──────────────────────────────── */
 .class-loading { text-align: center; padding: 30px; color: var(--muted); font-size: 1.1rem; }
