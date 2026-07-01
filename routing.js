@@ -953,6 +953,34 @@ function _renderTeacherClassContent(club, memberships, clubId) {
     </div>`;
 }
 
+async function showClubStudents() {
+  const clubId = _activeClubId;
+  if (!clubId) return;
+
+  const grid  = document.getElementById('club-students-grid');
+  const subEl = document.getElementById('club-students-name');
+
+  if (grid)  grid.innerHTML = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
+  if (subEl) subEl.textContent = '';
+  showScreen('screen-club-students');
+
+  const [club, memberships] = await Promise.all([
+    typeof fbLoadClub            === 'function' ? fbLoadClub(clubId)            : Promise.resolve(null),
+    typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+  ]);
+
+  if (subEl && club?.name) subEl.textContent = club.name;
+
+  const active = memberships.filter(m => m.status !== 'left');
+
+  if (!active.length) {
+    if (grid) grid.innerHTML = '<div class="who-reads-empty"><p>עדיין אין תלמידים במועדון זה.</p></div>';
+    return;
+  }
+
+  if (grid) _renderFirebaseMemberGrid(grid, active, clubId);
+}
+
 async function removeClubMember(clubId, userId, name) {
   if (!confirm(`להסיר את ${name} מהמועדון?\nהפעולה אינה הפיכה.`)) return;
   if (typeof fbRemoveClubMember !== 'function') return;
@@ -997,6 +1025,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
+  showClubStudents,
   enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,
