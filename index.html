@@ -309,13 +309,6 @@
   </div>
   <div class="club-dash-actions">
     <button class="btn-giant btn-green" onclick="enterReadingFromDashboard()">מתחילים לקרוא ⬅️</button>
-    <button class="tc-class-card" onclick="showClubStudents()">
-      <span class="tc-card-icon">👨‍🎓</span>
-      <div class="tc-card-text">
-        <span class="tc-card-title">תלמידי המועדון</span>
-        <span class="tc-card-sub">כל חברי המועדון הנוכחי</span>
-      </div>
-    </button>
   </div>
 </section>
 
@@ -323,7 +316,7 @@
 <section id="screen-club-students" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-club-dashboard')">חזרה למועדון →</button>
+      <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה למועדון →</button>
       <h2>👨‍🎓 תלמידי המועדון</h2>
     </div>
     <p id="club-students-name" class="who-reads-club"></p>
@@ -414,6 +407,13 @@
       <div class="tc-card-text">
         <span class="tc-card-title">הכיתה שלנו</span>
         <span class="tc-card-sub">דשבורד ניהול ובקרה</span>
+      </div>
+    </button>
+    <button class="tc-class-card" onclick="showClubStudents()">
+      <span class="tc-card-icon">👨‍🎓</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">תלמידי המועדון</span>
+        <span class="tc-card-sub">כרטיסי כל חברי המועדון</span>
       </div>
     </button>
   </div>
