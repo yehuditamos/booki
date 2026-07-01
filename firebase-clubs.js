@@ -591,8 +591,9 @@ async function fbLoadClubMemberships(clubId) {
 
 async function fbUpdateMembershipStats(clubId, userId, delta) {
   if (!_db() || !clubId || !userId) return;
-  const inc = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
+  const inc  = n => (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
     ? firebase.firestore.FieldValue.increment(n) : n;
+  const mins = delta.minutes || 0;
   try {
     await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
       userId,
@@ -600,10 +601,12 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
       status: 'active',
       role:   'member',
       cachedStats: {
-        totalMinutes:  inc(delta.minutes || 0),
+        totalMinutes:  inc(mins),
         totalSessions: inc(1),
-        totalPoints:   inc(delta.points  || delta.minutes || 0),
-        totalBooks:    inc(delta.books   || 0),
+        totalPoints:   inc(delta.points || mins),
+        totalBooks:    inc(delta.books  || 0),
+        appMinutes:    inc(delta.isApp  ? mins : 0),
+        bookMinutes:   inc(delta.isBook ? mins : 0),
         lastReadAt:    _now(),
       },
       updatedAt: _now(),

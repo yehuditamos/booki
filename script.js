@@ -293,16 +293,18 @@ async function finishAppReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  // Auth חייבת להיות מוקמת לפני כל כתיבה ל-Firestore
+  if (!Number.isInteger(currentStudentId) && typeof ensureStudentAuth === 'function') {
+    await ensureStudentAuth();
+  }
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes, points,
     }).catch(() => {});
   }
-  // מקור האמת — awaited כדי שכרטיס הקורא יראה נתונים עדכניים מיד
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbUpdateMembershipStats === 'function') {
-    if (typeof ensureStudentAuth === 'function') await ensureStudentAuth();
-    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points });
+    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, isApp: true });
   }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
@@ -374,17 +376,19 @@ async function submitBookReading() {
   currentStudentData = s;
 
   await saveStudentFull(s);
+  // Auth חייבת להיות מוקמת לפני כל כתיבה ל-Firestore
+  if (!Number.isInteger(currentStudentId) && typeof ensureStudentAuth === 'function') {
+    await ensureStudentAuth();
+  }
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'book', bookTitle: bookData.title, bookAuthor: bookData.author || null,
       pagesRead: bookData.pages || null, minutes, points,
     }).catch(() => {});
   }
-  // מקור האמת — awaited
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbUpdateMembershipStats === 'function') {
-    if (typeof ensureStudentAuth === 'function') await ensureStudentAuth();
-    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, books: 1 });
+    await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, books: 1, isBook: true });
   }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
@@ -459,10 +463,10 @@ async function showReaderCard() {
 
   const enriched = {
     ...s,
-    // Single source of truth: Firestore cachedStats (aggregate) → session fallback
+    // cachedStats הוא aggregate — sessions הם מקור מדויק; aggregate הוא fallback אם sessions ריקות
     totalMinutes: cs.totalMinutes || (appMins + bkMins),
-    appMinutes:   appMins,
-    bookMinutes:  bkMins,
+    appMinutes:   appMins  || cs.appMinutes  || 0,
+    bookMinutes:  bkMins   || cs.bookMinutes || 0,
     points:       cs.totalPoints  || (appMins + bkMins),
     history:      sorted,
   };
