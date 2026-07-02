@@ -163,11 +163,19 @@ async function routeOnLoad() {
       ? await ensureStudentAuth()
       : null;
 
+    // אם המשתמש המחובר הוא מורה (non-anonymous) — אין לדרוס את userId השמור ב-reader.
+    // ensureStudentAuth מחזירה UID מורה כשהיא מחוברת, וזה לא UID של תלמיד.
+    const _fbUserAfterAuth = (typeof firebase !== 'undefined' && firebase.auth)
+      ? firebase.auth().currentUser : null;
+    const _authUidIsTeacher = !!(authUid && _fbUserAfterAuth && !_fbUserAfterAuth.isAnonymous);
+
     // כרטיס שנוצר ע"י מורה — ה-cardId הוא המזהה היציב, לא Firebase Auth UID
     const isPreCreated = reader.createdByTeacher === true;
-    const userId = isPreCreated ? reader.userId : (authUid || reader.userId);
+    const userId = isPreCreated
+      ? reader.userId
+      : (_authUidIsTeacher ? reader.userId : (authUid || reader.userId));
 
-    if (!isPreCreated && authUid && authUid !== reader.userId) {
+    if (!isPreCreated && !_authUidIsTeacher && authUid && authUid !== reader.userId) {
       // ה-session שוחזר/נוצר עם UID שונה מהשמור — מסנכרנים את localStorage
       setActiveReader({ ...reader, userId: authUid });
       localStorage.setItem('booki_tmp_uid', authUid);
@@ -626,12 +634,20 @@ async function selectProfile(userId, clubIdHint) {
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
   if (membership?.createdByTeacher) {
-    await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
+    // מורה מחוברת (non-anonymous) — אין לקרוא ensureStudentAuth כי היא מחזירה UID מורה.
+    // הפרדה: תלמידים בלבד מקבלים anonymous UID; מורה צופה בכרטיס ישירות.
+    const currentUser = (typeof firebase !== 'undefined' && firebase.auth)
+      ? firebase.auth().currentUser : null;
+    const isTeacherSession = !!(currentUser && !currentUser.isAnonymous);
+
+    if (!isTeacherSession) {
+      await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
+    }
     const authUser = (typeof firebase !== 'undefined' && firebase.auth)
       ? firebase.auth().currentUser : null;
 
-    // כרטיס כבר נתבע ע"י מישהו אחר
-    if (membership.claimedByUid && membership.claimedByUid !== authUser?.uid) {
+    // כרטיס כבר נתבע ע"י מישהו אחר — בדיקה רק לתלמיד, לא למורה
+    if (!isTeacherSession && membership.claimedByUid && membership.claimedByUid !== authUser?.uid) {
       _showCardClaimedError();
       return;
     }
@@ -639,12 +655,12 @@ async function selectProfile(userId, clubIdHint) {
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
 
-    if (!membership.personalized) {
+    // פרסונליזציה — רק לתלמיד שלא השלים; מורה עוברת ישר לכרטיס
+    if (!membership.personalized && !isTeacherSession) {
       showMiniPersonalization(userId, targetClubId, membership.name || userId);
       return;
     }
 
-    // כבר personalized — כנס ישירות
     _enterPersonalHome(userId, {
       name:                    membership.name  || userId,
       emoji:                   membership.emoji || '📚',
