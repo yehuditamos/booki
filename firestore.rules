@@ -52,15 +52,58 @@ service cloud.firestore {
                     || (isTeacher() && resource.data.teacherUid == request.auth.uid);
 
       match /memberships/{userId} {
-        allow read:   if true;
-        allow create: if isMe(userId)
-                      && request.resource.data.userId == userId
-                      && (!request.resource.data.keys().hasAny(['status'])
-                          || validMemberStatus(request.resource.data.status));
-        allow update: if isMe(userId)
-                      && request.resource.data.userId == resource.data.userId
-                      && request.resource.data.clubId == resource.data.clubId;
+        allow read: if true;
+        allow create:
+          // תלמיד מצטרף בעצמו
+          if (isMe(userId)
+              && request.resource.data.userId == userId
+              && (!request.resource.data.keys().hasAny(['status'])
+                  || validMemberStatus(request.resource.data.status)))
+          // מורה מוסיפה תלמיד חסר — כרטיס בתולי בלבד
+          || (isTeacher()
+              && get(/databases/$(database)/documents/clubs/$(clubId))
+                 .data.get('teacherUid', null) == request.auth.uid
+              && request.resource.data.get('createdByTeacher', false) == true
+              && request.resource.data.get('claimedByUid', null) == null
+              && request.resource.data.userId == userId)
+          || isOwner();
+        allow update: if
+          // תלמיד רגיל מעדכן את הרשומה שלו
+          (isMe(userId)
+              && request.resource.data.userId == resource.data.userId
+              && request.resource.data.clubId == resource.data.clubId)
+          // מורה בעלת המועדון
+          || (isTeacher()
+              && get(/databases/$(database)/documents/clubs/$(clubId))
+                 .data.get('teacherUid', null) == request.auth.uid)
+          || isOwner()
+          // CLAIM: תביעת כרטיס בתולי — שדות מוגדרים בלבד
+          || (isSignedIn()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('claimedByUid', null) == null
+              && request.resource.data.claimedByUid == request.auth.uid
+              && request.resource.data.get('personalized', false) == true
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['claimedByUid', 'personalized', 'emoji', 'firstLoginAt', 'updatedAt']))
+          // cachedStats: רק מי שתבע את הכרטיס
+          || (isSignedIn()
+              && resource.data.get('claimedByUid', null) == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt']));
         allow delete: if isTeacher();
+
+        // sessions sub-collection — כרטיסי תלמיד שנוצרו ע"י מורה (Option B)
+        match /sessions/{sessionId} {
+          allow read: if isOwner()
+                      || (isTeacher()
+                          && get(/databases/$(database)/documents/clubs/$(clubId))
+                             .data.get('teacherUid', null) == request.auth.uid);
+          allow create: if isSignedIn()
+                        && request.resource.data.claimedByUid == request.auth.uid
+                        && request.resource.data.studentCardId == userId;
+          allow update: if false;
+          allow delete: if false;
+        }
       }
     }
 

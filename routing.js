@@ -15,10 +15,11 @@
 const _DEVICE_KEY        = 'booki_device_v1';
 const _ACTIVE_READER_KEY = 'booki_active_reader';
 
-let _activeClubId   = null;
-let _clubSelectMode = 'device'; // 'device' | 'user'
-let _pendingUserId  = null;
-let _pendingProfile = null;
+let _activeClubId            = null;
+let _clubSelectMode          = 'device'; // 'device' | 'user'
+let _pendingUserId           = null;
+let _pendingProfile          = null;
+let _pendingHighlightUserId  = null;
 
 // ─── Active Reader ────────────────────────────────────────────────────────────
 
@@ -33,10 +34,11 @@ function setActiveReader(reader) {
   if (!reader?.userId) return;
   try {
     localStorage.setItem(_ACTIVE_READER_KEY, JSON.stringify({
-      userId: reader.userId,
-      clubId: reader.clubId || _activeClubId || null,
-      name:   reader.name   || '',
-      emoji:  reader.emoji  || '📚',
+      userId:           reader.userId,
+      clubId:           reader.clubId || _activeClubId || null,
+      name:             reader.name   || '',
+      emoji:            reader.emoji  || '📚',
+      createdByTeacher: reader.createdByTeacher || false,
     }));
   } catch {}
 }
@@ -160,15 +162,18 @@ async function routeOnLoad() {
     const authUid = typeof ensureStudentAuth === 'function'
       ? await ensureStudentAuth()
       : null;
-    const userId = authUid || reader.userId;
 
-    if (authUid && authUid !== reader.userId) {
+    // כרטיס שנוצר ע"י מורה — ה-cardId הוא המזהה היציב, לא Firebase Auth UID
+    const isPreCreated = reader.createdByTeacher === true;
+    const userId = isPreCreated ? reader.userId : (authUid || reader.userId);
+
+    if (!isPreCreated && authUid && authUid !== reader.userId) {
       // ה-session שוחזר/נוצר עם UID שונה מהשמור — מסנכרנים את localStorage
       setActiveReader({ ...reader, userId: authUid });
       localStorage.setItem('booki_tmp_uid', authUid);
     }
 
-    _enterPersonalHome(userId, reader);
+    _enterPersonalHome(userId, isPreCreated ? { ...reader, personalizationComplete: true } : reader);
     return;
   }
 
@@ -554,7 +559,7 @@ function _renderFirebaseMemberGrid(grid, memberships, clubId) {
     return;
   }
   grid.innerHTML = active.map(m => `
-    <button class="profile-card" onclick="selectProfile('${m.userId}', '${clubId}')">
+    <button class="profile-card" data-user-id="${m.userId}" onclick="selectProfile('${m.userId}', '${clubId}')">
       <span class="profile-avatar">${m.emoji || m.avatar || '📚'}</span>
       <span class="profile-name">${m.name || m.userId}</span>
     </button>`).join('');
@@ -610,12 +615,46 @@ function selectLegacyProfile(index) {
 }
 
 async function selectProfile(userId, clubIdHint) {
-  const profile = typeof fbLoadUserProfile === 'function'
-    ? await fbLoadUserProfile(userId) : null;
-
   const targetClubId = clubIdHint || null;
 
-  // יש פרופיל Firebase תקין — כנס ישירות
+  // טוען פרופיל + membership במקביל — membership נדרש לזיהוי createdByTeacher
+  const [profile, membership] = await Promise.all([
+    typeof fbLoadUserProfile   === 'function' ? fbLoadUserProfile(userId)                        : Promise.resolve(null),
+    targetClubId && typeof fbLoadClubMembership === 'function'
+      ? fbLoadClubMembership(targetClubId, userId) : Promise.resolve(null),
+  ]);
+
+  // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
+  if (membership?.createdByTeacher) {
+    await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
+    const authUser = (typeof firebase !== 'undefined' && firebase.auth)
+      ? firebase.auth().currentUser : null;
+
+    // כרטיס כבר נתבע ע"י מישהו אחר
+    if (membership.claimedByUid && membership.claimedByUid !== authUser?.uid) {
+      _showCardClaimedError();
+      return;
+    }
+
+    _activeClubId        = targetClubId;
+    window.currentClubId = targetClubId;
+
+    if (!membership.personalized) {
+      showMiniPersonalization(userId, targetClubId, membership.name || userId);
+      return;
+    }
+
+    // כבר personalized — כנס ישירות
+    _enterPersonalHome(userId, {
+      name:                    membership.name  || userId,
+      emoji:                   membership.emoji || '📚',
+      personalizationComplete: true,
+      createdByTeacher:        true,
+    });
+    return;
+  }
+
+  // ── תלמיד רגיל ───────────────────────────────────────────────────────────
   if (profile?.onboardingComplete && targetClubId) {
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
@@ -623,16 +662,12 @@ async function selectProfile(userId, clubIdHint) {
     return;
   }
 
-  // פרופיל חסר / לא שלם — שחזר מ-Firebase membership
-  if (targetClubId) {
-    const membership = typeof fbLoadClubMembership === 'function'
-      ? await fbLoadClubMembership(targetClubId, userId) : null;
-    if (membership) {
-      _activeClubId        = targetClubId;
-      window.currentClubId = targetClubId;
-      _enterPersonalHome(userId, { name: membership.name || userId, emoji: membership.emoji || '📚' });
-      return;
-    }
+  // פרופיל חסר / לא שלם — שחזר מ-membership (כבר טעון)
+  if (membership) {
+    _activeClubId        = targetClubId;
+    window.currentClubId = targetClubId;
+    _enterPersonalHome(userId, { name: membership.name || userId, emoji: membership.emoji || '📚' });
+    return;
   }
 
   // אין נתונים כלל — שלח לאונבורדינג
@@ -689,7 +724,7 @@ function _enterPersonalHome(userId, profile) {
   const emojiEl = document.getElementById('greeting-avatar');
   if (nameEl)  nameEl.textContent  = studentData.name  || userId;
   if (emojiEl) emojiEl.textContent = studentData.emoji || '📚';
-  setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji });
+  setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji, createdByTeacher: !!profile?.createdByTeacher });
   showScreen('screen-main');
   _updateBugLabel();
 
@@ -807,6 +842,108 @@ window.enterPersonalHomeAfterJoin = function(userId, name, clubId) {
   window.currentClubId = clubId;
   _enterPersonalHome(userId, { name, emoji: '📚' });
 };
+
+// ─── Mini Personalization — כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────
+
+const _MINI_PERSON_EMOJIS = ['📚','🌟','⭐','🎨','🌈','🦋','🐬','🦁','🌸','🚀','🎵','🍎'];
+let _miniPersonState   = null;
+let _miniSelectedEmoji = '📚';
+
+function showMiniPersonalization(userId, clubId, name) {
+  _miniPersonState   = { userId, clubId, name };
+  _miniSelectedEmoji = '📚';
+
+  const h2El   = document.querySelector('.who-reads-title');
+  const subEl  = document.getElementById('who-reads-club-name');
+  const grid   = document.getElementById('who-reads-grid');
+  const footer = document.querySelector('#screen-who-reads .who-reads-footer');
+
+  if (h2El)   h2El.textContent  = `שלום, ${name}! 👋`;
+  if (subEl)  subEl.textContent = 'בחר/י אמוג׳י שמייצג אותך:';
+  if (footer) footer.innerHTML  = '';
+
+  if (grid) grid.innerHTML = `
+    <div class="mini-person-card">
+      <div class="mini-person-emojis">
+        ${_MINI_PERSON_EMOJIS.map(e =>
+          `<button class="mini-emoji-btn${e === '📚' ? ' selected' : ''}"
+                   data-emoji="${e}"
+                   onclick="selectMiniEmoji(this,'${e}')">${e}</button>`
+        ).join('')}
+      </div>
+      <p id="mini-person-error" class="auth-error" style="display:none"></p>
+      <button id="btn-mini-person-save" class="btn-giant btn-green"
+              style="margin:24px auto 0;display:block;max-width:240px"
+              onclick="submitMiniPersonalization()">נכנסים לקרוא ⬅️</button>
+    </div>`;
+
+  showScreen('screen-who-reads');
+}
+
+function selectMiniEmoji(btn, emoji) {
+  document.querySelectorAll('.mini-emoji-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  _miniSelectedEmoji = emoji;
+}
+
+async function submitMiniPersonalization() {
+  const state = _miniPersonState;
+  if (!state) return;
+  const { userId, clubId, name } = state;
+  const emoji = _miniSelectedEmoji || '📚';
+  const btn   = document.getElementById('btn-mini-person-save');
+  const errEl = document.getElementById('mini-person-error');
+
+  if (btn)   { btn.disabled = true; btn.textContent = 'שומר...'; }
+  if (errEl) { errEl.style.display = 'none'; }
+
+  const authUser = (typeof firebase !== 'undefined' && firebase.auth)
+    ? firebase.auth().currentUser : null;
+  if (!authUser) {
+    if (errEl) { errEl.textContent = 'שגיאת חיבור — נסה/י שוב'; errEl.style.display = ''; }
+    if (btn)   { btn.disabled = false; btn.textContent = 'נכנסים לקרוא ⬅️'; }
+    return;
+  }
+
+  try {
+    const now = new Date().toISOString();
+    await window.db.collection('clubs').doc(clubId)
+      .collection('memberships').doc(userId)
+      .set({
+        claimedByUid: authUser.uid,
+        personalized: true,
+        emoji,
+        firstLoginAt: now,
+        updatedAt:    now,
+      }, { merge: true });
+
+    _miniPersonState = null;
+    _enterPersonalHome(userId, { name, emoji, personalizationComplete: true, createdByTeacher: true });
+
+  } catch (e) {
+    console.error('[mini-person] submitMiniPersonalization error:', e);
+    const msg = e.code === 'permission-denied'
+      ? 'הכרטיס נתבע ע"י מישהו אחר — פנה/י למורה'
+      : 'שגיאה — נסה/י שוב';
+    if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
+    if (btn)   { btn.disabled = false; btn.textContent = 'נכנסים לקרוא ⬅️'; }
+  }
+}
+
+function _showCardClaimedError() {
+  const h2El   = document.querySelector('.who-reads-title');
+  const subEl  = document.getElementById('who-reads-club-name');
+  const grid   = document.getElementById('who-reads-grid');
+  const footer = document.querySelector('#screen-who-reads .who-reads-footer');
+  if (h2El)   h2El.textContent = '⚠️';
+  if (subEl)  subEl.textContent = '';
+  if (footer) footer.innerHTML = '';
+  if (grid)   grid.innerHTML   = `<div class="who-reads-hidden">
+    <p>הכרטיס הזה שייך למישהו אחר.</p>
+    <p>פנה/י למורה לסיוע.</p>
+  </div>`;
+  showScreen('screen-who-reads');
+}
 
 // ─── Teacher Dashboard ────────────────────────────────────────────────────────
 
@@ -1067,10 +1204,86 @@ async function showClubStudents() {
 
   if (!active.length) {
     if (grid) grid.innerHTML = '<div class="who-reads-empty"><p>עדיין אין תלמידים במועדון זה.</p></div>';
+  } else {
+    if (grid) _renderFirebaseMemberGrid(grid, active, clubId);
+  }
+
+  // כפתור הוספת תלמיד — גלוי למורה בלבד
+  const addSection = document.getElementById('add-student-section');
+  const clubNameEl = document.getElementById('add-student-club-name');
+  const addForm    = document.getElementById('add-student-form');
+  const isTeacher  = !!window._currentTeacher;
+  if (addSection) addSection.style.display = isTeacher ? '' : 'none';
+  if (clubNameEl) clubNameEl.textContent   = club?.name || clubId;
+  if (addForm)    addForm.style.display    = 'none';
+
+  // מדגיש כרטיס שנוסף זה עתה
+  if (_pendingHighlightUserId && grid) {
+    const newCard = grid.querySelector(`[data-user-id="${_pendingHighlightUserId}"]`);
+    if (newCard) {
+      newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      newCard.classList.add('card-new-highlight');
+      setTimeout(() => newCard.classList.remove('card-new-highlight'), 2500);
+    }
+    _pendingHighlightUserId = null;
+  }
+}
+
+// ─── Teacher: הוספת תלמיד חסר ────────────────────────────────────────────────
+
+function toggleAddStudentForm() {
+  const form = document.getElementById('add-student-form');
+  if (!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : '';
+  if (!isOpen) {
+    const nameInput = document.getElementById('add-student-name-input');
+    if (nameInput) { nameInput.value = ''; nameInput.focus(); }
+    const errEl = document.getElementById('add-student-error');
+    if (errEl)  errEl.style.display = 'none';
+  }
+}
+
+async function submitAddStudent() {
+  const clubId    = _activeClubId;
+  const nameInput = document.getElementById('add-student-name-input');
+  const btn       = document.getElementById('btn-add-student-save');
+  const errEl     = document.getElementById('add-student-error');
+  const name      = (nameInput?.value || '').trim();
+
+  if (errEl) errEl.style.display = 'none';
+
+  if (!name) {
+    if (errEl) { errEl.textContent = 'נא להזין שם תלמיד/ה'; errEl.style.display = ''; }
+    return;
+  }
+  if (!clubId) {
+    if (errEl) { errEl.textContent = 'שגיאה: אין מועדון פעיל'; errEl.style.display = ''; }
     return;
   }
 
-  if (grid) _renderFirebaseMemberGrid(grid, active, clubId);
+  if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
+
+  const result = typeof fbTeacherAddStudent === 'function'
+    ? await fbTeacherAddStudent(clubId, { name })
+    : { ok: false, reason: 'no-function' };
+
+  if (btn) { btn.disabled = false; btn.textContent = 'שמור תלמיד'; }
+
+  if (!result.ok) {
+    let msg = 'שגיאה — נסה/י שוב';
+    if (result.reason === 'duplicate-name') msg = `תלמיד/ה בשם "${name}" כבר קיים/ת במועדון`;
+    if (result.reason === 'permission')     msg = 'אין הרשאה — ודאי שאת מחוברת כמורה';
+    if (errEl) { errEl.textContent = msg; errEl.style.display = ''; }
+    return;
+  }
+
+  // הצלחה — סגור פורם, רענן רשימה עם הדגשת הכרטיס החדש
+  if (nameInput) nameInput.value = '';
+  const form = document.getElementById('add-student-form');
+  if (form) form.style.display = 'none';
+  _pendingHighlightUserId = result.userId;
+  showClubStudents();
 }
 
 async function removeClubMember(clubId, userId, name) {
@@ -1121,6 +1334,9 @@ Object.assign(window, {
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
   showClubStudents, goBackToClubStudents,
   enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
+  toggleAddStudentForm, submitAddStudent,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,
+  // Mini personalization (כרטיסי pre_)
+  showMiniPersonalization, selectMiniEmoji, submitMiniPersonalization,
 });

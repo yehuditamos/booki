@@ -165,14 +165,48 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
 
 /**
  * שומר סשן קריאה — additive לחלוטין, לא מחליף את fbSaveStudent().
+ * כרטיסי pre_ (נוצרו ע"י מורה): נשמרים תחת membership sub-collection (Option B).
  * @returns {Promise<string|null>} מזהה הסשן
  */
 async function fbSaveReadingSession(userId, session) {
   if (!_db()) return null;
+
+  // כרטיסי תלמיד שנוצרו ע"י מורה — שמירה תחת membership sub-collection
+  const _activeReader = typeof window.getActiveReader === 'function' ? window.getActiveReader() : null;
+  if (_activeReader?.createdByTeacher === true && _activeReader?.userId === userId) {
+    const clubId = session.clubId
+      || (typeof window !== 'undefined' && window.currentClubId)
+      || null;
+    const authUser = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
+    const claimedByUid = authUser?.uid || null;
+    if (!clubId || !claimedByUid) return null;
+    try {
+      const ref = _db().collection('clubs').doc(clubId)
+        .collection('memberships').doc(userId)
+        .collection('sessions').doc();
+      const id = ref.id;
+      const { clubId: _rm, ...cleanSession } = session;
+      await ref.set({
+        ...cleanSession,
+        id,
+        studentCardId: userId,
+        claimedByUid,
+        clubId,
+        date:      session.date      ?? _today(),
+        createdAt: session.createdAt ?? _now(),
+      });
+      return id;
+    } catch (e) {
+      console.warn('[firebase-clubs] fbSaveReadingSession (pre-created) error:', e);
+      return null;
+    }
+  }
+
+  // משתמש רגיל — שמירה תחת /users/{userId}/readingSessions/
   try {
     const ref = _db().collection('users').doc(userId).collection('readingSessions').doc();
     const id = ref.id;
-    const { clubId: _removed, ...cleanSession } = session; // מוודא שאין clubId
+    const { clubId: _removed, ...cleanSession } = session;
     await ref.set({
       ...cleanSession,
       id,
@@ -633,6 +667,77 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   }
 }
 
+/**
+ * מוסיפה תלמיד חסר למועדון — כרטיס בתולי שהתלמיד יתבע בכניסה הראשונה.
+ * @param {string} clubId
+ * @param {{ name: string }} opts
+ * @returns {Promise<{ok: boolean, userId?: string, reason?: string}>}
+ */
+async function fbTeacherAddStudent(clubId, { name }) {
+  if (!_db() || !clubId || !name?.trim()) return { ok: false, reason: 'missing-data' };
+  const nameClean = name.trim().replace(/\s+/g, ' '); // מנרמל רווחים מיותרים
+
+  // בדיקת כפילות שם — נרמול אחיד משני הצדדים
+  const _normName = s => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  try {
+    const existing = await fbLoadClubMemberships(clubId);
+    const isDuplicate = existing.some(
+      m => m.status !== 'left' && _normName(m.name) === _normName(nameClean)
+    );
+    if (isDuplicate) return { ok: false, reason: 'duplicate-name' };
+  } catch (e) {
+    console.warn('[firebase-clubs] fbTeacherAddStudent: duplicate check error:', e.message);
+  }
+
+  // מזהה כרטיס יציב — student_ + timestamp + random
+  const cardId = 'student_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  try {
+    await _db().collection('clubs').doc(clubId)
+      .collection('memberships').doc(cardId)
+      .set({
+        userId:           cardId,
+        clubId,
+        name:             nameClean,
+        emoji:            '📚',
+        role:             'member',
+        status:           'active',
+        inviteSource:     'pre-created',
+        invitationId:     null,
+        createdByTeacher: true,
+        personalized:     false,
+        claimedByUid:     null,
+        permissions: {
+          canViewLeaderboard: true,
+          canAddMembers:      false,
+          canEditClub:        false,
+        },
+        joinedAt:    _now(),
+        leftAt:      null,
+        cachedStats: {
+          totalMinutes:  0,
+          totalSessions: 0,
+          totalPoints:   0,
+          totalBooks:    0,
+          appMinutes:    0,
+          bookMinutes:   0,
+          lastReadAt:    null,
+        },
+        updatedAt: _now(),
+      });
+
+    const _inc = (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue)
+      ? firebase.firestore.FieldValue.increment(1) : 1;
+    _db().collection('clubs').doc(clubId)
+      .update({ memberCount: _inc }).catch(() => {});
+
+    return { ok: true, userId: cardId };
+  } catch (e) {
+    console.warn('[firebase-clubs] fbTeacherAddStudent error:', e);
+    return { ok: false, reason: e.code === 'permission-denied' ? 'permission' : 'create-failed' };
+  }
+}
+
 async function fbSetMemberName(clubId, userId, name, emoji) {
   if (!_db() || !userId) return;
   try {
@@ -858,6 +963,7 @@ Object.assign(window, {
   fbLoadClubMemberships,
   fbUpdateMembershipStats,
   fbSetMemberName,
+  fbTeacherAddStudent,
   // ClubInvitation
   fbCreateInvitation,
   fbLoadInvitation,

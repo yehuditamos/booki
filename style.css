@@ -1313,6 +1313,71 @@ label { font-weight: 700; font-size: 1rem; }
 .tcd-m-delete { background: none; border: none; font-size: 1rem; cursor: pointer; opacity: .35; padding: 4px; border-radius: 6px; flex-shrink: 0; transition: opacity .15s; }
 .tcd-m-delete:hover { opacity: 1; }
 
+/* ─── Teacher: Add Student ──────────────────────────────────────────────────── */
+.add-student-section {
+  padding: 16px 20px 24px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.btn-add-student-toggle {
+  background: none;
+  border: 2px dashed var(--green);
+  color: var(--green);
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.btn-add-student-toggle:hover { background: rgba(39,174,96,.07); }
+.add-student-form { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.add-student-confirm {
+  font-size: .85rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* ─── Mini Personalization (כרטיסי pre_) ──────────────────────────────────── */
+.mini-person-card { grid-column: 1 / -1; padding: 8px 0 16px; }
+.mini-person-emojis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 12px 8px 20px;
+}
+.mini-emoji-btn {
+  font-size: 2rem;
+  background: none;
+  border: 2.5px solid transparent;
+  border-radius: 14px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+  line-height: 1;
+}
+.mini-emoji-btn.selected {
+  border-color: var(--green);
+  background: rgba(39,174,96,.12);
+}
+.mini-emoji-btn:hover { border-color: var(--border); }
+
+/* ─── כרטיס תלמיד חדש ──────────────────────────────────────────────────────── */
+@keyframes cardNewPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(39,174,96,.7), var(--shadow); }
+  60%  { box-shadow: 0 0 0 10px rgba(39,174,96,0), var(--shadow); }
+  100% { box-shadow: var(--shadow); }
+}
+.card-new-highlight {
+  outline: 2.5px solid var(--green);
+  outline-offset: 2px;
+  animation: cardNewPulse 1.4s ease-out 2;
+}
+
 
 body.nav-visible .booki-nav { display: flex; }
 

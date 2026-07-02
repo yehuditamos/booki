@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
@@ -348,6 +348,17 @@
     <p id="club-students-name" class="who-reads-club"></p>
   </div>
   <div id="club-students-grid" class="who-reads-grid"></div>
+  <div id="add-student-section" class="add-student-section" style="display:none">
+    <button class="btn-add-student-toggle" onclick="toggleAddStudentForm()">➕ הוסף תלמיד למועדון הזה</button>
+    <div id="add-student-form" class="add-student-form" style="display:none">
+      <p class="add-student-confirm">מוסיפה ל: <strong id="add-student-club-name"></strong></p>
+      <input id="add-student-name-input" type="text" class="input-field"
+             placeholder="שם התלמיד/ה" maxlength="40"
+             onkeydown="if(event.key==='Enter') submitAddStudent()" />
+      <p id="add-student-error" class="auth-error" style="display:none"></p>
+      <button id="btn-add-student-save" class="btn-giant btn-green" onclick="submitAddStudent()">שמור תלמיד</button>
+    </div>
+  </div>
 </section>
 
 <!-- ══ Teacher Auth ════════════════════════════════════════════════ -->
@@ -817,7 +828,7 @@
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
 <script src="data-club-types.js?v=1"></script>
 <script src="seed-clubs.js?v=2"></script>
-<script src="firebase-clubs.js?v=2"></script>
+<script src="firebase-clubs.js?v=3"></script>
 <script src="auth.js?v=1"></script>
 <script src="analytics.js?v=1"></script>
 
@@ -844,7 +855,7 @@
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=3"></script>
+<script src="routing.js?v=4"></script>
 <script src="admin-setup.js?v=1"></script>
 <script src="onboarding.js?v=3"></script>
 
