@@ -392,6 +392,14 @@ label { font-weight: 700; font-size: 1rem; }
 }
 .btn-join-another:hover { border-color: var(--green); color: var(--green); }
 .who-reads-not-found { color: var(--muted); font-size: .85rem; line-height: 1.5; margin: 0; }
+.who-reads-hidden { grid-column: 1 / -1; text-align: center; padding: 3rem 24px; color: var(--muted); font-size: 1rem; line-height: 2; }
+.od-hidden-badge { background: #e67e22; color: #fff; font-size: .7rem; padding: 2px 7px; border-radius: 10px; vertical-align: middle; margin-right: 4px; }
+.od-row--hidden { opacity: .55; }
+.od-btn-sm { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: .75rem; cursor: pointer; color: var(--muted); font-family: inherit; white-space: nowrap; }
+.od-btn-sm:hover { border-color: var(--text); color: var(--text); }
+.od-btn-sm--warn { border-color: #e67e22; color: #e67e22; }
+.od-btn-sm--warn:hover { background: #e67e22; color: #fff; }
+.od-badge--active { background: var(--green); color: #fff; font-size: .7rem; padding: 2px 7px; border-radius: 10px; vertical-align: middle; margin-right: 4px; }
 
 /* ─── Create Club — shared form styles ──────────────────────── */
 .type-cards {

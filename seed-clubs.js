@@ -33,6 +33,7 @@ const BOOTSTRAP_CLUBS = [
     },
 
     active: true,
+    hidden: true,   // מוסתר מילדים — ממתין לאיחוד עם המועדון החדש
 
     // מזהי התלמידים הקיימים — תואם ל-STUDENT_NAMES ב-script.js
     memberIds: [

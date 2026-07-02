@@ -50,6 +50,7 @@ async function _odLoad() {
     // ── Render — pure computation, ללא קריאות Firestore נוספות ────────────
     _odRenderTeachers(teachers, clubs);
     _odRenderClubs(clubs);
+    _odRenderSystemClubs().catch(e => console.warn('[owner-dashboard] system clubs:', e));
 
     // ── Analytics ───────────────────────────────────────────────────────────
     const g  = gSnap.exists  ? gSnap.data()  : {};
@@ -146,19 +147,85 @@ function _odRenderClubs(clubs) {
   }
 
   const rows = clubs.map(c => {
-    const memberCount = c.memberCount ?? '?';
-    const teacherName = c.teacherName || c.teacherEmail || c.teacherUid || '—';
-    const date        = (c.createdAt || '').slice(0, 10);
-    return `<div class="od-row">
+    const memberCount  = c.memberCount ?? '?';
+    const teacherName  = c.teacherName || c.teacherEmail || c.teacherUid || '—';
+    const date         = (c.createdAt || '').slice(0, 10);
+    const hiddenBadge  = c.hidden ? ' <span class="od-hidden-badge">מוסתר</span>' : '';
+    const actionBtn    = c.hidden
+      ? `<button class="od-btn-sm" onclick="_odRestoreClub('${c.id}')">שחזר</button>`
+      : `<button class="od-btn-sm" onclick="_odMarkClubHidden('${c.id}')">הסתר</button>`;
+    return `<div class="od-row${c.hidden ? ' od-row--hidden' : ''}">
       <div style="flex:1;min-width:0">
-        <span class="od-row-label">${c.emoji || '📚'} ${c.name || c.id}</span>
+        <span class="od-row-label">${c.emoji || '📚'} ${c.name || c.id}${hiddenBadge}</span>
         <span style="font-size:.8em;color:#888;display:block">${teacherName} · ${date}</span>
       </div>
-      <span class="od-badge">${memberCount} תלמידים</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="od-badge">${memberCount} תלמידים</span>
+        ${actionBtn}
+      </div>
     </div>`;
   });
 
   if (listEl) listEl.innerHTML = rows.join('');
+}
+
+async function _odMarkClubHidden(clubId) {
+  if (!confirm(`להסתיר את "${clubId}" מהילדים?\nהנתונים נשמרים, אף תלמיד לא ייפגע.`)) return;
+  const meta = { hidden: true };
+  if (clubId === 'mitarim-aleph-2025') {
+    meta.ownerEmail = 'yehudiiit@icloud.com';
+    meta.notes      = 'מועדון ישן — ממתין לאיחוד עם החדש';
+  }
+  try {
+    if (typeof fbSetClubMeta === 'function') await fbSetClubMeta(clubId, meta);
+    _odLoad();
+  } catch (e) { alert('שגיאה: ' + e.message); }
+}
+
+async function _odRestoreClub(clubId) {
+  if (!confirm(`לשחזר את "${clubId}" כמועדון פעיל?`)) return;
+  try {
+    if (typeof fbSetClubMeta === 'function') await fbSetClubMeta(clubId, { hidden: false });
+    _odLoad();
+  } catch (e) { alert('שגיאה: ' + e.message); }
+}
+
+// ─── System / Bootstrap Clubs ─────────────────────────────────────────────────
+
+async function _odRenderSystemClubs() {
+  const el = document.getElementById('od-system-clubs');
+  if (!el || typeof BOOTSTRAP_CLUBS === 'undefined' || !window.db) return;
+
+  const rows = await Promise.all(BOOTSTRAP_CLUBS.map(async c => {
+    let fsData = null;
+    try {
+      const snap = await window.db.collection('clubs').doc(c.id).get();
+      if (snap.exists) fsData = snap.data();
+    } catch (_) {}
+
+    const isHidden   = fsData?.hidden   ?? c.hidden   ?? false;
+    const ownerEmail = fsData?.ownerEmail ?? '—';
+    const notes      = fsData?.notes     ?? '';
+
+    const badge = isHidden
+      ? '<span class="od-hidden-badge">מוסתר</span>'
+      : '<span class="od-badge od-badge--active">פעיל</span>';
+
+    const btn = isHidden
+      ? `<button class="od-btn-sm" onclick="_odRestoreClub('${c.id}')">שחזר לפעיל</button>`
+      : `<button class="od-btn-sm od-btn-sm--warn" onclick="_odMarkClubHidden('${c.id}')">הסתר / שייך אליי</button>`;
+
+    return `<div class="od-row${isHidden ? ' od-row--hidden' : ''}">
+      <div style="flex:1;min-width:0">
+        <span class="od-row-label">${c.emoji || '📚'} ${c.name} ${badge}</span>
+        <span style="font-size:.75em;color:#888;display:block">ID: ${c.id}${ownerEmail !== '—' ? ' · ' + ownerEmail : ''}</span>
+        ${notes ? `<span style="font-size:.75em;color:#aaa;display:block;font-style:italic">${notes}</span>` : ''}
+      </div>
+      ${btn}
+    </div>`;
+  }));
+
+  el.innerHTML = rows.join('') || '<div class="od-empty">אין מועדוני מערכת</div>';
 }
 
 // ─── Error Log ────────────────────────────────────────────────────────────────

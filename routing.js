@@ -507,6 +507,8 @@ async function showWhoReads(clubId) {
   const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(effectiveClubId);
 
   if (isLegacy) {
+    const bootstrapDef = getBootstrapClubById(effectiveClubId);
+    if (bootstrapDef?.hidden) { _showHiddenClubMessage(); return; }
     const club = getDeviceClubs().find(c => c.clubId === effectiveClubId);
     if (h2El) h2El.textContent = (club?.emoji || '🌳') + ' ' + (club?.name || '');
     if (grid) _renderLegacyProfiles(grid);
@@ -519,8 +521,25 @@ async function showWhoReads(clubId) {
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(effectiveClubId) : Promise.resolve([]),
   ]);
 
+  if (club?.hidden) { _showHiddenClubMessage(); return; }
+
   if (h2El) h2El.textContent = (club?.emoji || '📚') + ' ' + (club?.name || '');
   if (grid) _renderFirebaseMemberGrid(grid, memberships, effectiveClubId);
+}
+
+/** מועדון מוסתר — מציג הודעה במקום רשימת החברים */
+function _showHiddenClubMessage() {
+  const h2El   = document.querySelector('.who-reads-title');
+  const subEl  = document.getElementById('who-reads-club-name');
+  const grid   = document.getElementById('who-reads-grid');
+  const footer = document.querySelector('#screen-who-reads .who-reads-footer');
+  if (h2El)   h2El.textContent = '⚠️ מועדון לא פעיל';
+  if (subEl)  subEl.textContent = '';
+  if (grid)   grid.innerHTML   = `<div class="who-reads-hidden">
+    <p>המועדון הזה כבר לא פעיל.</p>
+    <p>בקשו מהמורה את הקישור החדש.</p>
+  </div>`;
+  if (footer) footer.innerHTML = '';
 }
 
 /** Firebase members — מועדונים חדשים */

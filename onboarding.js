@@ -47,7 +47,7 @@ function showJoinClubWithCode(code) {
 function _renderSeedClubs() {
   const list = document.getElementById('existing-clubs-list');
   if (!list) return;
-  const seeds = (typeof BOOTSTRAP_CLUBS !== 'undefined') ? BOOTSTRAP_CLUBS : [];
+  const seeds = (typeof BOOTSTRAP_CLUBS !== 'undefined') ? BOOTSTRAP_CLUBS.filter(s => !s.hidden) : [];
   if (!seeds.length) { list.innerHTML = ''; return; }
   list.innerHTML = seeds.map(s => {
     const typeLabel = (typeof CLUB_TYPE_DEFAULTS !== 'undefined')

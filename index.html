@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=2" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -816,8 +816,8 @@
 
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
 <script src="data-club-types.js?v=1"></script>
-<script src="seed-clubs.js?v=1"></script>
-<script src="firebase-clubs.js?v=1"></script>
+<script src="seed-clubs.js?v=2"></script>
+<script src="firebase-clubs.js?v=2"></script>
 <script src="auth.js?v=1"></script>
 <script src="analytics.js?v=1"></script>
 
@@ -844,12 +844,12 @@
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=2"></script>
+<script src="routing.js?v=3"></script>
 <script src="admin-setup.js?v=1"></script>
-<script src="onboarding.js?v=2"></script>
+<script src="onboarding.js?v=3"></script>
 
 <script src="script.js?v=2"></script>
-<script src="owner-dashboard.js?v=1"></script>
+<script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>
 <script src="student-profile.js?v=1"></script>
 
@@ -893,6 +893,12 @@
     <div class="od-section">
       <div class="od-section-title">🌳 כל המועדונים</div>
       <div id="od-clubs-list"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🗂️ מועדוני מערכת / ישנים</div>
+      <p style="font-size:.8rem;color:#888;margin:.3rem 0 .8rem">מועדונים Bootstrap — נתונים נשמרים, אפשר להסתיר או לשייך.</p>
+      <div id="od-system-clubs"><div class="od-empty">טוען...</div></div>
     </div>
 
     <div class="od-section">

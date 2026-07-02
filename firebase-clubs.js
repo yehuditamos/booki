@@ -463,6 +463,22 @@ async function fbSaveClub(clubId, data) {
   }
 }
 
+/** מסמן מועדון כמוסתר/בארכיון — merge בטוח, אינו מוחק נתונים. */
+async function fbSetClubMeta(clubId, meta) {
+  if (!_db()) return;
+  const allowed = { updatedAt: _now() };
+  if (meta.hidden    !== undefined) allowed.hidden    = !!meta.hidden;
+  if (meta.archived  !== undefined) allowed.archived  = !!meta.archived;
+  if (meta.ownerEmail !== undefined) allowed.ownerEmail = String(meta.ownerEmail);
+  if (meta.notes     !== undefined) allowed.notes     = String(meta.notes);
+  try {
+    await _db().collection('clubs').doc(clubId).set(allowed, { merge: true });
+  } catch (e) {
+    console.warn('[firebase-clubs] fbSetClubMeta error:', e);
+    throw e;
+  }
+}
+
 /** מחזיר רשימת אווטארים תפוסים במועדון (למניעת כפילות בתוך מועדון). */
 async function fbGetClubAvatars(clubId, excludeUserId) {
   if (!_db() || !clubId) return [];
@@ -820,6 +836,7 @@ Object.assign(window, {
   fbLoadClub,
   fbLoadTeacherClubs,
   fbSaveClub,
+  fbSetClubMeta,
   fbDeleteClub,
   // Owner / Multi-club
   fbCheckOwnerExists,
