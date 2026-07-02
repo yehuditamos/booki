@@ -81,12 +81,10 @@ service cloud.firestore {
               && request.resource.data.userId == userId)
           || isOwner();
         allow update: if
-          // תלמיד רגיל מעדכן את הרשומה שלו
+          // תלמיד רגיל — userId == auth.uid
           (isMe(userId)
               && request.resource.data.userId == resource.data.userId
               && request.resource.data.clubId == resource.data.clubId)
-          // מורה בעלת המועדון
-          || isClubTeacher(clubId)
           || isOwner()
           // CLAIM: תביעת כרטיס בתולי — שדות מוגדרים בלבד
           || (isSignedIn()
@@ -96,9 +94,14 @@ service cloud.firestore {
               && request.resource.data.get('personalized', false) == true
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['claimedByUid', 'personalized', 'emoji', 'firstLoginAt', 'updatedAt']))
-          // cachedStats: רק מי שתבע את הכרטיס
+          // cachedStats: כרטיס שנתבע
           || (isSignedIn()
               && resource.data.get('claimedByUid', null) == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt']))
+          // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
+          || (isSignedIn()
+              && isMe(userId)
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'updatedAt']));
         allow delete: if isTeacher();
