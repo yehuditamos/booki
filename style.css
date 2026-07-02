@@ -85,6 +85,8 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .btn-white-on-purple { background: rgba(255,255,255,.2); border: 3px solid rgba(255,255,255,.7); color: #fff; }
 .btn-back { background: none; font-size: 1rem; font-weight: 700; color: var(--blue2); padding: 6px 0; white-space: nowrap; }
 .btn-switch { font-size: .8rem; font-weight: 600; color: var(--muted); background: #f0f0f0; border-radius: 20px; padding: 6px 14px; }
+.switch-group { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+.btn-sc { background: rgba(41,128,185,.12); color: var(--blue); border: 1.5px solid rgba(41,128,185,.25); }
 
 /* ─── SPLASH ────────────────────────────────────────────────────── */
 #screen-splash,
@@ -389,6 +391,7 @@ label { font-weight: 700; font-size: 1rem; }
   transition: all .2s;
 }
 .btn-join-another:hover { border-color: var(--green); color: var(--green); }
+.who-reads-not-found { color: var(--muted); font-size: .85rem; line-height: 1.5; margin: 0; }
 
 /* ─── Create Club — shared form styles ──────────────────────── */
 .type-cards {

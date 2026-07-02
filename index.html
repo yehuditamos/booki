@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=1" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
 
@@ -101,7 +101,10 @@
         <h2 class="greeting-name" id="current-student-name">—</h2>
       </div>
     </div>
-    <button class="btn-switch" onclick="logout()">החלף</button>
+    <div class="switch-group">
+      <button id="btn-switch-club" class="btn-switch btn-sc" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
+      <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
+    </div>
   </div>
   <div class="main-menu">
     <button class="btn-menu btn-menu-primary btn-blue" onclick="showLibrary()">
@@ -841,11 +844,11 @@
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=1"></script>
+<script src="routing.js?v=2"></script>
 <script src="admin-setup.js?v=1"></script>
-<script src="onboarding.js?v=1"></script>
+<script src="onboarding.js?v=2"></script>
 
-<script src="script.js?v=1"></script>
+<script src="script.js?v=2"></script>
 <script src="owner-dashboard.js?v=1"></script>
 <script src="initial-setup.js?v=1"></script>
 <script src="student-profile.js?v=1"></script>

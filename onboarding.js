@@ -29,33 +29,11 @@ function showJoinClub() {
 }
 
 /** נקרא מ-routing.js כש-URL מכיל ?club=CLUB_ID */
-async function showJoinClubDirect(clubId) {
+function showJoinClubDirect(clubId) {
   _pendingClubId = clubId;
   _pendingInv    = null;
-
-  // אם המשתמש כבר חבר במועדון — כנס ישירות (בדיקה ב-Firebase)
-  const uid = localStorage.getItem('booki_tmp_uid');
-  if (uid) {
-    const existing = typeof fbLoadClubMembership === 'function'
-      ? await fbLoadClubMembership(clubId, uid) : null;
-    if (existing) {
-      if (typeof showWhoReads === 'function') showWhoReads(clubId);
-      return;
-    }
-  }
-
-  // טוען פרטי המועדון להצגה במסך הזנת שם
-  const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
-  const emojiEl = document.getElementById('join-club-emoji-display');
-  const nameEl  = document.getElementById('join-club-name-display');
-  if (emojiEl) emojiEl.textContent = club?.emoji ?? '';
-  if (nameEl)  nameEl.textContent  = club?.name  ?? clubId;
-
-  const input = document.getElementById('join-name-input');
-  if (input) { input.value = ''; input.focus(); }
-  const nameErr = document.getElementById('join-name-error');
-  if (nameErr) nameErr.textContent = '';
-  showScreen('screen-join-name');
+  // מציגים ישירות את רשימת חברי המועדון — הרשימה היא נקודת הכניסה
+  if (typeof showWhoReads === 'function') showWhoReads(clubId);
 }
 
 /** נקרא מ-routing.js כש-URL מכיל ?join=CODE */
@@ -152,8 +130,9 @@ async function submitJoinCode() {
     return;
   }
 
-  // קוד מועדון — מבקשים שם
-  _showNameEntry(inv);
+  // קוד מועדון — מציגים חברי המועדון (הרשימה היא נקודת הכניסה)
+  _pendingClubId = inv.clubId;
+  if (typeof showWhoReads === 'function') showWhoReads(inv.clubId);
 }
 
 async function _showNameEntry(inv) {

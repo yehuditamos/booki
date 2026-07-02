@@ -499,7 +499,8 @@ async function showWhoReads(clubId) {
   showScreen('screen-who-reads');
 
   if (!effectiveClubId) {
-    _renderAllProfiles();
+    // אין מועדון מזוהה — חזרה למסך הכניסה במקום הצגת כל הרשימה הישנה
+    showScreen('screen-splash');
     return;
   }
 
@@ -524,6 +525,10 @@ async function showWhoReads(clubId) {
 
 /** Firebase members — מועדונים חדשים */
 function _renderFirebaseMemberGrid(grid, memberships, clubId) {
+  // עדכון הפוטר: לא "כנס עם קוד" אלא "לא מצאת שם?"
+  const footer = document.querySelector('#screen-who-reads .who-reads-footer');
+  if (footer) footer.innerHTML = `<p class="who-reads-not-found">לא מצאת את השם שלך? 📩 בקש/י מהמורה להוסיף אותך למועדון.</p>`;
+
   const active = memberships.filter(m => m.status !== 'left');
   if (!active.length) {
     grid.innerHTML = `<div class="who-reads-empty"><p>עוד אין קוראים במועדון</p></div>`;
@@ -669,6 +674,9 @@ function _enterPersonalHome(userId, profile) {
   showScreen('screen-main');
   _updateBugLabel();
 
+  const clubBtn = document.getElementById('btn-switch-club');
+  if (clubBtn) clubBtn.style.display = _activeClubId ? '' : 'none';
+
   const backBar = document.getElementById('main-back-club-students');
   if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
 }
@@ -681,6 +689,27 @@ function goWhoReads() {
     || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
   if (!clubId && !hasDeviceClubs()) return;
   showWhoReads(clubId);
+}
+
+/** מנקה זהות תלמיד אבל שומר הקשר מועדון — חוזר לרשימת קוראי המועדון */
+function switchReaderInClub() {
+  const clubId = _activeClubId || getActiveReader()?.clubId;
+  if (typeof window.initCurrentStudent === 'function') window.initCurrentStudent(null, null);
+  window.currentStudentData   = null;
+  window._returnToClubStudents = false;
+  clearActiveReader();
+  // שומר הקשר מועדון בזיכרון (לא ב-localStorage)
+  _activeClubId        = clubId;
+  window.currentClubId = clubId;
+  setNavVisible(false);
+  if (clubId && typeof showWhoReads === 'function') showWhoReads(clubId);
+  else routeOnLoad();
+}
+
+/** מנקה הקשר מועדון — נקרא מ-logout() ב-script.js */
+function clearClubContext() {
+  _activeClubId        = null;
+  window.currentClubId = null;
 }
 
 function dismissWelcome() {
@@ -1066,7 +1095,8 @@ Object.assign(window, {
   // Club selection
   goClubs, pickClub,
   // Nav
-  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, goBackFromJoin, goBackToJoinEntry, goBackFromClubSelect,
+  setNavVisible, setNavTab, goHome, goWhoReads, switchReader, switchReaderInClub, clearClubContext,
+  goBackFromJoin, goBackToJoinEntry, goBackFromClubSelect,
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,

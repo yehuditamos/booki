@@ -137,10 +137,12 @@ async function selectStudent(id) {
 }
 
 function logout() {
-  currentStudentId   = null;
-  currentStudentData = null;
+  currentStudentId          = null;
+  currentStudentData        = null;
+  window.currentStudentData = null;
   if (typeof clearActiveReader === 'function') clearActiveReader();
-  if (typeof routeOnLoad === 'function') routeOnLoad();
+  if (typeof clearClubContext  === 'function') clearClubContext();
+  if (typeof routeOnLoad       === 'function') routeOnLoad();
   else showScreen('screen-splash');
 }
 
@@ -571,8 +573,14 @@ function showClassView() {
   }
 
   const clubId  = window.currentClubId;
-  const isLegacy = !clubId
-    || (typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId));
+
+  // אין הקשר מועדון — לא מציגים נתוני כיתה ישנה
+  if (!clubId) {
+    showScreen('screen-main');
+    return;
+  }
+
+  const isLegacy = typeof getBootstrapClubById === 'function' && !!getBootstrapClubById(clubId);
 
   if (isLegacy) {
     // מועדון מקורי — נתונים בזמן אמת מ-Firebase
