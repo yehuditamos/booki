@@ -26,6 +26,15 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
     }
 
+    // isClubTeacher(): מורה בעלת המועדון — לפי UID, teacherEmail, או ownerEmail
+    function isClubTeacher(clubId) {
+      let c = get(/databases/$(database)/documents/clubs/$(clubId)).data;
+      return isTeacher()
+          && (c.get('teacherUid',   null) == request.auth.uid
+              || c.get('teacherEmail', null) == request.auth.token.email
+              || c.get('ownerEmail',   null) == request.auth.token.email);
+    }
+
     function validMemberStatus(status) {
       return status == 'active' || status == 'pending' || status == 'left';
     }
@@ -44,12 +53,18 @@ service cloud.firestore {
       allow create: if isTeacher()
                     && request.resource.data.teacherUid == request.auth.uid;
       allow update: if isOwner()
-                    || (isTeacher() && resource.data.teacherUid == request.auth.uid)
+                    || (isTeacher() && (
+                        resource.data.get('teacherUid',   null) == request.auth.uid
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email))
                     // תלמיד (anonymous) יכול לעדכן memberCount בלבד — denormalization בטוחה
                     || (isSignedIn() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']));
       allow delete: if isOwner()
-                    || (isTeacher() && resource.data.teacherUid == request.auth.uid);
+                    || (isTeacher() && (
+                        resource.data.get('teacherUid',   null) == request.auth.uid
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email));
 
       match /memberships/{userId} {
         allow read: if true;
@@ -60,9 +75,7 @@ service cloud.firestore {
               && (!request.resource.data.keys().hasAny(['status'])
                   || validMemberStatus(request.resource.data.status)))
           // מורה מוסיפה תלמיד חסר — כרטיס בתולי בלבד
-          || (isTeacher()
-              && get(/databases/$(database)/documents/clubs/$(clubId))
-                 .data.get('teacherUid', null) == request.auth.uid
+          || (isClubTeacher(clubId)
               && request.resource.data.get('createdByTeacher', false) == true
               && request.resource.data.get('claimedByUid', null) == null
               && request.resource.data.userId == userId)
@@ -73,9 +86,7 @@ service cloud.firestore {
               && request.resource.data.userId == resource.data.userId
               && request.resource.data.clubId == resource.data.clubId)
           // מורה בעלת המועדון
-          || (isTeacher()
-              && get(/databases/$(database)/documents/clubs/$(clubId))
-                 .data.get('teacherUid', null) == request.auth.uid)
+          || isClubTeacher(clubId)
           || isOwner()
           // CLAIM: תביעת כרטיס בתולי — שדות מוגדרים בלבד
           || (isSignedIn()
@@ -94,10 +105,7 @@ service cloud.firestore {
 
         // sessions sub-collection — כרטיסי תלמיד שנוצרו ע"י מורה (Option B)
         match /sessions/{sessionId} {
-          allow read: if isOwner()
-                      || (isTeacher()
-                          && get(/databases/$(database)/documents/clubs/$(clubId))
-                             .data.get('teacherUid', null) == request.auth.uid);
+          allow read: if isOwner() || isClubTeacher(clubId);
           allow create: if isSignedIn()
                         && request.resource.data.claimedByUid == request.auth.uid
                         && request.resource.data.studentCardId == userId;
