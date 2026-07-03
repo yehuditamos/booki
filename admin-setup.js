@@ -55,8 +55,7 @@ function submitClubName() {
   const sel = document.querySelector('.emoji-opt.selected');
   if (sel) _newClub.emoji = sel.dataset.emoji;
   _newClub.members = [];
-  renderMemberList();
-  showScreen('screen-create-members');
+  goToReview();
 }
 
 function setAddMode(mode) {
@@ -273,22 +272,13 @@ function _renderSuccessScreen() {
   if (emojiEl) emojiEl.textContent = _newClub.emoji;
   if (codeEl)  codeEl.textContent  = _clubCode;
   if (guideEl) {
-    if (_createdCardsCount > 0) {
-      guideEl.innerHTML =
-        '<div class="success-next-step success-next-ok">' +
-        '<span class="success-next-icon">✅</span>' +
-        '<div><strong>' + _createdCardsCount + ' כרטיסי תלמיד נוצרו!</strong>' +
-        '<p>שתפי את קישור/קוד המועדון — כל תלמיד יבחר את שמו ויתחיל לקרוא.</p></div>' +
-        '</div>';
-    } else {
-      guideEl.innerHTML =
-        '<div class="success-next-step success-next-notice">' +
-        '<span class="success-next-icon">📋</span>' +
-        '<div><strong>הצעד הבא — פתחי כרטיס לכל תלמיד</strong>' +
-        '<p>כדי שתלמידים יוכלו להיכנס, צרי כרטיס לכל אחד מהם:<br>' +
-        'דשבורד ← שם המועדון ← <em>הוסף תלמיד</em></p></div>' +
-        '</div>';
-    }
+    guideEl.innerHTML =
+      '<div class="success-next-step success-next-notice">' +
+      '<span class="success-next-icon">📋</span>' +
+      '<div><strong>להשלמת הקמת המועדון — פתחי כרטיס לכל תלמיד</strong>' +
+      '<p>כדי שתלמידים יוכלו להתחבר, עליך לפתוח כרטיס לכל אחד מהם:<br>' +
+      'דשבורד ← שם המועדון ← <em>הוסף תלמיד</em></p></div>' +
+      '</div>';
   }
 }
 
