@@ -243,9 +243,15 @@ async function _scanBrokenCards(clubId) {
   const mSnap  = await db.collection('clubs').doc(clubId).collection('memberships').get();
   const broken = [];
 
+  console.log('[scan] club:', clubId, '| total memberships:', mSnap.docs.length);
+  console.log('[scan] teacherUids:', Array.from(teacherUids));
+
   for (var i = 0; i < mSnap.docs.length; i++) {
     var d = mSnap.docs[i];
     var m = d.data();
+
+    console.log('[scan] card:', d.id, '| name:', m.name, '| status:', m.status,
+      '| createdByTeacher:', m.createdByTeacher, '| student_:', d.id.startsWith('student_'));
 
     if (m.status === 'left')            continue;
     if (d.id.startsWith('student_'))    continue;
@@ -262,6 +268,8 @@ async function _scanBrokenCards(clubId) {
     // Vulnerable to UID drift (new device / cleared browser = can't save minutes)
     if (!m.createdByTeacher && !flags.length)
       flags.push('self-joined card — UID-locked (vulnerable to session/device change)');
+
+    console.log('[scan] → flags:', flags);
 
     var profileName = null;
     if (m.userId) {
