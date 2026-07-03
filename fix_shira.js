@@ -9,18 +9,19 @@
     var mSnap   = await db.collection('clubs').doc(clubDoc.id).collection('memberships').get();
     mSnap.forEach(function (d) {
       var name = (d.data().name || '').trim();
-      if (name === 'עומרי') {
+      if (name.includes('שירה') && name.includes('דהן')) {
         found.push({ clubId: clubDoc.id, clubName: clubDoc.data().name, docId: d.id, data: d.data() });
       }
     });
   }
 
-  if (!found.length) return console.error('[fix] עומרי not found');
+  if (!found.length) return console.error('[fix] שירה דהן not found');
 
   for (var fi = 0; fi < found.length; fi++) {
     var item = found[fi];
     var m    = item.data;
-    console.log('[fix] found:', item.clubName, '| card:', item.docId, '| status:', m.status);
+    console.log('[fix] found:', item.clubName, '| card:', item.docId,
+      '| status:', m.status, '| totalMinutes:', (m.cachedStats || {}).totalMinutes);
 
     if (m.status === 'left') { console.log('[fix] skipping — already left'); continue; }
 
@@ -30,7 +31,7 @@
     var stats  = m.cachedStats || {};
 
     var newCard = {
-      userId: newId, clubId: CLUB, name: m.name || 'עומרי',
+      userId: newId, clubId: CLUB, name: m.name || 'שירה דהן',
       emoji: m.emoji || '📚', role: 'member', status: 'active',
       inviteSource: 'pre-created', invitationId: null,
       createdByTeacher: true, personalized: false, claimedByUid: null,
@@ -53,6 +54,6 @@
 
     await db.collection('clubs').doc(CLUB).collection('memberships').doc(OLD_ID)
       .set({ status: 'left', migratedTo: newId, updatedAt: now }, { merge: true });
-    console.log('[fix] DONE — עומרי: new card =', newId);
+    console.log('[fix] DONE — שירה דהן: new card =', newId);
   }
 })();

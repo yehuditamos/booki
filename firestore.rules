@@ -86,12 +86,9 @@ service cloud.firestore {
               && request.resource.data.userId == resource.data.userId
               && request.resource.data.clubId == resource.data.clubId)
           || isOwner()
-          // CLAIM: תביעת כרטיס בתולי — שדות מוגדרים בלבד
-          // גם מאפשר re-claim אידמפוטנטי כאשר אותו UID כבר תבע את הכרטיס (ניסיון חוזר)
+          // CLAIM: any signed-in session can personalize a teacher-created card not yet personalized
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
-              && (resource.data.get('claimedByUid', null) == null
-                  || resource.data.get('claimedByUid', null) == request.auth.uid)
               && resource.data.get('personalized', false) == false
               && request.resource.data.claimedByUid == request.auth.uid
               && request.resource.data.get('personalized', false) == true

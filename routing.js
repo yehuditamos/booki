@@ -643,19 +643,11 @@ async function selectProfile(userId, clubIdHint) {
     if (!isTeacherSession) {
       await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
     }
-    const authUser = (typeof firebase !== 'undefined' && firebase.auth)
-      ? firebase.auth().currentUser : null;
-
-    // כרטיס כבר נתבע ע"י מישהו אחר — בדיקה רק לתלמיד, לא למורה
-    if (!isTeacherSession && membership.claimedByUid && membership.claimedByUid !== authUser?.uid) {
-      _showCardClaimedError();
-      return;
-    }
 
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
 
-    // פרסונליזציה — רק לתלמיד שלא השלים; מורה עוברת ישר לכרטיס
+    // Personalization only on first access; any device can enter once personalized
     if (!membership.personalized && !isTeacherSession) {
       showMiniPersonalization(userId, targetClubId, membership.name || userId);
       return;
