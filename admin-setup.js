@@ -8,6 +8,7 @@
 let _newClub = { type: null, name: '', emoji: '🌳', members: [] };
 let _newClubId = null;
 let _clubCode  = '';
+let _createdCardsCount = 0;
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ function showCreateClub() {
   _newClub  = { type: null, name: '', emoji: '🌳', members: [] };
   _newClubId = null;
   _clubCode  = '';
+  _createdCardsCount = 0;
   showScreen('screen-create-type');
 }
 
@@ -53,7 +55,8 @@ function submitClubName() {
   const sel = document.querySelector('.emoji-opt.selected');
   if (sel) _newClub.emoji = sel.dataset.emoji;
   _newClub.members = [];
-  goToReview();
+  renderMemberList();
+  showScreen('screen-create-members');
 }
 
 function setAddMode(mode) {
@@ -76,8 +79,6 @@ function addPastedMembers() {
   if (pasteInput) pasteInput.value = '';
   setAddMode('single');
   renderMemberList();
-  const btn = document.getElementById('btn-go-review');
-  if (btn) btn.disabled = _newClub.members.length === 0;
 }
 
 // ─── Step 3: Members ──────────────────────────────────────────────────────────
@@ -94,22 +95,18 @@ function addMember() {
   _newClub.members.push(name);
   if (input) { input.value = ''; input.focus(); }
   renderMemberList();
-  const btn = document.getElementById('btn-go-review');
-  if (btn) btn.disabled = false;
 }
 
 function removeMember(i) {
   _newClub.members.splice(i, 1);
   renderMemberList();
-  const btn = document.getElementById('btn-go-review');
-  if (btn) btn.disabled = _newClub.members.length === 0;
 }
 
 function renderMemberList() {
   const countEl = document.getElementById('member-count');
   if (countEl) {
     countEl.textContent = _newClub.members.length
-      ? `${_newClub.members.length} חברים נוספו`
+      ? `${_newClub.members.length} תלמידים נוספו`
       : '';
   }
   const listEl = document.getElementById('member-list');
@@ -119,6 +116,11 @@ function renderMemberList() {
       <span class="member-chip-name">${name}</span>
       <button class="member-chip-remove" onclick="removeMember(${i})">✕</button>
     </div>`).join('');
+  const btn = document.getElementById('btn-go-review');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = _newClub.members.length ? 'לסיכום ⬅️' : 'המשך ⬅️';
+  }
 }
 
 // ─── Step 4: Review ───────────────────────────────────────────────────────────
@@ -138,8 +140,14 @@ function goToReview() {
   if (emojiEl)   emojiEl.textContent = _newClub.emoji;
   if (nameEl)    nameEl.textContent  = _newClub.name;
   if (typeEl)    typeEl.textContent  = typeLabel;
-  if (countEl)   countEl.textContent = '';
-  if (listEl)    listEl.innerHTML    = '<div style="color:#888;font-size:.9rem;padding:.5rem 0">תלמידים יצטרפו בעצמם דרך קישור או קוד מועדון 📱</div>';
+  if (countEl) countEl.textContent = _newClub.members.length
+    ? `${_newClub.members.length} תלמידים ייכנסו לאחר יצירת המועדון`
+    : '';
+  if (listEl) {
+    listEl.innerHTML = _newClub.members.length
+      ? _newClub.members.map(n => `<span class="review-member">${n}</span>`).join('')
+      : '<div style="color:#888;font-size:.9rem;padding:.5rem 0">ניתן להוסיף תלמידים גם לאחר יצירת המועדון</div>';
+  }
   if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'צור מועדון! 🚀'; }
 
   showScreen('screen-create-review');
@@ -214,6 +222,15 @@ async function createClub() {
     });
   }
 
+  // Create a student card for each name entered during setup
+  _createdCardsCount = 0;
+  if (_newClub.members.length > 0 && typeof fbTeacherAddStudent === 'function') {
+    for (const memberName of _newClub.members) {
+      const result = await fbTeacherAddStudent(_newClubId, { name: memberName });
+      if (result && result.ok) _createdCardsCount++;
+    }
+  }
+
   _renderSuccessScreen();
   showScreen('screen-create-success');
 }
@@ -251,9 +268,28 @@ function _renderSuccessScreen() {
   const nameEl  = document.getElementById('success-club-name');
   const emojiEl = document.getElementById('success-club-emoji');
   const codeEl  = document.getElementById('success-club-code');
+  const guideEl = document.getElementById('success-guide');
   if (nameEl)  nameEl.textContent  = _newClub.name;
   if (emojiEl) emojiEl.textContent = _newClub.emoji;
   if (codeEl)  codeEl.textContent  = _clubCode;
+  if (guideEl) {
+    if (_createdCardsCount > 0) {
+      guideEl.innerHTML =
+        '<div class="success-next-step success-next-ok">' +
+        '<span class="success-next-icon">✅</span>' +
+        '<div><strong>' + _createdCardsCount + ' כרטיסי תלמיד נוצרו!</strong>' +
+        '<p>שתפי את קישור/קוד המועדון — כל תלמיד יבחר את שמו ויתחיל לקרוא.</p></div>' +
+        '</div>';
+    } else {
+      guideEl.innerHTML =
+        '<div class="success-next-step success-next-notice">' +
+        '<span class="success-next-icon">📋</span>' +
+        '<div><strong>הצעד הבא — פתחי כרטיס לכל תלמיד</strong>' +
+        '<p>כדי שתלמידים יוכלו להיכנס, צרי כרטיס לכל אחד מהם:<br>' +
+        'דשבורד ← שם המועדון ← <em>הוסף תלמיד</em></p></div>' +
+        '</div>';
+    }
+  }
 }
 
 function shareCodesWhatsApp() {
