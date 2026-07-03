@@ -258,6 +258,11 @@ async function _scanBrokenCards(clubId) {
     if (m.claimedByUid && teacherUids.has(m.claimedByUid))
       flags.push('claimedByUid is teacher: ' + teacherNames[m.claimedByUid]);
 
+    // Self-joined card: not teacher-created, not already in student_xxx format
+    // Vulnerable to UID drift (new device / cleared browser = can't save minutes)
+    if (!m.createdByTeacher && !flags.length)
+      flags.push('self-joined card — UID-locked (vulnerable to session/device change)');
+
     var profileName = null;
     if (m.userId) {
       try {
