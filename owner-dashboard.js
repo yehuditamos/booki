@@ -146,6 +146,7 @@ function _odRenderClubs(clubs) {
     return;
   }
 
+  const LEGACY_ID = 'mitarim-aleph-2025';
   const rows = clubs.map(c => {
     const memberCount  = c.memberCount ?? '?';
     const teacherName  = c.teacherName || c.teacherEmail || c.teacherUid || '—';
@@ -154,6 +155,9 @@ function _odRenderClubs(clubs) {
     const actionBtn    = c.hidden
       ? `<button class="od-btn-sm" onclick="_odRestoreClub('${c.id}')">שחזר</button>`
       : `<button class="od-btn-sm" onclick="_odMarkClubHidden('${c.id}')">הסתר</button>`;
+    const repairBtn = c.id !== LEGACY_ID
+      ? `<button class="od-btn-sm" onclick="showCardRepairTool('${c.id}')">🔧 סרוק</button>`
+      : '';
     return `<div class="od-row${c.hidden ? ' od-row--hidden' : ''}">
       <div style="flex:1;min-width:0">
         <span class="od-row-label">${c.emoji || '📚'} ${c.name || c.id}${hiddenBadge}</span>
@@ -161,12 +165,168 @@ function _odRenderClubs(clubs) {
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span class="od-badge">${memberCount} תלמידים</span>
+        ${repairBtn}
         ${actionBtn}
       </div>
     </div>`;
   });
 
   if (listEl) listEl.innerHTML = rows.join('');
+}
+
+// ─── Card Repair Tool — Read-Only Scan + Dry-Run ──────────────────────────────
+
+async function showCardRepairTool(clubId) {
+  const section = document.getElementById('od-repair-section');
+  const content = document.getElementById('od-repair-content');
+  const nameEl  = document.getElementById('od-repair-club-name');
+  if (!section || !content) return;
+
+  content.innerHTML = '<div class="od-empty">סורק...</div>';
+  section.style.display = '';
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  try {
+    const clubSnap = await window.db.collection('clubs').doc(clubId).get();
+    const clubName = clubSnap.exists ? (clubSnap.data().name || clubId) : clubId;
+    if (nameEl) nameEl.textContent = clubName;
+
+    const broken = await _scanBrokenCards(clubId);
+
+    if (!broken.length) {
+      content.innerHTML = '<div class="od-empty">✅ לא נמצאו כרטיסים שבורים במועדון זה</div>';
+      return;
+    }
+
+    content.innerHTML =
+      '<p style="font-size:.85rem;color:#c0392b;margin:.5rem 0 1rem">נמצאו ' + broken.length + ' כרטיסים שבורים — Dry-Run בלבד, אין כתיבה:</p>' +
+      broken.map(function (card, i) { return _buildRepairRow(card, i); }).join('');
+
+  } catch (e) {
+    content.innerHTML = '<div class="od-empty">שגיאה: ' + e.message + '</div>';
+  }
+}
+
+async function _scanBrokenCards(clubId) {
+  const db = window.db;
+
+  const teacherUids  = new Set();
+  const teacherNames = {};
+  const uSnap = await db.collection('users').where('role', 'in', ['teacher', 'owner']).get();
+  uSnap.forEach(function (d) {
+    teacherUids.add(d.id);
+    teacherNames[d.id] = d.data().name || d.data().email || d.id;
+  });
+
+  const mSnap  = await db.collection('clubs').doc(clubId).collection('memberships').get();
+  const broken = [];
+
+  for (var i = 0; i < mSnap.docs.length; i++) {
+    var d = mSnap.docs[i];
+    var m = d.data();
+
+    if (m.status === 'left')            continue;
+    if (d.id.startsWith('student_'))    continue;
+
+    var flags = [];
+
+    if (m.userId && teacherUids.has(m.userId))
+      flags.push('userId is teacher: ' + teacherNames[m.userId]);
+
+    if (m.claimedByUid && teacherUids.has(m.claimedByUid))
+      flags.push('claimedByUid is teacher: ' + teacherNames[m.claimedByUid]);
+
+    var profileName = null;
+    if (m.userId) {
+      try {
+        var pSnap = await db.collection('users').doc(m.userId).collection('profile').doc('main').get();
+        if (pSnap.exists) {
+          profileName = (pSnap.data().name || '').trim();
+          var cardName = (m.name || '').trim();
+          if (profileName && cardName && profileName !== cardName && teacherUids.has(m.userId))
+            flags.push('profile "' + profileName + '" != card "' + cardName + '"');
+        }
+      } catch (_) {}
+    }
+
+    if (flags.length) {
+      broken.push({
+        cardId:          d.id,
+        name:            m.name            || '-',
+        userId:          m.userId          || '-',
+        claimedByUid:    m.claimedByUid    || null,
+        createdByTeacher: m.createdByTeacher || false,
+        personalized:    m.personalized    || false,
+        emoji:           m.emoji           || '📚',
+        joinedAt:        m.joinedAt        || null,
+        cachedStats:     m.cachedStats     || {},
+        flags:           flags,
+        profileName:     profileName,
+      });
+    }
+  }
+
+  return broken;
+}
+
+function _buildRepairRow(card, index) {
+  var stats     = card.cachedStats || {};
+  var flagsHtml = card.flags.map(function (f) {
+    return '<span style="display:inline-block;background:#fde8e8;color:#c0392b;border-radius:4px;padding:1px 6px;font-size:.78em;margin:1px">' + f + '</span>';
+  }).join(' ');
+
+  var previewId = 'student_' + Date.now().toString(36) + String(index);
+
+  var newCardJson = JSON.stringify({
+    userId:           previewId + '  (final ID generated at write time)',
+    name:             card.name,
+    emoji:            card.emoji,
+    createdByTeacher: true,
+    personalized:     false,
+    claimedByUid:     null,
+    status:           'active',
+    migratedFrom:     card.cardId,
+    cachedStats: {
+      totalMinutes:  stats.totalMinutes  || 0,
+      totalSessions: stats.totalSessions || 0,
+      totalPoints:   stats.totalPoints   || 0,
+      totalBooks:    stats.totalBooks    || 0,
+      appMinutes:    stats.appMinutes    || 0,
+      bookMinutes:   stats.bookMinutes   || 0,
+      lastReadAt:    stats.lastReadAt    || null,
+    },
+  }, null, 2);
+
+  var oldUpdateJson = JSON.stringify({
+    status:     'left',
+    migratedTo: previewId + '  (same ID as new card)',
+    updatedAt:  '(now)',
+  }, null, 2);
+
+  return '<div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+      '<span style="font-size:1.1em">' + card.emoji + ' ' + card.name + '</span>' +
+      '<span style="font-size:.8em;color:#888">card: ' + card.cardId + '</span>' +
+    '</div>' +
+    '<div style="margin-bottom:6px">' + flagsHtml + '</div>' +
+    '<div style="font-size:.8em;color:#666;margin-bottom:8px">' +
+      'totalMinutes: <strong>' + (stats.totalMinutes || 0) + '</strong> · ' +
+      'totalSessions: <strong>' + (stats.totalSessions || 0) + '</strong>' +
+    '</div>' +
+    '<details>' +
+      '<summary style="cursor:pointer;font-size:.85em;color:#2980b9">Dry-Run — מה ייקרה (Read-Only Preview)</summary>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">' +
+        '<div>' +
+          '<div style="font-size:.78em;font-weight:bold;color:#27ae60;margin-bottom:4px">NEW card (create)</div>' +
+          '<pre style="font-size:.72em;background:#f5f5f5;padding:8px;border-radius:4px;overflow:auto;margin:0">' + newCardJson + '</pre>' +
+        '</div>' +
+        '<div>' +
+          '<div style="font-size:.78em;font-weight:bold;color:#e67e22;margin-bottom:4px">OLD card (update only 3 fields)</div>' +
+          '<pre style="font-size:.72em;background:#f5f5f5;padding:8px;border-radius:4px;overflow:auto;margin:0">' + oldUpdateJson + '</pre>' +
+        '</div>' +
+      '</div>' +
+    '</details>' +
+  '</div>';
 }
 
 async function _odMarkClubHidden(clubId) {
@@ -318,9 +478,10 @@ async function devReset() {
 
 // ─── חשיפה גלובלית ───────────────────────────────────────────────────────────
 
-window.showOwnerDashboard = showOwnerDashboard;
-window._odLoad            = _odLoad;
-window.devReset           = devReset;
+window.showOwnerDashboard  = showOwnerDashboard;
+window._odLoad             = _odLoad;
+window.devReset            = devReset;
+window.showCardRepairTool  = showCardRepairTool;
 
 /**
  * פונקציית פיתוח חד-פעמית.
