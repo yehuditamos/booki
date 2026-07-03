@@ -647,10 +647,6 @@ async function fbUpdateMembershipStats(clubId, userId, delta) {
   const mins = delta.minutes || 0;
   try {
     await _db().collection('clubs').doc(clubId).collection('memberships').doc(userId).set({
-      userId,
-      clubId,
-      status: 'active',
-      role:   'member',
       cachedStats: {
         totalMinutes:  inc(mins),
         totalSessions: inc(1),

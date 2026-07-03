@@ -87,16 +87,26 @@ service cloud.firestore {
               && request.resource.data.clubId == resource.data.clubId)
           || isOwner()
           // CLAIM: תביעת כרטיס בתולי — שדות מוגדרים בלבד
+          // גם מאפשר re-claim אידמפוטנטי כאשר אותו UID כבר תבע את הכרטיס (ניסיון חוזר)
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
-              && resource.data.get('claimedByUid', null) == null
+              && (resource.data.get('claimedByUid', null) == null
+                  || resource.data.get('claimedByUid', null) == request.auth.uid)
+              && resource.data.get('personalized', false) == false
               && request.resource.data.claimedByUid == request.auth.uid
               && request.resource.data.get('personalized', false) == true
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['claimedByUid', 'personalized', 'emoji', 'firstLoginAt', 'updatedAt']))
-          // cachedStats: כרטיס שנתבע
+          // cachedStats: כרטיס שנתבע — בדיקת claimedByUid מדויקת
           || (isSignedIn()
               && resource.data.get('claimedByUid', null) == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt']))
+          // cachedStats: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
+          // נדרש כי ה-anonymous UID עשוי להשתנות בין sessions על אותו מכשיר
+          || (isSignedIn()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('claimedByUid', null) != null
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'updatedAt']))
           // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)

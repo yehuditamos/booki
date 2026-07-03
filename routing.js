@@ -913,6 +913,9 @@ async function submitMiniPersonalization() {
   if (btn)   { btn.disabled = true; btn.textContent = 'שומר...'; }
   if (errEl) { errEl.style.display = 'none'; }
 
+  // Ensure anonymous auth is active — session may have expired since selectProfile ran
+  if (typeof ensureStudentAuth === 'function') await ensureStudentAuth();
+
   const authUser = (typeof firebase !== 'undefined' && firebase.auth)
     ? firebase.auth().currentUser : null;
   if (!authUser) {
