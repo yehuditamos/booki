@@ -174,7 +174,10 @@ function _odRenderClubs(clubs) {
   if (listEl) listEl.innerHTML = rows.join('');
 }
 
-// ─── Card Repair Tool — Read-Only Scan + Dry-Run ──────────────────────────────
+// ─── Card Repair Tool — Scan, Dry-Run, Execute ───────────────────────────────
+
+var _repairCardCache    = {};
+var _repairActiveClubId = null;
 
 async function showCardRepairTool(clubId) {
   const section = document.getElementById('od-repair-section');
@@ -191,6 +194,9 @@ async function showCardRepairTool(clubId) {
     const clubName = clubSnap.exists ? (clubSnap.data().name || clubId) : clubId;
     if (nameEl) nameEl.textContent = clubName;
 
+    _repairActiveClubId = clubId;
+    _repairCardCache    = {};
+
     const broken = await _scanBrokenCards(clubId);
 
     if (!broken.length) {
@@ -198,9 +204,11 @@ async function showCardRepairTool(clubId) {
       return;
     }
 
+    broken.forEach(function (card) { _repairCardCache[card.cardId] = card; });
+
     content.innerHTML =
-      '<p style="font-size:.85rem;color:#c0392b;margin:.5rem 0 1rem">נמצאו ' + broken.length + ' כרטיסים שבורים — Dry-Run בלבד, אין כתיבה:</p>' +
-      broken.map(function (card, i) { return _buildRepairRow(card, i); }).join('');
+      '<p style="font-size:.85rem;color:#c0392b;margin:.5rem 0 1rem">נמצאו ' + broken.length + ' כרטיסים שבורים:</p>' +
+      broken.map(function (card, i) { return _buildRepairRow(clubId, card, i); }).join('');
 
   } catch (e) {
     content.innerHTML = '<div class="od-empty">שגיאה: ' + e.message + '</div>';
@@ -212,11 +220,25 @@ async function _scanBrokenCards(clubId) {
 
   const teacherUids  = new Set();
   const teacherNames = {};
-  const uSnap = await db.collection('users').where('role', 'in', ['teacher', 'owner']).get();
-  uSnap.forEach(function (d) {
-    teacherUids.add(d.id);
-    teacherNames[d.id] = d.data().name || d.data().email || d.id;
-  });
+
+  // Primary source: club document has teacherUid directly
+  const clubSnap = await db.collection('clubs').doc(clubId).get();
+  if (clubSnap.exists) {
+    var cd = clubSnap.data();
+    if (cd.teacherUid) {
+      teacherUids.add(cd.teacherUid);
+      teacherNames[cd.teacherUid] = cd.teacherName || cd.teacherEmail || cd.teacherUid;
+    }
+  }
+
+  // Secondary source: users collection (may be empty if role field is absent)
+  try {
+    const uSnap = await db.collection('users').where('role', 'in', ['teacher', 'owner']).get();
+    uSnap.forEach(function (d) {
+      teacherUids.add(d.id);
+      teacherNames[d.id] = d.data().name || d.data().email || d.id;
+    });
+  } catch (_) {};
 
   const mSnap  = await db.collection('clubs').doc(clubId).collection('memberships').get();
   const broken = [];
@@ -269,7 +291,7 @@ async function _scanBrokenCards(clubId) {
   return broken;
 }
 
-function _buildRepairRow(card, index) {
+function _buildRepairRow(clubId, card, index) {
   var stats     = card.cachedStats || {};
   var flagsHtml = card.flags.map(function (f) {
     return '<span style="display:inline-block;background:#fde8e8;color:#c0392b;border-radius:4px;padding:1px 6px;font-size:.78em;margin:1px">' + f + '</span>';
@@ -303,6 +325,10 @@ function _buildRepairRow(card, index) {
     updatedAt:  '(now)',
   }, null, 2);
 
+  var fixBtn =
+    '<button class="od-btn-sm" style="margin-top:10px;background:#c0392b;color:#fff"' +
+    ' onclick="_executeCardRepair(\'' + clubId + '\',\'' + card.cardId + '\')">🔧 תקן כרטיס זה</button>';
+
   return '<div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:12px">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
       '<span style="font-size:1.1em">' + card.emoji + ' ' + card.name + '</span>' +
@@ -314,7 +340,7 @@ function _buildRepairRow(card, index) {
       'totalSessions: <strong>' + (stats.totalSessions || 0) + '</strong>' +
     '</div>' +
     '<details>' +
-      '<summary style="cursor:pointer;font-size:.85em;color:#2980b9">Dry-Run — מה ייקרה (Read-Only Preview)</summary>' +
+      '<summary style="cursor:pointer;font-size:.85em;color:#2980b9">Dry-Run — Preview</summary>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">' +
         '<div>' +
           '<div style="font-size:.78em;font-weight:bold;color:#27ae60;margin-bottom:4px">NEW card (create)</div>' +
@@ -326,7 +352,86 @@ function _buildRepairRow(card, index) {
         '</div>' +
       '</div>' +
     '</details>' +
+    fixBtn +
   '</div>';
+}
+
+async function _executeCardRepair(clubId, cardId) {
+  var card = _repairCardCache[cardId];
+  if (!card) { alert('Card data not found — please rescan.'); return; }
+
+  var auth = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+  if (!auth || auth.isAnonymous) { alert('Owner login required.'); return; }
+
+  var confirmed = confirm(
+    'תיקון כרטיס: ' + card.emoji + ' ' + card.name + '\n\n' +
+    'ייצור כרטיס חדש (student_xxx) עם אותם נתונים.\n' +
+    'הכרטיס הישן יסומן status:left בלבד — לא יימחק.\n\n' +
+    'להמשיך?'
+  );
+  if (!confirmed) return;
+
+  var db  = window.db;
+  var now = new Date().toISOString();
+  var newId = 'student_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  var checkSnap = await db.collection('clubs').doc(clubId).collection('memberships').doc(newId).get();
+  if (checkSnap.exists) { alert('ID collision — try again.'); return; }
+
+  var s = card.cachedStats || {};
+  var newCard = {
+    userId:           newId,
+    clubId:           clubId,
+    name:             card.name,
+    emoji:            card.emoji,
+    role:             'member',
+    status:           'active',
+    inviteSource:     'pre-created',
+    invitationId:     null,
+    createdByTeacher: true,
+    personalized:     false,
+    claimedByUid:     null,
+    permissions: { canViewLeaderboard: true, canAddMembers: false, canEditClub: false },
+    joinedAt:    card.joinedAt || now,
+    leftAt:      null,
+    cachedStats: {
+      totalMinutes:  s.totalMinutes  || 0,
+      totalSessions: s.totalSessions || 0,
+      totalPoints:   s.totalPoints   || 0,
+      totalBooks:    s.totalBooks    || 0,
+      appMinutes:    s.appMinutes    || 0,
+      bookMinutes:   s.bookMinutes   || 0,
+      lastReadAt:    s.lastReadAt    || null,
+    },
+    migratedFrom: cardId,
+    updatedAt:    now,
+  };
+
+  try {
+    await db.collection('clubs').doc(clubId).collection('memberships').doc(newId).set(newCard);
+  } catch (e) {
+    alert('שגיאה ביצירת כרטיס חדש — הכרטיס הישן לא נגע.\n' + e.message);
+    return;
+  }
+
+  try {
+    await db.collection('clubs').doc(clubId).collection('memberships').doc(cardId).set(
+      { status: 'left', migratedTo: newId, updatedAt: now },
+      { merge: true }
+    );
+  } catch (e) {
+    alert('כרטיס חדש נוצר (' + newId + ') אך סימון הישן כ-left נכשל.\n' + e.message);
+    return;
+  }
+
+  var content = document.getElementById('od-repair-content');
+  if (content) {
+    content.innerHTML =
+      '<div style="color:#27ae60;padding:.5rem;font-weight:bold">✅ ' + card.name + ' תוקן בהצלחה!</div>' +
+      '<div style="font-size:.8em;color:#666;padding:.25rem .5rem">כרטיס חדש: ' + newId + ' · הישן סומן left.</div>' +
+      '<div style="padding:.5rem;color:#888;font-size:.8em">סורק מחדש...</div>';
+  }
+  setTimeout(function () { showCardRepairTool(clubId); }, 1500);
 }
 
 async function _odMarkClubHidden(clubId) {
@@ -482,6 +587,7 @@ window.showOwnerDashboard  = showOwnerDashboard;
 window._odLoad             = _odLoad;
 window.devReset            = devReset;
 window.showCardRepairTool  = showCardRepairTool;
+window._executeCardRepair  = _executeCardRepair;
 
 /**
  * פונקציית פיתוח חד-פעמית.
