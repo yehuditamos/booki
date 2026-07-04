@@ -730,8 +730,13 @@ function _enterPersonalHome(userId, profile) {
   window.currentStudentData = studentData;
   const nameEl  = document.getElementById('current-student-name');
   const emojiEl = document.getElementById('greeting-avatar');
-  if (nameEl)  nameEl.textContent  = studentData.name  || userId;
-  if (emojiEl) emojiEl.textContent = studentData.emoji || '📚';
+  if (nameEl)  nameEl.textContent = studentData.name || userId;
+  if (emojiEl) {
+    _setAvatarEl(emojiEl, studentData.emoji || '📚');
+    emojiEl.style.cursor = 'pointer';
+    emojiEl.title        = 'שנה אווטאר';
+    emojiEl.onclick      = changeStudentAvatar;
+  }
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji, createdByTeacher: !!profile?.createdByTeacher });
   showScreen('screen-main');
   _updateBugLabel();
@@ -853,13 +858,25 @@ window.enterPersonalHomeAfterJoin = function(userId, name, clubId) {
 
 // ─── Mini Personalization — כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────
 
-const _MINI_PERSON_EMOJIS = ['📚','🌟','⭐','🎨','🌈','🦋','🐬','🦁','🌸','🚀','🎵','🍎'];
+const _MINI_PERSON_EMOJIS = [
+  '🐶','🐱','🦊','🐸','🐯','🦁',
+  '🌟','🌈','🌸','🦋','🚀','⭐',
+  '🎨','🎵','🍎','🍭','⚽','🎮',
+  '🌊','🦄','🐬','🐧','🦉','🐢',
+];
 let _miniPersonState   = null;
 let _miniSelectedEmoji = '📚';
+let _miniDrawMode      = false;
+// Shared canvas drawing state
+let _cvIsDrawing = false, _cvLastX = 0, _cvLastY = 0;
+let _cvColor = '#222222', _cvIsEraser = false, _cvActiveId = null;
 
 function showMiniPersonalization(userId, clubId, name) {
   _miniPersonState   = { userId, clubId, name };
-  _miniSelectedEmoji = '📚';
+  _miniSelectedEmoji = _MINI_PERSON_EMOJIS[0];
+  _miniDrawMode      = false;
+  _cvIsDrawing       = false;
+  _cvActiveId        = null;
 
   const h2El   = document.querySelector('.who-reads-title');
   const subEl  = document.getElementById('who-reads-club-name');
@@ -867,21 +884,29 @@ function showMiniPersonalization(userId, clubId, name) {
   const footer = document.querySelector('#screen-who-reads .who-reads-footer');
 
   if (h2El)   h2El.textContent  = `שלום, ${name}! 👋`;
-  if (subEl)  subEl.textContent = 'בחר/י אמוג׳י שמייצג אותך:';
+  if (subEl)  subEl.textContent = 'בחר/י את האווטאר שלך:';
   if (footer) footer.innerHTML  = '';
 
   if (grid) grid.innerHTML = `
     <div class="mini-person-card">
-      <div class="mini-person-emojis">
-        ${_MINI_PERSON_EMOJIS.map(e =>
-          `<button class="mini-emoji-btn${e === '📚' ? ' selected' : ''}"
-                   data-emoji="${e}"
-                   onclick="selectMiniEmoji(this,'${e}')">${e}</button>`
-        ).join('')}
+      <div class="mini-avatar-tabs">
+        <button class="mini-tab active" id="mini-tab-emoji" onclick="_switchMiniTab('emoji')">😊 אמוג׳י</button>
+        <button class="mini-tab"        id="mini-tab-draw"  onclick="_switchMiniTab('draw')">✏️ ציור חופשי</button>
+      </div>
+      <div id="mini-emoji-panel">
+        <div class="mini-person-emojis">
+          ${_MINI_PERSON_EMOJIS.map(e =>
+            `<button class="mini-emoji-btn${e === _miniSelectedEmoji ? ' selected' : ''}"
+                     onclick="selectMiniEmoji(this,'${e}')">${e}</button>`
+          ).join('')}
+        </div>
+      </div>
+      <div id="mini-draw-panel" style="display:none">
+        ${_cvPanelHtml('mini-draw-canvas')}
       </div>
       <p id="mini-person-error" class="auth-error" style="display:none"></p>
       <button id="btn-mini-person-save" class="btn-giant btn-green"
-              style="margin:24px auto 0;display:block;max-width:240px"
+              style="margin:16px auto 0;display:block;max-width:240px"
               onclick="submitMiniPersonalization()">נכנסים לקרוא ⬅️</button>
     </div>`;
 
@@ -894,11 +919,202 @@ function selectMiniEmoji(btn, emoji) {
   _miniSelectedEmoji = emoji;
 }
 
+function _switchMiniTab(tab) {
+  _miniDrawMode = tab === 'draw';
+  const ep = document.getElementById('mini-emoji-panel');
+  const dp = document.getElementById('mini-draw-panel');
+  const et = document.getElementById('mini-tab-emoji');
+  const dt = document.getElementById('mini-tab-draw');
+  if (ep) ep.style.display = tab === 'emoji' ? '' : 'none';
+  if (dp) dp.style.display = tab === 'draw'  ? '' : 'none';
+  if (et) et.classList.toggle('active', tab === 'emoji');
+  if (dt) dt.classList.toggle('active', tab === 'draw');
+  if (tab === 'draw') setTimeout(() => _cvAttach('mini-draw-canvas'), 0);
+}
+
+// ─── Canvas drawing helpers ────────────────────────────────────────────────────
+
+function _cvPanelHtml(canvasId) {
+  const colors = ['#222222','#e74c3c','#e67e22','#f1c40f','#2ecc71','#3498db','#9b59b6','#e91e63'];
+  return '<canvas id="' + canvasId + '" width="220" height="220" class="draw-canvas" style="touch-action:none"></canvas>' +
+    '<div class="draw-palette">' +
+    colors.map(c =>
+      '<button class="draw-color-btn" style="background:' + c + '"' +
+      ' onclick="_cvPickColor(\'' + c + '\',this)"></button>'
+    ).join('') +
+    '<button class="draw-color-btn draw-eraser-btn" onclick="_cvPickEraser(this)" title="מחק">⬜</button>' +
+    '</div>' +
+    '<button class="draw-clear-btn" onclick="_cvClear()">🗑️ נקה</button>';
+}
+
+function _cvAttach(canvasId) {
+  const cv = document.getElementById(canvasId);
+  if (!cv || cv._cvReady) return;
+  cv._cvReady  = true;
+  _cvActiveId  = canvasId;
+  _cvColor     = '#222222';
+  _cvIsEraser  = false;
+  const ctx    = cv.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+
+  function _pos(e) {
+    const r = cv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {
+      x: (t.clientX - r.left) * (cv.width  / r.width),
+      y: (t.clientY - r.top)  * (cv.height / r.height),
+    };
+  }
+  function _start(e) {
+    e.preventDefault();
+    _cvIsDrawing = true;
+    _cvActiveId  = canvasId;
+    const p = _pos(e); _cvLastX = p.x; _cvLastY = p.y;
+  }
+  function _move(e) {
+    if (!_cvIsDrawing) return;
+    e.preventDefault();
+    const p = _pos(e);
+    ctx.strokeStyle = _cvIsEraser ? '#fff' : _cvColor;
+    ctx.lineWidth   = _cvIsEraser ? 28 : 8;
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(_cvLastX, _cvLastY);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    _cvLastX = p.x; _cvLastY = p.y;
+  }
+  function _end() { _cvIsDrawing = false; }
+  cv.addEventListener('mousedown',  _start);
+  cv.addEventListener('mousemove',  _move);
+  cv.addEventListener('mouseup',    _end);
+  cv.addEventListener('mouseleave', _end);
+  cv.addEventListener('touchstart', _start, { passive: false });
+  cv.addEventListener('touchmove',  _move,  { passive: false });
+  cv.addEventListener('touchend',   _end,   { passive: false });
+}
+
+function _cvPickColor(color, btn) {
+  _cvColor = color; _cvIsEraser = false;
+  document.querySelectorAll('.draw-color-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+function _cvPickEraser(btn) {
+  _cvIsEraser = true;
+  document.querySelectorAll('.draw-color-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+function _cvClear() {
+  const cv = document.getElementById(_cvActiveId);
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+}
+function _cvExport(canvasId) {
+  const cv = document.getElementById(canvasId || _cvActiveId);
+  return cv ? cv.toDataURL('image/jpeg', 0.5) : null;
+}
+
+// ─── Avatar display helpers ────────────────────────────────────────────────────
+
+function _isImgAvatar(av) { return typeof av === 'string' && av.startsWith('data:'); }
+
+function _setAvatarEl(el, avatar) {
+  if (!el) return;
+  if (_isImgAvatar(avatar)) {
+    el.innerHTML = '<img src="' + avatar + '" class="av-img" alt="">';
+  } else {
+    el.innerHTML = '';
+    el.textContent = avatar || '📚';
+  }
+}
+
+function _avatarHtml(avatar, cls) {
+  if (_isImgAvatar(avatar)) {
+    return '<img src="' + avatar + '" class="' + cls + ' av-img" alt="">';
+  }
+  return '<span class="' + cls + '">' + (avatar || '📚') + '</span>';
+}
+
+// ─── Change avatar after setup ────────────────────────────────────────────────
+
+function changeStudentAvatar() {
+  const reader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  const userId = reader?.userId;
+  const clubId = reader?.clubId || window.currentClubId;
+  if (!userId || !clubId) return;
+
+  document.getElementById('av-modal')?.remove();
+  window._apmCtx = { userId, clubId, drawMode: false, emoji: _MINI_PERSON_EMOJIS[0] };
+
+  const overlay = document.createElement('div');
+  overlay.id        = 'av-modal';
+  overlay.className = 'av-modal-overlay';
+  overlay.addEventListener('click', () => document.getElementById('av-modal')?.remove());
+  overlay.innerHTML =
+    '<div class="av-modal-box" onclick="event.stopPropagation()">' +
+    '<button class="av-modal-close" onclick="document.getElementById(\'av-modal\').remove()">✕</button>' +
+    '<p class="av-modal-title">בחר/י אווטאר</p>' +
+    '<div class="mini-avatar-tabs">' +
+    '<button class="mini-tab active" id="apm-tab-emoji" onclick="_apmTab(\'emoji\')">😊 אמוג׳י</button>' +
+    '<button class="mini-tab"        id="apm-tab-draw"  onclick="_apmTab(\'draw\')">✏️ ציור</button>' +
+    '</div>' +
+    '<div id="apm-emoji-panel"><div class="mini-person-emojis">' +
+    _MINI_PERSON_EMOJIS.map(e =>
+      '<button class="mini-emoji-btn" onclick="_apmPickEmoji(\'' + e + '\',this)">' + e + '</button>'
+    ).join('') +
+    '</div></div>' +
+    '<div id="apm-draw-panel" style="display:none">' + _cvPanelHtml('apm-canvas') + '</div>' +
+    '<button class="btn-giant btn-green" style="margin:16px auto 0;display:block;max-width:180px"' +
+    ' onclick="_apmSave()">שמור ✓</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function _apmTab(tab) {
+  const ep = document.getElementById('apm-emoji-panel');
+  const dp = document.getElementById('apm-draw-panel');
+  const et = document.getElementById('apm-tab-emoji');
+  const dt = document.getElementById('apm-tab-draw');
+  if (ep) ep.style.display = tab === 'emoji' ? '' : 'none';
+  if (dp) dp.style.display = tab === 'draw'  ? '' : 'none';
+  if (et) et.classList.toggle('active', tab === 'emoji');
+  if (dt) dt.classList.toggle('active', tab === 'draw');
+  if (window._apmCtx) window._apmCtx.drawMode = tab === 'draw';
+  if (tab === 'draw') setTimeout(() => _cvAttach('apm-canvas'), 0);
+}
+
+function _apmPickEmoji(emoji, btn) {
+  if (window._apmCtx) window._apmCtx.emoji = emoji;
+  document.querySelectorAll('#apm-emoji-panel .mini-emoji-btn').forEach(b => b.classList.remove('selected'));
+  if (btn) btn.classList.add('selected');
+}
+
+async function _apmSave() {
+  const ctx = window._apmCtx;
+  if (!ctx) return;
+  const avatar = ctx.drawMode ? (_cvExport('apm-canvas') || '📚') : (ctx.emoji || '📚');
+  document.getElementById('av-modal')?.remove();
+  window._apmCtx = null;
+
+  if (typeof fbUpdateMemberAvatar === 'function') {
+    await fbUpdateMemberAvatar(ctx.clubId, ctx.userId, avatar);
+  }
+  if (window.currentStudentData) window.currentStudentData.emoji = avatar;
+  _setAvatarEl(document.getElementById('greeting-avatar'), avatar);
+  const cardScreen = document.getElementById('screen-reader-card');
+  if (cardScreen && cardScreen.classList.contains('active') && typeof showReaderCard === 'function') {
+    showReaderCard();
+  }
+}
+
 async function submitMiniPersonalization() {
   const state = _miniPersonState;
   if (!state) return;
   const { userId, clubId, name } = state;
-  const emoji = _miniSelectedEmoji || '📚';
+  const emoji = _miniDrawMode ? (_cvExport('mini-draw-canvas') || '📚') : (_miniSelectedEmoji || '📚');
   const btn   = document.getElementById('btn-mini-person-save');
   const errEl = document.getElementById('mini-person-error');
 
@@ -1350,4 +1566,6 @@ Object.assign(window, {
   _updateSplashForRole,
   // Mini personalization (כרטיסי pre_)
   showMiniPersonalization, selectMiniEmoji, submitMiniPersonalization,
+  _switchMiniTab, _cvPickColor, _cvPickEraser, _cvClear,
+  changeStudentAvatar, _apmTab, _apmPickEmoji, _apmSave,
 });

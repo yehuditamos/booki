@@ -1359,12 +1359,29 @@ label { font-weight: 700; font-size: 1rem; }
 
 /* ─── Mini Personalization (כרטיסי pre_) ──────────────────────────────────── */
 .mini-person-card { grid-column: 1 / -1; padding: 8px 0 16px; }
+
+.mini-avatar-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.mini-tab {
+  flex: 1; max-width: 160px;
+  padding: 9px 12px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #f8f8f8;
+  font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+}
+.mini-tab.active {
+  border-color: var(--green);
+  background: rgba(39,174,96,.1);
+  color: var(--green);
+}
+
 .mini-person-emojis {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
-  padding: 12px 8px 20px;
+  padding: 12px 8px 16px;
 }
 .mini-emoji-btn {
   font-size: 2rem;
@@ -1381,6 +1398,85 @@ label { font-weight: 700; font-size: 1rem; }
   background: rgba(39,174,96,.12);
 }
 .mini-emoji-btn:hover { border-color: var(--border); }
+
+/* ─── Canvas drawing tool ───────────────────────────────────────────────────── */
+.draw-canvas {
+  display: block;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  border: 3px solid #ddd;
+  background: #fff;
+  cursor: crosshair;
+  max-width: 220px; max-height: 220px;
+}
+.draw-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 4px 8px;
+}
+.draw-color-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform .12s, border-color .12s;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.draw-color-btn:hover    { transform: scale(1.15); }
+.draw-color-btn.active   { border-color: #333; transform: scale(1.2); }
+.draw-eraser-btn         { background: #f0f0f0 !important; border-color: #ccc; }
+.draw-clear-btn {
+  display: block; margin: 8px auto 0;
+  background: none; border: 1.5px solid #ddd;
+  border-radius: 10px; padding: 5px 16px;
+  font-size: .82rem; cursor: pointer; color: #888;
+}
+.draw-clear-btn:hover { background: #ffeaea; border-color: #e74c3c; color: #e74c3c; }
+
+/* ─── Avatar image (when drawn) ─────────────────────────────────────────────── */
+.av-img {
+  border-radius: 50%;
+  object-fit: cover;
+  width: 1em; height: 1em;
+  vertical-align: middle;
+}
+.greeting-avatar .av-img { width: 2.5rem; height: 2.5rem; }
+.card-avatar .av-img, .card-avatar-wrap .av-img { width: 4rem; height: 4rem; }
+.profile-avatar .av-img  { width: 2.4rem; height: 2.4rem; }
+
+.card-avatar-wrap { position: relative; display: inline-block; }
+.btn-change-avatar {
+  display: block; margin: 8px auto 0;
+  background: none; border: 1.5px solid #ddd;
+  border-radius: 20px; padding: 4px 14px;
+  font-size: .78rem; cursor: pointer; color: #888;
+}
+.btn-change-avatar:hover { border-color: var(--green); color: var(--green); }
+
+/* ─── Change-avatar modal ───────────────────────────────────────────────────── */
+.av-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 16px;
+}
+.av-modal-box {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px 16px 24px;
+  width: 100%; max-width: 360px;
+  max-height: 90vh; overflow-y: auto;
+  position: relative;
+}
+.av-modal-close {
+  position: absolute; top: 12px; left: 14px;
+  background: none; border: none;
+  font-size: 1.3rem; cursor: pointer; color: #aaa;
+}
+.av-modal-title { text-align: center; font-weight: 800; font-size: 1.1rem; margin: 0 0 14px; }
 
 /* ─── כרטיס תלמיד חדש ──────────────────────────────────────────────────────── */
 @keyframes cardNewPulse {

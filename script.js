@@ -516,11 +516,18 @@ function _renderReaderCardContent(s) {
   }).join('');
 
   // s.emoji is set for new students; STUDENT_EMOJIS[s.id] for legacy (numeric index)
-  const avatar = s.emoji || (typeof STUDENT_EMOJIS !== 'undefined' ? STUDENT_EMOJIS[s.id] : '') || '📚';
+  const avatar    = s.emoji || (typeof STUDENT_EMOJIS !== 'undefined' ? STUDENT_EMOJIS[s.id] : '') || '📚';
+  const isImgAv   = typeof avatar === 'string' && avatar.startsWith('data:');
+  const avatarTag = isImgAv
+    ? `<img src="${avatar}" class="card-avatar av-img" alt="">`
+    : `<div class="card-avatar">${avatar}</div>`;
+  const changeBtn = window.currentClubId
+    ? `<button class="btn-change-avatar" onclick="changeStudentAvatar()">✏️ שנה אווטאר</button>`
+    : '';
 
   document.getElementById('reader-card-content').innerHTML = `
     <div class="card-hero">
-      <div class="card-avatar">${avatar}</div>
+      <div class="card-avatar-wrap">${avatarTag}${changeBtn}</div>
       <div class="card-name">${s.name || ''}</div>
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
