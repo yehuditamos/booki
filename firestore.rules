@@ -99,13 +99,13 @@ service cloud.firestore {
               && resource.data.get('claimedByUid', null) == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'updatedAt']))
-          // cachedStats: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
+          // cachedStats + avatar: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
           // נדרש כי ה-anonymous UID עשוי להשתנות בין sessions על אותו מכשיר
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
               && resource.data.get('claimedByUid', null) != null
               && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['cachedStats', 'updatedAt']))
+                 .hasOnly(['cachedStats', 'updatedAt', 'emoji', 'avatar']))
           // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
           || (isSignedIn()
               && isMe(userId)
