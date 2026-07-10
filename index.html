@@ -60,6 +60,7 @@
       </button>
       <div class="splash-secondary-actions">
         <button class="btn-splash-secondary" onclick="showJoinClub()">🔑 יש לי קוד מועדון</button>
+        <button class="btn-splash-secondary btn-solo-card" onclick="openSoloCard()">📚 כרטיס קריאה אישי — ללא מועדון</button>
       </div>
     </div>
   </div>
@@ -103,6 +104,7 @@
     </div>
     <div class="switch-group">
       <button id="btn-switch-club" class="btn-switch btn-sc" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
+      <button class="btn-switch btn-share-sm" title="שתפי בוקי" onclick="shareApp()">📤</button>
       <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
     </div>
   </div>
@@ -417,7 +419,10 @@
   <div class="screen-header sticky-header">
     <div class="header-row">
       <h2>📚 מועדוני הקריאה שלי</h2>
-      <button class="btn-logout" onclick="teacherSignOut()">יציאה</button>
+      <div class="header-actions">
+        <button class="btn-share-app" onclick="shareApp()">📤 שתפי</button>
+        <button class="btn-logout" onclick="teacherSignOut()">יציאה</button>
+      </div>
     </div>
     <p id="td-teacher-name" class="td-subtitle"></p>
   </div>

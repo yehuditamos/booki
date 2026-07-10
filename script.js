@@ -668,7 +668,7 @@ async function _renderNewClubView(clubId) {
       ${active.slice(0, 10).map((m, i) => `
         <div class="leader-row ${rowCls[i] || ''}">
           <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-          <span class="leader-avatar">${m.emoji}</span>
+          ${_avatarHtml(m.emoji || '📚', 'leader-avatar')}
           <span class="leader-name">${m.name}</span>
           <span class="leader-pts">${m.totalMinutes} דק׳</span>
         </div>`).join('')}
@@ -734,7 +734,7 @@ function _renderClassContent(fbStudents) {
         return `
           <div class="leader-row ${rowCls[i] || ''}">
             <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-            <span class="leader-avatar">${STUDENT_EMOJIS[s.id] || '📚'}</span>
+            ${_avatarHtml(STUDENT_EMOJIS[s.id] || '📚', 'leader-avatar')}
             <span class="leader-name">${s.name}</span>
             <span class="leader-rank">${r.icon}</span>
             <span class="leader-pts">${s.points || 0} נק׳</span>

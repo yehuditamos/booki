@@ -568,7 +568,7 @@ function _renderFirebaseMemberGrid(grid, memberships, clubId) {
   }
   grid.innerHTML = active.map(m => `
     <button class="profile-card" data-user-id="${m.userId}" onclick="selectProfile('${m.userId}', '${clubId}')">
-      <span class="profile-avatar">${m.emoji || m.avatar || '📚'}</span>
+      ${_avatarHtml(m.emoji || m.avatar || '📚', 'profile-avatar')}
       <span class="profile-name">${m.name || m.userId}</span>
     </button>`).join('');
 }
@@ -824,6 +824,64 @@ function goBackFromJoin() {
 
 function goBackToJoinEntry() {
   showScreen('screen-join-entry');
+}
+
+// ─── Solo Card (כרטיס קריאה אישי ללא מועדון) ─────────────────────────────────
+
+function openSoloCard() {
+  let soloId = localStorage.getItem('booki_solo_uid');
+  if (!soloId) {
+    soloId = 'solo_' + Date.now();
+    localStorage.setItem('booki_solo_uid', soloId);
+  }
+  _activeClubId        = null;
+  window.currentClubId = null;
+  const existing = typeof loadStudentLocal === 'function' ? loadStudentLocal(soloId) : {};
+  if (existing && existing.personalizationComplete) {
+    _enterPersonalHome(soloId, existing);
+    return;
+  }
+  if (typeof showProfileWizard === 'function') {
+    showProfileWizard(soloId, null, { name: existing?.name || '' });
+  }
+}
+
+// ─── Share App ────────────────────────────────────────────────────────────────
+
+function _shareText() {
+  const url = window.location.origin + window.location.pathname.replace(/\/+$/, '');
+  return 'היי!\nגילית אפליקציה מגניבה לעידוד קריאה אצל ילדים — בוקי 📚\n\nכיצד מצטרפים?\n👩‍🏫 מורה — פתחי מועדון קריאה חינמי\n📚 ילד — פתח כרטיס קריאה אישי, או בקשי ממורה קישור למועדון\n\n' + url;
+}
+
+function shareApp() {
+  const text = _shareText();
+  const url  = window.location.origin + window.location.pathname.replace(/\/+$/, '');
+  if (navigator.share) {
+    navigator.share({ title: 'בוקי — יער הקריאה', text, url }).catch(() => {});
+    return;
+  }
+  const waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
+  const overlay = document.createElement('div');
+  overlay.id = 'share-app-overlay';
+  overlay.className = 'share-overlay';
+  overlay.innerHTML =
+    '<div class="share-modal">' +
+      '<button class="share-modal-close" onclick="document.getElementById(\'share-app-overlay\').remove()">✕</button>' +
+      '<div class="share-modal-title">📤 שתפי בוקי</div>' +
+      '<p class="share-modal-text">שתפי עם חברות ומשפחה!</p>' +
+      '<a class="btn-share-wa" href="' + waUrl + '" target="_blank" rel="noopener">💬 שלחי בוואטסאפ</a>' +
+      '<button class="btn-share-copy" onclick="_copyShareText()">📋 העתקי את הטקסט</button>' +
+      '<div id="share-copy-ok" class="share-copy-ok" style="display:none">הועתק! ✓</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function _copyShareText() {
+  navigator.clipboard.writeText(_shareText()).then(() => {
+    const ok = document.getElementById('share-copy-ok');
+    if (ok) { ok.style.display = ''; setTimeout(() => { ok.style.display = 'none'; }, 2000); }
+  }).catch(() => {});
 }
 
 // ─── כלי פיתוח (קונסול) ──────────────────────────────────────────────────────
@@ -1354,7 +1412,7 @@ function _renderTeacherClassContent(club, memberships, clubId) {
         return `
           <div class="tcd-member-row ${podium}">
             <span class="tcd-m-pos">${posIcons[i] || (i + 1)}</span>
-            <span class="tcd-m-avatar">${avatar}</span>
+            ${_avatarHtml(avatar, 'tcd-m-avatar')}
             <div class="tcd-m-info">
               <span class="tcd-m-name">${name}</span>
               <span class="tcd-m-last">${dot} ${lastStr}</span>
@@ -1568,4 +1626,6 @@ Object.assign(window, {
   showMiniPersonalization, selectMiniEmoji, submitMiniPersonalization,
   _switchMiniTab, _cvPickColor, _cvPickEraser, _cvClear,
   changeStudentAvatar, _apmTab, _apmPickEmoji, _apmSave,
+  // Solo + Share
+  openSoloCard, shareApp, _copyShareText,
 });

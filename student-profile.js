@@ -507,14 +507,23 @@ async function _wizardSubmit() {
     if (btn) { btn.disabled = false; btn.textContent = WIZARD_STEPS[WIZARD_STEPS.length - 1].next; }
   };
 
+  const _isSolo = typeof _wizardUserId === 'string' && _wizardUserId.startsWith('solo_');
+
   try {
-    if (typeof fbSaveUserProfile === 'function') {
-      console.log('[wizard] שומר פרופיל ב-Firestore...');
-      await _save(fbSaveUserProfile(_wizardUserId, profileData));
-      console.log('[wizard] פרופיל נשמר בהצלחה');
-    }
-    if (_wizardClubId && typeof fbUpdateMemberAvatar === 'function') {
-      await _save(fbUpdateMemberAvatar(_wizardClubId, _wizardUserId, _wizardAnswers.avatar), 5000);
+    if (_isSolo) {
+      // Solo mode — localStorage only, no Firestore
+      if (typeof saveStudentLocal === 'function') {
+        saveStudentLocal({ id: _wizardUserId, ...profileData });
+      }
+    } else {
+      if (typeof fbSaveUserProfile === 'function') {
+        console.log('[wizard] שומר פרופיל ב-Firestore...');
+        await _save(fbSaveUserProfile(_wizardUserId, profileData));
+        console.log('[wizard] פרופיל נשמר בהצלחה');
+      }
+      if (_wizardClubId && typeof fbUpdateMemberAvatar === 'function') {
+        await _save(fbUpdateMemberAvatar(_wizardClubId, _wizardUserId, _wizardAnswers.avatar), 5000);
+      }
     }
     console.log('[wizard] שמירה הושלמה — מעבר למסך הבא');
   } catch (e) {
