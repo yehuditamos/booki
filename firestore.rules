@@ -1,0 +1,200 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Auth Helpers ─────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAnonymous() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    function isTeacher() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    function isMe(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // isOwner(): בודק role == 'owner' ב-Firestore (ללא hardcode של UID/email)
+    function isOwner() {
+      return isTeacher() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    // isClubTeacher(): מורה בעלת המועדון — לפי UID, teacherEmail, או ownerEmail
+    function isClubTeacher(clubId) {
+      let c = get(/databases/$(database)/documents/clubs/$(clubId)).data;
+      return isTeacher()
+          && (c.get('teacherUid',   null) == request.auth.uid
+              || c.get('teacherEmail', null) == request.auth.token.email
+              || c.get('ownerEmail',   null) == request.auth.token.email);
+    }
+
+    function validMemberStatus(status) {
+      return status == 'active' || status == 'pending' || status == 'left';
+    }
+
+    // ─── Legacy classes ───────────────────────────────────────────────────────
+    match /classes/{classId} {
+      allow read, write: if true;
+      match /students/{studentId} {
+        allow read, write: if true;
+      }
+    }
+
+    // ─── Clubs ────────────────────────────────────────────────────────────────
+    match /clubs/{clubId} {
+      allow read:   if true;
+      allow create: if isTeacher()
+                    && request.resource.data.teacherUid == request.auth.uid;
+      allow update: if isOwner()
+                    || (isTeacher() && (
+                        resource.data.get('teacherUid',   null) == request.auth.uid
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email))
+                    // תלמיד (anonymous) יכול לעדכן memberCount בלבד — denormalization בטוחה
+                    || (isSignedIn() &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']));
+      allow delete: if isOwner()
+                    || (isTeacher() && (
+                        resource.data.get('teacherUid',   null) == request.auth.uid
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email));
+
+      match /memberships/{userId} {
+        allow read: if true;
+        allow create:
+          // תלמיד מצטרף בעצמו
+          if (isMe(userId)
+              && request.resource.data.userId == userId
+              && (!request.resource.data.keys().hasAny(['status'])
+                  || validMemberStatus(request.resource.data.status)))
+          // מורה מוסיפה תלמיד חסר — כרטיס בתולי בלבד
+          || (isClubTeacher(clubId)
+              && request.resource.data.get('createdByTeacher', false) == true
+              && request.resource.data.get('claimedByUid', null) == null
+              && request.resource.data.userId == userId)
+          || isOwner();
+        allow update: if
+          // תלמיד רגיל — userId == auth.uid
+          (isMe(userId)
+              && request.resource.data.userId == resource.data.userId
+              && request.resource.data.clubId == resource.data.clubId)
+          || isOwner()
+          // CLAIM: any signed-in session can personalize a teacher-created card not yet personalized
+          || (isSignedIn()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('personalized', false) == false
+              && request.resource.data.claimedByUid == request.auth.uid
+              && request.resource.data.get('personalized', false) == true
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['claimedByUid', 'personalized', 'emoji', 'firstLoginAt', 'updatedAt']))
+          // cachedStats: כרטיס שנתבע — בדיקת claimedByUid מדויקת
+          || (isSignedIn()
+              && resource.data.get('claimedByUid', null) == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt']))
+          // cachedStats + avatar: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
+          // נדרש כי ה-anonymous UID עשוי להשתנות בין sessions על אותו מכשיר
+          || (isSignedIn()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('claimedByUid', null) != null
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt', 'emoji', 'avatar']))
+          // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
+          || (isSignedIn()
+              && isMe(userId)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats', 'updatedAt']));
+        allow delete: if isTeacher();
+
+        // sessions sub-collection — כרטיסי תלמיד שנוצרו ע"י מורה (Option B)
+        match /sessions/{sessionId} {
+          allow read: if isOwner() || isClubTeacher(clubId);
+          allow create: if isSignedIn()
+                        && request.resource.data.claimedByUid == request.auth.uid
+                        && request.resource.data.studentCardId == userId;
+          allow update: if false;
+          allow delete: if false;
+        }
+      }
+    }
+
+    // ─── Collection group: memberships — תמיכה ב-fbLoadMembershipsForUser ────
+    match /{path=**}/memberships/{membershipId} {
+      allow read: if true;
+    }
+
+    // ─── Invitations ──────────────────────────────────────────────────────────
+    match /invitations/{code} {
+      allow read:   if true;
+      allow create: if isTeacher();
+      allow update: if isSignedIn()
+                    && request.resource.data.clubId == resource.data.clubId
+                    && request.resource.data.code   == resource.data.code;
+      allow delete: if isTeacher();
+    }
+
+    // ─── Config (setup sentinel) ──────────────────────────────────────────────
+    // config/setup נוצר פעם אחת בלבד על ידי Initial Setup.
+    // לאחר יצירה: immutable — רק Owner יכול למחוק (Dev Reset בלבד).
+    match /config/setup {
+      allow read:   if true;
+      allow create: if isSignedIn()
+                    && !exists(/databases/$(database)/documents/config/setup);
+      allow update: if false;
+      allow delete: if isOwner();
+    }
+
+    // ─── Users ────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if true;
+
+      // יצירה: role:'teacher' תמיד (הרשמה רגילה).
+      // role:'owner' מותר אך ורק כאשר config/setup עדיין אינו קיים (Initial Setup בלבד).
+      allow create: if isMe(userId) && (
+                      request.resource.data.get('role', 'teacher') == 'teacher'
+                      || (request.resource.data.role == 'owner'
+                          && !exists(/databases/$(database)/documents/config/setup))
+                    );
+
+      // עדכון: owner יכול לשנות כל שדה; מורה לא יכולה לשנות role.
+      // חריג: role:'owner' מותר כאשר config/setup אינו קיים (פונקציית dev חד-פעמית).
+      allow update: if isOwner()
+                    || (isMe(userId) &&
+                        request.resource.data.get('role', resource.data.get('role', 'teacher'))
+                        == resource.data.get('role', 'teacher'))
+                    || (isMe(userId) &&
+                        request.resource.data.role == 'owner' &&
+                        !exists(/databases/$(database)/documents/config/setup));
+
+      allow delete: if false;
+
+      match /profile/{doc} {
+        allow read:  if true;
+        allow write: if isMe(userId);
+      }
+
+      match /readingSessions/{sessionId} {
+        allow read:   if isMe(userId);
+        allow create: if isMe(userId);
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // ─── Analytics (owner-stats) ──────────────────────────────────────────────
+    match /owner-stats/{anyPath=**} {
+      allow read:   if isTeacher();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isOwner();  // Dev Reset בלבד
+    }
+
+  }
+}

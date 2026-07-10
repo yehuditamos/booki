@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>יער הקריאה של בוקי</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
+  <link rel="stylesheet" href="style.css?v=5" />
+</head>
+<body>
+
+<!-- ══ מסך ברוכים הבאים — חד-פעמי ═══════════════════════════════ -->
+<section id="screen-welcome" class="screen">
+  <div class="welcome-bg">
+    <div class="welcome-card">
+      <p class="welcome-wave">👋</p>
+      <h1 class="welcome-title">וולקאםםםם!</h1>
+      <h2 class="welcome-sub">ברוכים הבאים לבוקי 📚</h2>
+      <div class="welcome-body">
+        <p>בוקי נמצאת כרגע בגרסת ניסיון.</p>
+        <p>אם משהו לא עובד, נתקע או נראה מוזר — ממש נשמח לדעת.</p>
+        <p>בהמשך יש כפתור קטן לדיווח על תקלות, והוא שולח הודעה ישירות ליהודית.</p>
+        <p>תודה שאתם עוזרים לנו לשפר את בוקי ❤️</p>
+      </div>
+      <button class="btn-welcome-enter" onclick="dismissWelcome()">יאללה, נכנסים לבוקי ⬅️</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ מסך פתיחה ══════════════════════════════════════════════════ -->
+<section id="screen-splash" class="screen active">
+  <div class="splash-bg">
+    <div class="splash-tree">
+      <div class="big-tree">🌳</div>
+      <div class="floating-leaves">
+        <span class="leaf l1">🍃</span>
+        <span class="leaf l2">📚</span>
+        <span class="leaf l3">🍃</span>
+        <span class="leaf l4">✨</span>
+        <span class="leaf l5">🍃</span>
+      </div>
+    </div>
+    <h1 class="splash-title">בּוּקִי<br><span class="splash-sub">יַעַר הַקְּרִיאָה</span></h1>
+    <p class="splash-tagline">לקריאה מהנה, מדי יום 📖</p>
+    <div class="splash-actions">
+      <button id="splash-btn-create" class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
+        <span class="sa-icon">👩‍🏫</span>
+        <div class="sa-text">
+          <span class="sa-label">התחברות למורה / הקמת מועדון חדש</span>
+          <span class="sa-sub">כניסה למורה קיימת או פתיחת מועדון חדש</span>
+        </div>
+      </button>
+      <button class="btn-splash-action btn-sa-reader" onclick="showWhoReads()">
+        <span class="sa-icon">📖</span>
+        <div class="sa-text">
+          <span class="sa-label">מי קורא עכשיו?</span>
+          <span class="sa-sub">כניסה לקריאה</span>
+        </div>
+      </button>
+      <div class="splash-secondary-actions">
+        <button class="btn-splash-secondary" onclick="showJoinClub()">🔑 יש לי קוד מועדון</button>
+        <button class="btn-splash-secondary btn-solo-card" onclick="openSoloCard()">📚 כרטיס קריאה אישי — ללא מועדון</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ מסך בית — קיים מועדון ══════════════════════════════════════ -->
+<section id="screen-home" class="screen">
+  <div class="splash-bg">
+    <div class="splash-tree">
+      <div class="big-tree">🌳</div>
+      <div class="floating-leaves">
+        <span class="leaf l1">🍃</span>
+        <span class="leaf l2">📚</span>
+        <span class="leaf l3">🍃</span>
+        <span class="leaf l4">✨</span>
+        <span class="leaf l5">🍃</span>
+      </div>
+    </div>
+    <h1 class="splash-title">🌳 יַעַר הַקְּרִיאָה<br><span class="splash-sub">שֶׁל בּוּקִי</span></h1>
+    <p class="splash-tagline">בוחרים מועדון, בוחרים קורא,<br>ומתחילים להצמיח עץ מקריאה 🌱</p>
+    <div class="home-actions">
+      <button class="btn-home-start" onclick="startReading()">מתחילים ⬅️</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ תפריט ראשי ═════════════════════════════════════════════════ -->
+<section id="screen-main" class="screen">
+  <div id="main-back-club-students" class="screen-header sticky-header" style="display:none">
+    <div class="header-row">
+      <button class="btn-back" onclick="goBackToClubStudents()">חזרה לחברי המועדון →</button>
+    </div>
+  </div>
+  <div class="main-top">
+    <div class="greeting-row">
+      <span id="greeting-avatar" class="greeting-avatar">📚</span>
+      <div>
+        <p class="greeting-hi">שלום,</p>
+        <h2 class="greeting-name" id="current-student-name">—</h2>
+      </div>
+    </div>
+    <div class="switch-group">
+      <button id="btn-switch-club" class="btn-switch btn-sc" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
+      <button class="btn-switch btn-share-sm" title="שתפי בוקי" onclick="shareApp()">📤</button>
+      <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
+    </div>
+  </div>
+  <div class="main-menu">
+    <button class="btn-menu btn-menu-primary btn-blue" onclick="showLibrary()">
+      <span class="btn-icon">📚</span>
+      <span class="btn-label">לקריאה באפליקציה</span>
+    </button>
+    <button class="btn-menu btn-menu-primary btn-orange" onclick="startBookReading()">
+      <span class="btn-icon">📖</span>
+      <span class="btn-label">קראתי מתוך ספר</span>
+    </button>
+    <button class="btn-menu btn-menu-secondary btn-purple" onclick="showReaderCard()">
+      <span class="btn-icon">👤</span>
+      <span class="btn-label">כרטיס הקורא שלי</span>
+    </button>
+    <button class="btn-menu btn-menu-secondary btn-teal" onclick="showClassView()">
+      <span class="btn-icon">🏆</span>
+      <span class="btn-label">הכיתה שלנו</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
+<section id="screen-library" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>ספריית הסיפורים</h2>
+    </div>
+    <div class="library-tabs">
+      <button class="tab-btn active" id="tab-all"      onclick="filterLibrary('all')">הכל</button>
+      <button class="tab-btn"        id="tab-tanakh"   onclick="filterLibrary('תנ״ך לילדים')">📜 תנ״ך לילדים</button>
+      <button class="tab-btn"        id="tab-familiar" onclick="filterLibrary('מוכרים')">📚 מוכרים</button>
+      <button class="tab-btn"        id="tab-original" onclick="filterLibrary('מקוריים')">✨ מקוריים</button>
+      <button class="tab-btn"        id="tab-long"     onclick="filterLibrary('ארוכים')">📖 ארוכים</button>
+      <button class="tab-btn"        id="tab-values"   onclick="filterLibrary('ערכים וחברות')">💛 ערכים וחברות</button>
+      <button class="tab-btn"        id="tab-nature"   onclick="filterLibrary('טבע וסקרנות')">🌿 טבע וסקרנות</button>
+      <button class="tab-btn"        id="tab-family"   onclick="filterLibrary('משפחה וחגים')">🏠 משפחה וחגים</button>
+    </div>
+  </div>
+  <div id="for-you-section" class="for-you-section" style="display:none">
+    <div class="for-you-header">⭐ במיוחד בשבילך</div>
+    <div id="for-you-list" class="story-list for-you-list"></div>
+    <div class="for-you-divider">📚 כל הסיפורים</div>
+  </div>
+  <div id="story-list" class="story-list"></div>
+</section>
+
+<!-- ══ קורא סיפורים ════════════════════════════════════════════════ -->
+<section id="screen-reader" class="screen reader-screen">
+  <div class="reader-header sticky-header">
+    <button class="btn-back" onclick="exitReader()">יציאה →</button>
+    <span id="reader-page-counter" class="page-counter">עמוד 1 מתוך 1</span>
+  </div>
+  <h2 id="reader-story-title" class="reader-title"></h2>
+  <div class="reader-content">
+    <div id="reader-text" class="reader-text"></div>
+  </div>
+  <div class="page-dots-wrap">
+    <div id="page-dots" class="page-dots"></div>
+  </div>
+  <div class="reader-nav">
+    <button id="btn-prev" class="btn-nav" onclick="prevPage()">הקודם ➡️</button>
+    <button id="btn-next" class="btn-nav btn-nav-primary" onclick="nextPage()">⬅️ הבא</button>
+  </div>
+  <div id="finish-reading-div" class="finish-reading hidden">
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishAppReading()">🎉 סיימתי להיום!</button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 1 ══════════════════════════════════════════ -->
+<section id="screen-book-step1" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>📖 קראתי מספר</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:33%"></div></div>
+    <p class="step-indicator">שלב 1 מתוך 3 — פרטי הספר</p>
+  </div>
+  <div class="form-card">
+    <label for="book-title">שם הספר <span class="required">*</span></label>
+    <input id="book-title" type="text" class="input-field" placeholder="כתוב/י את שם הספר…" />
+    <label for="book-author">שם המחבר/ת <span class="optional">(לא חובה)</span></label>
+    <input id="book-author" type="text" class="input-field" placeholder="כתוב/י את שם המחבר/ת…" />
+    <button class="btn-giant btn-orange" onclick="bookStep2()">⬅️ המשך</button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 2 ══════════════════════════════════════════ -->
+<section id="screen-book-step2" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-book-step1')">חזרה →</button>
+      <h2>📖 כמה עמודים קראת?</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:66%"></div></div>
+    <p class="step-indicator">שלב 2 מתוך 3 — כמות עמודים</p>
+  </div>
+  <div class="pages-options">
+    <button class="btn-pages" onclick="selectPages(event,'1-5',5)">
+      <span class="pages-count">1–5</span>
+      <span class="pages-mins">כ-5 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'6-10',10)">
+      <span class="pages-count">6–10</span>
+      <span class="pages-mins">כ-10 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'11-20',15)">
+      <span class="pages-count">11–20</span>
+      <span class="pages-mins">כ-15 דקות</span>
+    </button>
+    <button class="btn-pages" onclick="selectPages(event,'21+',25)">
+      <span class="pages-count">21+</span>
+      <span class="pages-mins">כ-25 דקות</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ ספר אמיתי — שלב 3 ══════════════════════════════════════════ -->
+<section id="screen-book-step3" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-book-step2')">חזרה →</button>
+      <h2>📖 שאלות על הספר</h2>
+    </div>
+    <div class="step-bar"><div class="step-fill" style="width:100%"></div></div>
+    <p class="step-indicator">שלב 3 מתוך 3 — הבנת הנקרא</p>
+  </div>
+  <div class="form-card">
+    <label for="q-character">מי הדמות הראשית בסיפור? <span class="required">*</span></label>
+    <input id="q-character" type="text" class="input-field" placeholder="כתוב/י את שם הדמות…" />
+    <label for="q-story">מה קרה בסיפור? <span class="required">*</span></label>
+    <textarea id="q-story" class="input-field textarea-field" placeholder="ספר/י מה קרה…"></textarea>
+    <label for="q-liked">מה הכי אהבת? <span class="required">*</span></label>
+    <textarea id="q-liked" class="input-field textarea-field" placeholder="מה הכי אהבת בספר?"></textarea>
+    <button class="btn-giant btn-orange" onclick="submitBookReading()">🎉 סיימתי!</button>
+  </div>
+</section>
+
+<!-- ══ מסך סיום ════════════════════════════════════════════════════ -->
+<section id="screen-session-complete" class="screen complete-screen">
+  <div class="complete-content">
+    <div class="confetti-area" id="confetti-area"></div>
+    <div class="complete-star animate-bounce">🌟</div>
+    <h1 class="complete-title">כָּל הַכָּבוֹד!</h1>
+    <p class="complete-sub">היום קראת:</p>
+    <div class="complete-stats">
+      <div class="stat-card stat-blue">
+        <span class="stat-icon">⏱️</span>
+        <span class="stat-number" id="complete-minutes">0</span>
+        <span class="stat-label">דקות קריאה</span>
+      </div>
+      <div class="stat-card stat-yellow">
+        <span class="stat-icon">⭐</span>
+        <span class="stat-number" id="complete-points">0</span>
+        <span class="stat-label">נקודות חדשות!</span>
+      </div>
+    </div>
+    <p class="complete-msg">הדקות והנקודות נוספו לכרטיס הקורא שלך! 📚</p>
+    <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 חזרה לתפריט</button>
+  </div>
+</section>
+
+<!-- ══ כרטיס קורא ══════════════════════════════════════════════════ -->
+<section id="screen-reader-card" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2>👤 כרטיס הקורא שלי</h2>
+    </div>
+  </div>
+  <div id="reader-card-content" class="reader-card-content"></div>
+</section>
+
+<!-- ══ הכיתה שלנו ═════════════════════════════════════════════════ -->
+<section id="screen-class" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="_classGoBack()">חזרה →</button>
+      <h2 id="class-screen-title">👨‍👩‍👧‍👦 הכיתה שלנו</h2>
+    </div>
+  </div>
+  <div id="class-content" class="class-content"></div>
+</section>
+
+<!-- ══ בחירת מועדון (מועדונים מרובים) ════════════════════════════ -->
+<section id="screen-club-select" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goBackFromClubSelect()">חזרה →</button>
+      <h2 id="club-select-title">בחר/י מועדון</h2>
+    </div>
+  </div>
+  <div id="club-select-list" class="club-select-list"></div>
+</section>
+
+<!-- ══ מי קורא עכשיו — Profile Picker ════════════════════════════ -->
+<section id="screen-who-reads" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="_goBackFromWhoReads()">חזרה →</button>
+      <h2 class="who-reads-title">📖 מי קורא עכשיו?</h2>
+    </div>
+    <p id="who-reads-club-name" class="who-reads-club"></p>
+  </div>
+  <div id="who-reads-grid" class="who-reads-grid"></div>
+  <div class="who-reads-footer">
+    <button class="btn-join-another" onclick="showJoinClub()">+ התחבר/י עם קוד</button>
+  </div>
+</section>
+
+<!-- ══ Club Dashboard ════════════════════════════════════════════ -->
+<section id="screen-club-dashboard" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goClubs()">חזרה →</button>
+      <h2 id="club-dash-name"></h2>
+    </div>
+    <p id="club-dash-reader-row" class="header-sub" style="display:none"></p>
+  </div>
+  <div class="club-dash-hero">
+    <span id="club-dash-emoji" class="club-dash-emoji">📚</span>
+    <p id="club-dash-members" class="club-dash-members"></p>
+  </div>
+  <div class="club-dash-stats">
+    <div id="club-dash-minutes" class="club-dash-stat-card"></div>
+    <div id="club-dash-stories" class="club-dash-stat-card"></div>
+  </div>
+  <div class="club-dash-actions">
+    <button class="btn-giant btn-green" onclick="enterReadingFromDashboard()">מתחילים לקרוא ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ Club Students Screen ══════════════════════════════════════ -->
+<section id="screen-club-students" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה למועדון →</button>
+      <h2>👨‍🎓 תלמידי המועדון</h2>
+    </div>
+    <p id="club-students-name" class="who-reads-club"></p>
+  </div>
+  <div id="club-students-grid" class="who-reads-grid"></div>
+  <div id="add-student-section" class="add-student-section" style="display:none">
+    <button class="btn-add-student-toggle" onclick="toggleAddStudentForm()">➕ הוסף תלמיד למועדון הזה</button>
+    <div id="add-student-form" class="add-student-form" style="display:none">
+      <p class="add-student-confirm">מוסיפה ל: <strong id="add-student-club-name"></strong></p>
+      <input id="add-student-name-input" type="text" class="input-field"
+             placeholder="שם התלמיד/ה" maxlength="40"
+             onkeydown="if(event.key==='Enter') submitAddStudent()" />
+      <p id="add-student-error" class="auth-error" style="display:none"></p>
+      <button id="btn-add-student-save" class="btn-giant btn-green" onclick="submitAddStudent()">שמור תלמיד</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Teacher Auth ════════════════════════════════════════════════ -->
+<!-- ══ Initial Setup — מוצג פעם אחת בלבד כשאין config/setup ══════════ -->
+<section id="screen-initial-setup" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2>🚀 הגדרת מערכת ראשונית</h2>
+    </div>
+    <p class="td-subtitle">מסך זה מופיע פעם אחת בלבד</p>
+  </div>
+  <div class="auth-container">
+    <div class="auth-icon">🔑</div>
+    <div class="auth-form">
+      <p style="color:#555;font-size:.9rem;text-align:center;margin-bottom:1.2rem">
+        הגדר/י את פרטי בעלת המערכת.<br>
+        לאחר אישור, ה-Owner Dashboard ייפתח אוטומטית.
+      </p>
+      <input id="su-name"     type="text"     class="input-field" placeholder="שם מלא" autocomplete="name" />
+      <input id="su-email"    type="email"    class="input-field" placeholder="כתובת אימייל" autocomplete="email" />
+      <input id="su-password" type="password" class="input-field" placeholder="סיסמה (לפחות 6 תווים)" autocomplete="new-password" />
+      <input id="su-org"      type="text"     class="input-field" placeholder="שם הארגון (אופציונלי)" />
+      <p id="su-error" class="auth-error"></p>
+      <button id="btn-submit-setup" class="btn-giant btn-green" onclick="submitInitialSetup()">הגדר מערכת</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Profile Wizard ════════════════════════════════════════════════ -->
+<section id="screen-profile-wizard" class="screen wiz-screen">
+  <div id="wizard-progress-bar" class="wizard-progress">
+    <div class="wizard-progress-track">
+      <div id="wizard-progress-fill" class="wizard-progress-fill"></div>
+    </div>
+    <span id="wizard-progress-label" class="wizard-progress-label">1 מתוך 8</span>
+  </div>
+  <div id="wizard-content" class="wizard-content"></div>
+</section>
+
+<!-- ══ Teacher Auth ══════════════════════════════════════════════════ -->
+<section id="screen-teacher-auth" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-splash')">חזרה →</button>
+      <h2>כניסה למורים</h2>
+    </div>
+  </div>
+  <div class="auth-container">
+    <div class="auth-icon">👩‍🏫</div>
+    <div id="teacher-auth-form" class="auth-form"></div>
+  </div>
+</section>
+
+<!-- ══ Teacher Dashboard ═══════════════════════════════════════════ -->
+<section id="screen-teacher-dashboard" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2>📚 מועדוני הקריאה שלי</h2>
+      <div class="header-actions">
+        <button class="btn-share-app" onclick="shareApp()">📤 שתפי</button>
+        <button class="btn-logout" onclick="teacherSignOut()">יציאה</button>
+      </div>
+    </div>
+    <p id="td-teacher-name" class="td-subtitle"></p>
+  </div>
+  <div class="td-body">
+    <button class="btn-td-secondary" onclick="showCreateClub()">+ יצירת מועדון חדש</button>
+    <div id="td-clubs-list" class="td-clubs-list"></div>
+  </div>
+</section>
+
+<!-- ══ Teacher Club Screen ═════════════════════════════════════════ -->
+<section id="screen-teacher-club" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="_goBackToTeacherDashboard()">חזרה →</button>
+      <h2 id="tc-club-name">המועדון שלי</h2>
+    </div>
+  </div>
+  <div class="tc-body">
+    <div class="tc-hero">
+      <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
+    </div>
+    <button class="tc-class-card" onclick="showTeacherClassScreen()">
+      <span class="tc-card-icon">📊</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">דשבורד המועדון</span>
+        <span class="tc-card-sub">דשבורד ניהול ובקרה</span>
+      </div>
+    </button>
+    <button class="tc-class-card tc-class-card--sm" onclick="showClubStudents()">
+      <span class="tc-card-icon">👨‍🎓</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">תלמידי המועדון</span>
+        <span class="tc-card-sub">כרטיסי כל חברי המועדון</span>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ══ יצירת מועדון — בחירת סוג ══════════════════════════════════ -->
+<section id="screen-create-type" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-splash')">חזרה →</button>
+      <h2>יצירת מועדון</h2>
+    </div>
+    <p class="step-indicator">שלב 1 מתוך 3 — סוג המועדון</p>
+    <div class="step-bar"><div class="step-fill" style="width:33%"></div></div>
+  </div>
+  <div class="type-cards">
+    <button class="type-card" onclick="selectClubType('school')">
+      <span class="type-emoji">🏫</span>
+      <div>
+        <span class="type-label">בית ספר</span>
+        <span class="type-sub">לכיתות ומוסדות חינוך</span>
+      </div>
+    </button>
+    <button class="type-card" onclick="selectClubType('family')">
+      <span class="type-emoji">🏠</span>
+      <div>
+        <span class="type-label">משפחה</span>
+        <span class="type-sub">לקריאה משפחתית משותפת</span>
+      </div>
+    </button>
+    <button class="type-card" onclick="selectClubType('friends')">
+      <span class="type-emoji">🤝</span>
+      <div>
+        <span class="type-label">חברים</span>
+        <span class="type-sub">לקבוצות חברים וחברות</span>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ══ יצירת מועדון — שם ואמוג׳י ══════════════════════════════════ -->
+<section id="screen-create-name" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-create-type')">חזרה →</button>
+      <h2>יצירת מועדון</h2>
+    </div>
+    <p class="step-indicator">שלב 2 מתוך 3 — שם ואמוג׳י</p>
+    <div class="step-bar"><div class="step-fill" style="width:66%"></div></div>
+  </div>
+  <div class="form-card">
+    <label for="club-name-input">שם המועדון <span class="required">*</span></label>
+    <input id="club-name-input" type="text" class="input-field" placeholder="לדוגמה: מיתרים כיתה ב׳" />
+    <label>סמל המועדון</label>
+    <div class="emoji-picker-row">
+      <button class="emoji-opt selected" data-emoji="🌳" onclick="selectClubEmoji(this)">🌳</button>
+      <button class="emoji-opt" data-emoji="🌊" onclick="selectClubEmoji(this)">🌊</button>
+      <button class="emoji-opt" data-emoji="🦋" onclick="selectClubEmoji(this)">🦋</button>
+      <button class="emoji-opt" data-emoji="🌈" onclick="selectClubEmoji(this)">🌈</button>
+      <button class="emoji-opt" data-emoji="📚" onclick="selectClubEmoji(this)">📚</button>
+      <button class="emoji-opt" data-emoji="🎯" onclick="selectClubEmoji(this)">🎯</button>
+      <button class="emoji-opt" data-emoji="🌟" onclick="selectClubEmoji(this)">🌟</button>
+      <button class="emoji-opt" data-emoji="🏆" onclick="selectClubEmoji(this)">🏆</button>
+      <button class="emoji-opt" data-emoji="🌸" onclick="selectClubEmoji(this)">🌸</button>
+      <button class="emoji-opt" data-emoji="⚡" onclick="selectClubEmoji(this)">⚡</button>
+    </div>
+    <button class="btn-giant btn-green" onclick="submitClubName()">המשך ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ יצירת מועדון — הוספת חברים ════════════════════════════════ -->
+<section id="screen-create-members" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-create-name')">חזרה →</button>
+      <h2>יצירת מועדון</h2>
+    </div>
+    <p class="step-indicator">שלב 3 מתוך 3 — הוספת חברים</p>
+    <div class="step-bar"><div class="step-fill" style="width:100%"></div></div>
+  </div>
+  <div class="form-card">
+    <div class="add-mode-tabs">
+      <button class="add-mode-btn active" id="btn-mode-single" onclick="setAddMode('single')">➕ אחד-אחד</button>
+      <button class="add-mode-btn" id="btn-mode-paste" onclick="setAddMode('paste')">📋 הדבק רשימה</button>
+    </div>
+
+    <div id="add-single-mode">
+      <label for="member-name-input">שם החבר/ה</label>
+      <div class="add-member-row">
+        <input id="member-name-input" type="text" class="input-field"
+               placeholder="כתוב/י שם..." onkeydown="addMemberOnEnter(event)" />
+        <button class="btn-add-member" onclick="addMember()">+ הוסף</button>
+      </div>
+    </div>
+
+    <div id="add-paste-mode" style="display:none">
+      <label for="member-paste-input">הדבק שמות — שם אחד בכל שורה</label>
+      <textarea id="member-paste-input" class="input-field textarea-field"
+                rows="7"
+                placeholder="עומרי כהן&#10;יונתן לוי&#10;שירה דהן&#10;נועה ישראלי"></textarea>
+      <button class="btn-giant btn-blue" style="margin-top:8px" onclick="addPastedMembers()">📋 הוסף את כולם</button>
+    </div>
+
+    <p id="member-count" class="member-count-label"></p>
+    <div id="member-list" class="member-list"></div>
+    <button id="btn-go-review" class="btn-giant btn-green" onclick="goToReview()">המשך ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ יצירת מועדון — סקירה ════════════════════════════════════════ -->
+<section id="screen-create-review" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-create-members')">חזרה →</button>
+      <h2>סקירה לפני יצירה</h2>
+    </div>
+  </div>
+  <div class="review-card">
+    <div class="review-club-header">
+      <span id="review-club-emoji" class="review-club-emoji">🌳</span>
+      <div>
+        <p id="review-club-name" class="review-club-name">שם המועדון</p>
+        <p id="review-club-type" class="review-club-type">סוג</p>
+      </div>
+    </div>
+    <p id="review-count" class="review-count"></p>
+    <div id="review-member-list" class="review-member-list"></div>
+  </div>
+  <div style="padding:0 16px 24px">
+    <button id="btn-create-club" class="btn-giant btn-green" onclick="createClub()">צור מועדון! 🚀</button>
+  </div>
+</section>
+
+<!-- ══ יצירת מועדון — הצלחה ════════════════════════════════════════ -->
+<section id="screen-create-success" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <h2>🎉 המועדון נוצר!</h2>
+    </div>
+  </div>
+  <div class="success-club-header">
+    <span id="success-club-emoji" class="success-big-emoji">🌳</span>
+    <h3 id="success-club-name">שם המועדון</h3>
+  </div>
+  <div class="success-code-block">
+    <p class="success-code-label">קוד ההצטרפות:</p>
+    <div class="success-code-value" id="success-club-code">——</div>
+  </div>
+  <div class="success-actions">
+    <button class="btn-giant btn-outline-green" onclick="copyJoinLink()">📋 העתק קישור</button>
+    <button class="btn-giant btn-green" style="margin-top:10px" onclick="shareCodesWhatsApp()">📤 שלח ב-WhatsApp</button>
+    <button class="btn-giant btn-outline-green" style="margin-top:10px" onclick="goToTeacherArea()">🏠 חזרה לדשבורד</button>
+  </div>
+  <div id="success-guide"></div>
+</section>
+
+<!-- ══ הצטרפות למועדון — הזנת קוד ════════════════════════════════ -->
+<section id="screen-join-entry" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goBackFromJoin()">חזרה →</button>
+      <h2>התחברות למועדון</h2>
+    </div>
+  </div>
+  <div class="join-code-section">
+    <p class="join-label">הזן/י קוד מועדון</p>
+    <input id="join-code-input" type="text" class="join-code-input"
+           maxlength="6" placeholder="ABC123"
+           onkeydown="handleCodeKeydown(event)" autocomplete="off" />
+    <p id="join-error-msg" class="join-error"></p>
+    <button id="btn-join-code" class="btn-giant btn-blue" onclick="submitJoinCode()">כניסה ⬅️</button>
+  </div>
+  <div class="join-divider">— או —</div>
+  <div class="join-channels">
+    <button class="join-channel-btn" disabled>
+      <span>📷 סריקת QR</span>
+      <span class="badge-soon">בקרוב</span>
+    </button>
+    <button class="join-channel-btn" disabled>
+      <span>💬 קישור מ-WhatsApp</span>
+      <span class="badge-soon">בקרוב</span>
+    </button>
+  </div>
+  <div class="join-divider">— מועדונים קיימים —</div>
+  <div id="existing-clubs-list" class="existing-clubs-list"></div>
+</section>
+
+<!-- ══ הצטרפות — הזנת שם ══════════════════════════════════════════ -->
+<section id="screen-join-name" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goBackToJoinEntry()">חזרה →</button>
+      <h2>ברוכים הבאים!</h2>
+    </div>
+  </div>
+  <div class="join-code-section">
+    <p class="join-invite-label">📚 הוזמנתם להצטרף למועדון:</p>
+    <div class="join-club-banner">
+      <span id="join-club-emoji-display"></span>
+      <span id="join-club-name-display"></span>
+    </div>
+    <p class="join-label">הזינו את שם הילד כדי להצטרף:</p>
+    <input id="join-name-input" type="text" class="join-code-input"
+           maxlength="30" placeholder="שם פרטי"
+           onkeydown="handleNameKeydown(event)" autocomplete="given-name" />
+    <p id="join-name-error" class="join-error"></p>
+    <button id="btn-join-name" class="btn-giant btn-blue" onclick="submitJoinName()">מצטרף/ת ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ הצטרפות — ברוכים הבאים ════════════════════════════════════ -->
+<section id="screen-join-welcome" class="screen welcome-full-screen">
+  <div class="welcome-content">
+    <div class="welcome-icon">🎉</div>
+    <h1 class="welcome-title">היי, <span id="welcome-name">קורא/ת</span>!</h1>
+    <p class="welcome-sub">הכרטיס שלך כבר מחכה לך 📖</p>
+    <p class="welcome-hint">בוא/י נשלים את פרופיל הקריאה שלך</p>
+    <button class="btn-giant btn-white-on-purple" style="margin-top:30px" onclick="startProfile()">בואו נתחיל! ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ אונבורדינג — כיתה ═══════════════════════════════════════════ -->
+<section id="screen-onboard-grade" class="screen">
+  <div class="onboard-header">
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-join-welcome')">חזרה →</button>
+      <p class="onboard-step">שלב 1 מתוך 4</p>
+    </div>
+    <div class="onboard-progress"><div class="onboard-fill" style="width:25%"></div></div>
+  </div>
+  <p class="onboard-question">באיזו כיתה אתה/את?</p>
+  <div class="grade-grid">
+    <button class="grade-btn" onclick="selectGrade('grade-1',this)">
+      <span class="grade-letter">א׳</span><span class="grade-sub">כיתה</span>
+    </button>
+    <button class="grade-btn" onclick="selectGrade('grade-2',this)">
+      <span class="grade-letter">ב׳</span><span class="grade-sub">כיתה</span>
+    </button>
+    <button class="grade-btn" onclick="selectGrade('grade-3',this)">
+      <span class="grade-letter">ג׳</span><span class="grade-sub">כיתה</span>
+    </button>
+    <button class="grade-btn" onclick="selectGrade('grade-4',this)">
+      <span class="grade-letter">ד׳</span><span class="grade-sub">כיתה</span>
+    </button>
+    <button class="grade-btn" onclick="selectGrade('grade-5',this)">
+      <span class="grade-letter">ה׳</span><span class="grade-sub">כיתה</span>
+    </button>
+    <button class="grade-btn" onclick="selectGrade('grade-6',this)">
+      <span class="grade-letter">ו׳</span><span class="grade-sub">כיתה</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ אונבורדינג — רמת קריאה ════════════════════════════════════ -->
+<section id="screen-onboard-reading" class="screen">
+  <div class="onboard-header">
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-grade')">חזרה →</button>
+      <p class="onboard-step">שלב 2 מתוך 4</p>
+    </div>
+    <div class="onboard-progress"><div class="onboard-fill" style="width:50%"></div></div>
+  </div>
+  <p class="onboard-question">איך אתה/את קורא/ת?</p>
+  <div class="level-cards">
+    <button class="level-card" onclick="selectReadingLevel('beginner',this)">
+      <span class="level-icon">🌱</span>
+      <div>
+        <span class="level-label">עם עזרה</span>
+        <span class="level-desc">עדיין לומד/ת לקרוא</span>
+      </div>
+    </button>
+    <button class="level-card" onclick="selectReadingLevel('intermediate',this)">
+      <span class="level-icon">📖</span>
+      <div>
+        <span class="level-label">קורא/ת לבד</span>
+        <span class="level-desc">מסתדר/ת בלי עזרה</span>
+      </div>
+    </button>
+    <button class="level-card" onclick="selectReadingLevel('advanced',this)">
+      <span class="level-icon">🚀</span>
+      <div>
+        <span class="level-label">שוטף/שוטפת</span>
+        <span class="level-desc">קורא/ת הרבה ומהר</span>
+      </div>
+    </button>
+  </div>
+</section>
+
+<!-- ══ אונבורדינג — ניקוד ══════════════════════════════════════════ -->
+<section id="screen-onboard-niqqud" class="screen">
+  <div class="onboard-header">
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-reading')">חזרה →</button>
+      <p class="onboard-step">שלב 3 מתוך 4</p>
+    </div>
+    <div class="onboard-progress"><div class="onboard-fill" style="width:75%"></div></div>
+  </div>
+  <p class="onboard-question">מה עדיף לך לקרוא?</p>
+  <div class="niqqud-cards">
+    <button class="niqqud-card" onclick="selectNiqqudLevel('full',this)">
+      <span class="niqqud-example">בְּרֵאשִׁית</span>
+      <span class="niqqud-label">ניקוד מלא</span>
+    </button>
+    <button class="niqqud-card" onclick="selectNiqqudLevel('partial',this)">
+      <span class="niqqud-example">בְּראשית</span>
+      <span class="niqqud-label">ניקוד חלקי</span>
+    </button>
+    <button class="niqqud-card" onclick="selectNiqqudLevel('none',this)">
+      <span class="niqqud-example">בראשית</span>
+      <span class="niqqud-label">ללא ניקוד</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ אונבורדינג — תחומי עניין ══════════════════════════════════ -->
+<section id="screen-onboard-interests" class="screen">
+  <div class="onboard-header">
+    <div class="ob-back-row">
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-niqqud')">חזרה →</button>
+      <p class="onboard-step">שלב 4 מתוך 4</p>
+    </div>
+    <div class="onboard-progress"><div class="onboard-fill" style="width:100%"></div></div>
+  </div>
+  <p class="onboard-question">מה אתה/את אוהב/ת לקרוא? <small>(עד 3)</small></p>
+  <div class="interests-grid">
+    <button class="interest-card" onclick="toggleInterest('animals',this)">
+      <span class="int-emoji">🐾</span><span class="int-label">חיות</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('magic',this)">
+      <span class="int-emoji">🔮</span><span class="int-label">קסם</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('royalty',this)">
+      <span class="int-emoji">👑</span><span class="int-label">נסיכות וגיבורים</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('adventure',this)">
+      <span class="int-emoji">🌍</span><span class="int-label">הרפתקאות</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('science',this)">
+      <span class="int-emoji">🚀</span><span class="int-label">מדע וחלל</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('judaism',this)">
+      <span class="int-emoji">✡️</span><span class="int-label">יהדות</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('nature',this)">
+      <span class="int-emoji">🌳</span><span class="int-label">טבע</span>
+    </button>
+    <button class="interest-card" onclick="toggleInterest('folk',this)">
+      <span class="int-emoji">🌊</span><span class="int-label">סיפורי עם</span>
+    </button>
+  </div>
+  <div style="padding:16px">
+    <button id="btn-interests-next" class="btn-giant btn-green"
+            onclick="finishInterests()" disabled>סיום ⬅️</button>
+  </div>
+</section>
+
+<!-- ══ אונבורדינג — סיום ══════════════════════════════════════════ -->
+<section id="screen-onboard-complete" class="screen complete-full-screen">
+  <div class="complete-new-content">
+    <div class="complete-new-star animate-bounce">🌟</div>
+    <h1 class="complete-new-title">כָּל הַכָּבוֹד!</h1>
+    <p class="complete-new-sub">ברוך/ה הבא/ה לבוקי, <span id="complete-user-name"></span>!</p>
+    <p class="complete-new-hint">הפרופיל שלך מוכן 📚</p>
+    <button class="btn-giant btn-white-on-purple" style="margin-top:28px"
+            onclick="goHomeAfterOnboarding()">📖 קדימה לקרוא!</button>
+  </div>
+</section>
+
+<!-- Firebase SDK v10 (compat) — טוען לפני הקבצים שלנו -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<!-- גרסה מרכזית לCache Busting — עדכן v= בכל פריסה -->
+<script src="firebase.js?v=1"></script>
+
+<!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
+<script src="data-club-types.js?v=1"></script>
+<script src="seed-clubs.js?v=2"></script>
+<script src="firebase-clubs.js?v=3"></script>
+<script src="auth.js?v=1"></script>
+<script src="analytics.js?v=1"></script>
+
+<!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
+<script src="data-libraries.js?v=1"></script>
+<script src="data-categories.js?v=1"></script>
+
+<!-- תוכן: קובץ נפרד לכל ספרייה (סדר הטעינה אינו חשוב) -->
+<script src="content/stories-familiar.js?v=1"></script>
+<script src="content/stories-original.js?v=1"></script>
+<script src="content/stories-long.js?v=1"></script>
+<script src="content/stories-tanakh.js?v=1"></script>
+<script src="content/stories-folk.js?v=1"></script>
+<script src="content/stories-holidays.js?v=1"></script>
+<script src="content/stories-chazal.js?v=1"></script>
+<script src="content/stories-science.js?v=1"></script>
+<script src="content/stories-animals.js?v=1"></script>
+<script src="content/stories-history.js?v=1"></script>
+<script src="content/stories-adventure.js?v=1"></script>
+<script src="content/stories-booki.js?v=1"></script>
+<script src="content/stories-reading.js?v=1"></script>
+
+<!-- אגרגטור + לוגיקה (חייבים לטעון אחרי כל קבצי content/) -->
+<script src="stories.js?v=1"></script>
+
+<!-- Club System UI — routing, admin, onboarding -->
+<script src="routing.js?v=4"></script>
+<script src="admin-setup.js?v=1"></script>
+<script src="onboarding.js?v=3"></script>
+
+<script src="script.js?v=2"></script>
+<script src="owner-dashboard.js?v=3"></script>
+<script src="initial-setup.js?v=1"></script>
+<script src="student-profile.js?v=1"></script>
+
+<!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
+<section id="screen-owner-dashboard" class="screen od-screen">
+  <div class="od-header">
+    <div>
+      <h2>📊 Owner Dashboard</h2>
+      <p id="od-owner-name" style="font-size:.9rem;color:#888;margin:0"></p>
+    </div>
+    <span id="od-status" class="od-status"></span>
+    <button class="btn-logout" onclick="teacherSignOut()">יציאה</button>
+  </div>
+  <div class="od-body">
+
+    <div class="od-section">
+      <div class="od-section-title">📊 KPI</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-total-teachers">—</span><span class="od-lbl">מורות</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
+      </div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">📅 היום</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-opens-today">—</span><span class="od-lbl">פתיחות</span></div>
+        <div class="od-metric"><span class="od-val" id="od-sessions-today">—</span><span class="od-lbl">סשני קריאה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-dau-today">—</span><span class="od-lbl">פעילים היום</span></div>
+        <div class="od-metric"><span class="od-val" id="od-wau">—</span><span class="od-lbl">פעילים 7 ימים</span></div>
+      </div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">👩‍🏫 רשימת מורות</div>
+      <div id="od-teachers-list"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🌳 כל המועדונים</div>
+      <div id="od-clubs-list"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section" id="od-repair-section" style="display:none">
+      <div class="od-section-title">🔧 תיקון כרטיסים — <span id="od-repair-club-name"></span></div>
+      <div id="od-repair-content"><div class="od-empty">סורק...</div></div>
+      <button class="od-btn-sm" style="margin-top:1rem" onclick="document.getElementById('od-repair-section').style.display='none'">✕ סגור</button>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🗂️ מועדוני מערכת / ישנים</div>
+      <p style="font-size:.8rem;color:#888;margin:.3rem 0 .8rem">מועדונים Bootstrap — נתונים נשמרים, אפשר להסתיר או לשייך.</p>
+      <div id="od-system-clubs"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">⭐ סיפורים פופולריים</div>
+      <div id="od-top-stories"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">🚨 שגיאות אחרונות</div>
+      <div id="od-errors"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div style="display:none">
+      <span id="od-total-users"></span>
+      <span id="od-total-sessions"></span>
+      <span id="od-new-today"></span>
+      <span id="od-joins-today"></span>
+    </div>
+
+    <button class="od-refresh" onclick="_odLoad()">🔄 רענן נתונים</button>
+
+    <div class="od-section od-danger-zone">
+      <div class="od-section-title" style="color:#c0392b">⚠️ Danger Zone</div>
+      <p style="font-size:.82rem;color:#666;margin:.4rem 0 .9rem">
+        מוחק את כל נתוני הבדיקה של Booki.<br>
+        <strong>לא נוגע ב-Legacy ("מיתרים כיתה א'")</strong>.
+      </p>
+      <button id="btn-dev-reset" class="btn-dev-reset" onclick="devReset()">🗑️ Developer Reset</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Tab Bar — 2 עוגני ניווט ════════════════════════════════════ -->
+<nav id="booki-nav" class="booki-nav" data-tab="" aria-label="ניווט ראשי">
+  <button class="booki-tab" data-for="clubs" onclick="goClubs()">
+    <span class="btab-icon">👨‍👩‍👧‍👦</span>
+    <span class="btab-label">הכיתה שלי</span>
+  </button>
+  <button class="booki-tab" data-for="reader" onclick="goWhoReads()">
+    <span class="btab-icon">📖</span>
+    <span class="btab-label">מי קורא עכשיו?</span>
+  </button>
+</nav>
+
+<!-- כפתור דיווח באג — קבוע בכל מסך -->
+<button id="btn-bug-report" class="btn-bug-report" onclick="openBugReport()">
+  🐞 <span id="bug-report-label">משהו לא עובד?</span>
+</button>
+
+<!-- קרדיט -->
+<div class="app-copyright">© כל הזכויות שמורות ליהודית עמוס</div>
+
+</body>
+</html>
