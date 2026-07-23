@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
@@ -278,43 +278,28 @@
     </div>
   </div>
 
-  <!-- שלב 1: הכנה — הטיימר עדיין לא רץ -->
-  <div id="booki-prep-view" class="booki-prep-view">
-    <div class="booki-prep-scene">
-      <span class="booki-prep-owl">🦉</span>
-      <span class="booki-prep-clock">🕒</span>
-    </div>
-    <p class="booki-prep-msg">הכל מוכן! 📖<br>כשתהיה/י מוכן/ה להתחיל לקרוא, לחצ/י על הכפתור למטה.</p>
-    <button class="btn-giant btn-booki-read" onclick="beginBookiReadingTimer()">▶ להתחיל לקרוא</button>
+  <div class="booki-say-moment">
+    <span class="booki-say-face">🦉</span>
+    <p id="booki-say-bubble-text" class="booki-say-bubble">הכל מוכן! 📖<br>לחצ/י על השעון כדי להתחיל לקרוא.</p>
   </div>
 
-  <!-- שלב 2: אנימציית מעבר — "עכשיו הקריאה התחילה" -->
-  <div id="booki-transition-view" class="booki-transition-view" style="display:none">
-    <div class="booki-sparkle-scene">
-      <span class="booki-sparkle-owl">🦉</span>
-      <span class="booki-sparkle bs-1">✨</span>
-      <span class="booki-sparkle bs-2">⭐</span>
-      <span class="booki-sparkle bs-3">🌟</span>
-      <span class="booki-sparkle bs-4">✨</span>
-      <span class="booki-sparkle bs-5">⭐</span>
-      <span class="booki-sparkle bs-6">🌟</span>
-    </div>
-    <p class="booki-transition-msg">הקריאה מתחילה... 📖</p>
-  </div>
+  <!-- אובייקט אחד: גם כפתור ההתחלה וגם תצוגת הטיימר — לא שני כפתורים נפרדים.
+       idle: "התחל" (לחיץ) -> starting: ניצוצות קצרים -> running: מספר הדקות (לא לחיץ) -->
+  <button id="booki-timer-btn" class="booki-timer-circle booki-timer-idle" onclick="beginBookiReadingTimer()">
+    <span class="booki-timer-sparkles">
+      <span class="timer-sparkle ts-1">✨</span>
+      <span class="timer-sparkle ts-2">⭐</span>
+      <span class="timer-sparkle ts-3">🌟</span>
+      <span class="timer-sparkle ts-4">✨</span>
+      <span class="timer-sparkle ts-5">⭐</span>
+      <span class="timer-sparkle ts-6">🌟</span>
+    </span>
+    <span id="booki-timer-icon" class="booki-timer-icon">🕒</span>
+    <span id="booki-timer-label" class="booki-timer-label">התחל</span>
+  </button>
 
-  <!-- שלב 3: קריאה פעילה — הטיימר רץ -->
-  <div id="booki-running-view" class="booki-running-view" style="display:none">
-    <div class="booki-say-moment">
-      <span class="booki-say-face">🦉</span>
-      <p class="booki-say-bubble">תיהנה/י מהספר! 📖<br>אני אשמור לך על זמן הקריאה.</p>
-    </div>
-    <div class="booki-elapsed-wrap">
-      <span class="booki-elapsed-icon">🕒</span>
-      <span id="booki-elapsed-minutes" class="booki-elapsed-num">0 דקות</span>
-    </div>
-    <div class="booki-finish-wrap">
-      <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
-    </div>
+  <div class="booki-finish-wrap">
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
   </div>
 </section>
 
@@ -986,7 +971,7 @@
 
 <script src="script.js?v=2"></script>
 <script src="motivation.js?v=1"></script>
-<script src="booki-reading.js?v=1"></script>
+<script src="booki-reading.js?v=2"></script>
 <script src="shop.js?v=1"></script>
 <script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>

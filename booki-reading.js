@@ -11,12 +11,16 @@
 ═══════════════════════════════════════════════════════════════ */
 
 // ─── 1. מחזור חיים של סשן ───────────────────────────────────────────
-// שלושה מצבי-תת-מסך בתוך screen-booki-reading, בכוונה נפרדים מהטיימר עצמו:
-//   prep (הטיימר עוד לא רץ) -> transition (אנימציה קצרה, ~1.4s) -> running (הטיימר רץ)
+// אובייקט עגול אחד (#booki-timer-btn) שהוא גם כפתור ההתחלה וגם תצוגת הטיימר —
+// לא שני כפתורים נפרדים. שלושה מצבים: idle (לחיץ, "התחל") -> starting (ניצוצות
+// קצרים, ~1.2s, לא לחיץ) -> running (מספר הדקות, לא לחיץ).
 
 let _bookiReadingInterval  = null;
 let _bookiTransitionTimer  = null;
 let _bookiPendingMinutes   = null;
+
+const _BOOKI_PREP_MSG    = 'הכל מוכן! 📖<br>לחצ/י על השעון כדי להתחיל לקרוא.';
+const _BOOKI_RUNNING_MSG = 'תיהנה/י מהספר! 📖<br>אני אשמור לך על זמן הקריאה.';
 
 function _bookiSessionKey() {
   return 'booki_reading_' + currentStudentId;
@@ -31,12 +35,27 @@ function _loadBookiSession() {
   }
 }
 
-function _showBookiSubview(name) {
-  const views = { prep: 'booki-prep-view', transition: 'booki-transition-view', running: 'booki-running-view' };
-  for (const key of Object.keys(views)) {
-    const el = document.getElementById(views[key]);
-    if (el) el.style.display = key === name ? '' : 'none';
+function _setBookiBubble(html) {
+  const bubble = document.getElementById('booki-say-bubble-text');
+  if (bubble) bubble.innerHTML = html;
+}
+
+/** idle/starting/running — קובע גם את מראה הכפתור-העגול וגם את הטקסט שבתוכו. */
+function _setBookiTimerState(state) {
+  const btn = document.getElementById('booki-timer-btn');
+  if (btn) {
+    btn.classList.remove('booki-timer-idle', 'booki-timer-starting', 'booki-timer-running');
+    btn.classList.add('booki-timer-' + state);
   }
+  const icon  = document.getElementById('booki-timer-icon');
+  const label = document.getElementById('booki-timer-label');
+  if (state === 'idle') {
+    if (icon)  icon.textContent  = '🕒';
+    if (label) label.textContent = 'התחל';
+  } else if (state === 'starting') {
+    if (label) label.textContent = '';
+  }
+  // running: הטקסט (מספר הדקות) מוזן ע"י _renderBookiElapsed, לא כאן.
 }
 
 function _clearBookiReadingLocal() {
@@ -62,7 +81,7 @@ function _minutesLabel(n) {
 function _renderBookiElapsed(startedAt) {
   const update = () => {
     const mins = Math.max(0, Math.floor((Date.now() - startedAt) / 60000));
-    const el = document.getElementById('booki-elapsed-minutes');
+    const el = document.getElementById('booki-timer-label');
     if (el) el.textContent = _minutesLabel(mins);
   };
   update();
@@ -70,39 +89,47 @@ function _renderBookiElapsed(startedAt) {
   _bookiReadingInterval = setInterval(update, 5000);
 }
 
-/** מהכרטיס בעמוד הבית — תמיד מציג את מסך ההכנה קודם; הטיימר לא רץ עדיין. */
+/** מהכרטיס בעמוד הבית — מציג את הכפתור-העגול במצב הנכון לפי מצב הסשן. */
 function startBookiReading() {
   if (currentStudentId === null || currentStudentId === undefined) return;
   const session = _loadBookiSession();
   if (session?.startedAt) {
-    // סשן כבר רץ (למשל חזרה למסך בלי לעבור דרך ביטול) — אין טעם להראות שוב את ההכנה.
+    // סשן כבר רץ (למשל חזרה למסך בלי לעבור דרך ביטול) — ממשיכים ישר, בלי "התחל" מחדש.
+    _setBookiTimerState('running');
     _renderBookiElapsed(session.startedAt);
-    _showBookiSubview('running');
+    _setBookiBubble(_BOOKI_RUNNING_MSG);
   } else {
-    _showBookiSubview('prep');
+    _setBookiTimerState('idle');
+    _setBookiBubble(_BOOKI_PREP_MSG);
   }
   showScreen('screen-booki-reading');
 }
 
-/** נלחץ רק בלחיצה על "להתחיל לקרוא" במסך ההכנה — כאן, ורק כאן, הטיימר באמת מתחיל. */
+/** נלחץ על הכפתור-העגול עצמו במצב idle — כאן, ורק כאן, הטיימר באמת מתחיל. */
 function beginBookiReadingTimer() {
+  const btn = document.getElementById('booki-timer-btn');
+  if (btn && !btn.classList.contains('booki-timer-idle')) return; // כבר בתהליך/רץ — התעלם מלחיצות נוספות
+
   const startedAt = Date.now();
   try { localStorage.setItem(_bookiSessionKey(), JSON.stringify({ startedAt })); } catch {}
-  _showBookiSubview('transition');
+  _setBookiTimerState('starting');
+  _setBookiBubble(_BOOKI_RUNNING_MSG);
+
   if (_bookiTransitionTimer) clearTimeout(_bookiTransitionTimer);
   _bookiTransitionTimer = setTimeout(() => {
     _bookiTransitionTimer = null;
+    _setBookiTimerState('running');
     _renderBookiElapsed(startedAt);
-    _showBookiSubview('running');
-  }, 1400);
+  }, 1200);
 }
 
-/** מהודעת "להמשיך לקרוא" — סשן כבר קיים, ממשיכים ישר לתצוגת הטיימר הרץ, בלי הכנה ובלי אנימציה. */
+/** מהודעת "להמשיך לקרוא" — סשן כבר קיים, ממשיכים ישר למצב running, בלי אנימציית ההתחלה. */
 function resumeBookiReading() {
   const session = _loadBookiSession();
   if (!session?.startedAt) return;
+  _setBookiTimerState('running');
   _renderBookiElapsed(session.startedAt);
-  _showBookiSubview('running');
+  _setBookiBubble(_BOOKI_RUNNING_MSG);
   showScreen('screen-booki-reading');
 }
 
@@ -111,7 +138,7 @@ function discardBookiReading() {
 }
 
 function cancelBookiReading() {
-  // אם הטיימר עוד לא התחיל (עדיין במסך ההכנה) — אין זמן קריאה לאבד, ואין צורך לאשר.
+  // אם הטיימר עוד לא התחיל (מצב idle) — אין זמן קריאה לאבד, ואין צורך לאשר.
   const session = _loadBookiSession();
   if (session?.startedAt && !confirm('לצאת מהקריאה? הזמן לא יישמר.')) return;
   _clearBookiReadingLocal();

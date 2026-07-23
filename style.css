@@ -257,36 +257,6 @@ label { font-weight: 700; font-size: 1rem; }
 
 .booki-reading-screen { background: #FFFEF8; padding-bottom: 20px; min-height: 100%; }
 
-/* שלב 1: הכנה — הטיימר עדיין לא רץ */
-.booki-prep-view { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 20px 20px; }
-.booki-prep-scene { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 22px; }
-.booki-prep-owl   { font-size: 4rem; animation: bookiGentleFloat 3.2s ease-in-out infinite; }
-.booki-prep-clock { font-size: 4.4rem; animation: bookiGentleFloat 3.2s ease-in-out infinite .5s; }
-.booki-prep-msg   { font-size: 1.05rem; font-weight: 700; color: #5a4520; line-height: 1.7; margin-bottom: 26px; max-width: 30ch; }
-@keyframes bookiGentleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-
-/* שלב 2: אנימציית מעבר — "עכשיו הקריאה התחילה" (כ-1.2-1.4 שניות, לפי ה-setTimeout ב-JS) */
-.booki-transition-view { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; min-height: 320px; }
-.booki-sparkle-scene { position: relative; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center; }
-.booki-sparkle-owl { font-size: 4.4rem; animation: bookiTransitionOwl 1.4s ease-in-out; }
-@keyframes bookiTransitionOwl { 0% { transform: scale(.85); } 35% { transform: scale(1.15); } 100% { transform: scale(1); } }
-.booki-sparkle { position: absolute; font-size: 1.7rem; opacity: 0; animation: bookiSparklePop 1.2s ease-out forwards; }
-.booki-sparkle.bs-1 { top: 6%;  left: 50%; }
-.booki-sparkle.bs-2 { top: 24%; left: 88%; animation-delay: .12s; }
-.booki-sparkle.bs-3 { top: 68%; left: 90%; animation-delay: .24s; }
-.booki-sparkle.bs-4 { top: 90%; left: 50%; animation-delay: .36s; }
-.booki-sparkle.bs-5 { top: 68%; left: 10%; animation-delay: .48s; }
-.booki-sparkle.bs-6 { top: 24%; left: 12%; animation-delay: .6s; }
-@keyframes bookiSparklePop {
-  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3); }
-  40%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
-  100% { opacity: 0; transform: translate(-50%,-50%) scale(.9); }
-}
-.booki-transition-msg { font-size: 1rem; font-weight: 700; color: #5a4520; margin-top: 8px; }
-@media (prefers-reduced-motion: reduce) {
-  .booki-prep-owl, .booki-prep-clock, .booki-sparkle-owl, .booki-sparkle { animation: none; opacity: 1; }
-}
-
 .booki-say-moment { display: flex; align-items: flex-start; gap: 12px; margin: 20px 16px; }
 .booki-say-face { font-size: 2.6rem; flex-shrink: 0; animation: bookiFacePulse 2.6s ease-in-out infinite; }
 .booki-say-bubble {
@@ -294,13 +264,52 @@ label { font-weight: 700; font-size: 1rem; }
   border-radius: 6px 18px 18px 18px; padding: 14px 18px; font-size: 1rem; font-weight: 700;
   color: #5a4520; line-height: 1.6;
 }
-.booki-elapsed-wrap {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  margin: 30px auto; padding: 26px; width: 200px; height: 200px; justify-content: center;
-  background: var(--card); border-radius: 50%; box-shadow: var(--shadow);
+
+/* אובייקט דינמי אחד: גם כפתור ההתחלה וגם תצוגת הטיימר (לא שני כפתורים נפרדים) */
+.booki-timer-circle {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; margin: 30px auto; width: 200px; height: 200px; border-radius: 50%; border: none;
+  font-family: inherit; box-shadow: var(--shadow); transition: background .4s ease, transform .15s ease;
 }
-.booki-elapsed-icon { font-size: 2rem; }
-.booki-elapsed-num  { font-size: 1.6rem; font-weight: 900; color: var(--text); }
+.booki-timer-idle {
+  background: linear-gradient(135deg, #FF9A56, #FF6B6B); cursor: pointer;
+  animation: bookiTimerInvite 2.2s ease-in-out infinite;
+}
+.booki-timer-idle:active { transform: scale(.96); }
+.booki-timer-starting, .booki-timer-running { background: var(--card); cursor: default; }
+@keyframes bookiTimerInvite { 0%, 100% { box-shadow: var(--shadow); } 50% { box-shadow: 0 6px 26px rgba(255,107,107,.45); } }
+
+.booki-timer-icon  { font-size: 2.2rem; }
+.booki-timer-label { font-size: 1.5rem; font-weight: 900; color: #fff; }
+.booki-timer-running .booki-timer-label,
+.booki-timer-running .booki-timer-icon { color: var(--text); }
+.booki-timer-starting .booki-timer-icon { opacity: 0; }
+
+/* ניצוצות — האובייקט הדינמי שמלווה את המעבר מ"התחל" למספר הדקות (~1.2s) */
+.booki-timer-sparkles { position: absolute; inset: 0; pointer-events: none; }
+.timer-sparkle { position: absolute; font-size: 1.5rem; opacity: 0; }
+.timer-sparkle.ts-1 { top: 2%;  left: 50%; }
+.timer-sparkle.ts-2 { top: 20%; left: 90%; }
+.timer-sparkle.ts-3 { top: 66%; left: 92%; }
+.timer-sparkle.ts-4 { top: 92%; left: 50%; }
+.timer-sparkle.ts-5 { top: 66%; left: 8%;  }
+.timer-sparkle.ts-6 { top: 20%; left: 10%; }
+.booki-timer-starting .timer-sparkle { animation: bookiSparklePop 1.1s ease-out forwards; }
+.booki-timer-starting .ts-2 { animation-delay: .1s;  }
+.booki-timer-starting .ts-3 { animation-delay: .2s;  }
+.booki-timer-starting .ts-4 { animation-delay: .3s;  }
+.booki-timer-starting .ts-5 { animation-delay: .4s;  }
+.booki-timer-starting .ts-6 { animation-delay: .5s;  }
+@keyframes bookiSparklePop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3); }
+  40%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .booki-timer-idle { animation: none; }
+  .timer-sparkle { animation: none !important; opacity: 0 !important; }
+}
+
 .booki-finish-wrap  { text-align: center; padding: 10px 16px 20px; }
 .btn-skip { display: block; margin: 4px auto 0; background: none; font-size: .9rem; font-weight: 600; color: var(--muted); padding: 8px; }
 
