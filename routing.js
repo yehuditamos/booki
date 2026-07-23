@@ -738,6 +738,7 @@ function _enterPersonalHome(userId, profile) {
     emojiEl.onclick      = changeStudentAvatar;
   }
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji, createdByTeacher: !!profile?.createdByTeacher });
+  if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
   showScreen('screen-main');
   _updateBugLabel();
 
@@ -1380,7 +1381,8 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
-  const goalTarget = club?.goal?.target || 1500;
+  const goalTarget      = club?.goal?.target || 1500;
+  const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
   const now        = new Date();
   const active     = memberships.filter(m => m.status !== 'left');
   const sorted     = [...active].sort((a, b) =>
@@ -1470,6 +1472,16 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
       </div>
       <div class="tcd-goal-pct">${pct}% הושלמו</div>
     </div>`}
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">📊 תצוגת התקדמות לתלמידים</span>
+      </div>
+      <p class="class-empty" style="margin:0;padding:4px 0 10px">קובע מה התלמידים רואים במסך "הכיתה שלנו" שלהם. הדשבורד הזה שלך לא משתנה.</p>
+      <div class="progress-display-toggle">
+        <button class="pd-toggle-btn ${progressDisplay === 'leaderboard' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','leaderboard')">🏆 כיתה + טבלת מובילים</button>
+        <button class="pd-toggle-btn ${progressDisplay === 'progressOnly' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','progressOnly')">🌳 התקדמות כיתתית בלבד</button>
+      </div>
+    </div>
     <div class="tcd-leaderboard">
       <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
       ${membersHtml}
@@ -1600,6 +1612,13 @@ async function editClubGoal(clubId, currentTarget) {
   showTeacherClassScreen();
 }
 
+async function setProgressDisplayMode(clubId, mode) {
+  if (typeof fbSaveClub === 'function') {
+    await fbSaveClub(clubId, { settings: { progressDisplay: mode } });
+  }
+  showTeacherClassScreen();
+}
+
 function goToTeacherArea() {
   const t = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
   if (t) showTeacherDashboard(t);
@@ -1629,7 +1648,7 @@ Object.assign(window, {
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
   showClubStudents, goBackToClubStudents,
-  enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
+  enterReadingSession, showTeacherClassScreen, editClubGoal, setProgressDisplayMode, removeClubMember,
   toggleAddStudentForm, submitAddStudent,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,

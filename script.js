@@ -136,6 +136,7 @@ async function selectStudent(id) {
   document.getElementById('current-student-name').textContent = STUDENT_NAMES[id];
   document.getElementById('greeting-avatar').textContent      = STUDENT_EMOJIS[id];
   if (typeof setNavVisible === 'function') { setNavVisible(true); setNavTab(''); }
+  if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
   showScreen('screen-main');
   currentStudentData = await loadStudentFull(id);
   document.getElementById('current-student-name').textContent = currentStudentData.name;
@@ -285,6 +286,7 @@ async function finishAppReading() {
 
   const s = currentStudentData || loadStudentLocal(currentStudentId);
   if (!Array.isArray(s.history)) s.history = [];
+  const prevMinutes = s.totalMinutes;
   s.totalMinutes += minutes;
   s.appMinutes   += minutes;
   s.points       += points;
@@ -322,7 +324,9 @@ async function finishAppReading() {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes,
     });
   }
-  showComplete(minutes, points);
+  const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
+  const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
+  showComplete(minutes, points, { levelUp, streakDays });
 }
 
 // ─── קריאה מספר אמיתי ───────────────────────────────────────────────
@@ -372,6 +376,7 @@ async function submitBookReading() {
   const points  = minutes * 1;
 
   const s = currentStudentData || loadStudentLocal(currentStudentId);
+  const prevMinutes = s.totalMinutes;
   s.totalMinutes += minutes;
   s.bookMinutes  += minutes;
   s.points       += points;
@@ -410,14 +415,41 @@ async function submitBookReading() {
       type: 'book', storyId: null, storyTitle: bookData.title, minutes,
     });
   }
-  showComplete(minutes, points);
+  const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
+  const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
+  showComplete(minutes, points, { levelUp, streakDays });
 }
 
 // ─── מסך סיום ───────────────────────────────────────────────────────
 
-function showComplete(minutes, points) {
+function showComplete(minutes, points, opts = {}) {
   document.getElementById('complete-minutes').textContent = minutes;
   document.getElementById('complete-points').textContent  = points;
+
+  const banner = document.getElementById('levelup-banner');
+  if (banner) {
+    if (opts.levelUp) {
+      banner.style.display = '';
+      banner.innerHTML = `<span class="levelup-icon">${opts.levelUp.icon}</span> עלית לדרגה: <strong style="color:${opts.levelUp.color}">${opts.levelUp.name}</strong>`;
+    } else {
+      banner.style.display = 'none';
+      banner.innerHTML = '';
+    }
+  }
+
+  const encEl = document.getElementById('complete-encouragement');
+  if (encEl) {
+    encEl.textContent = typeof pickPersonalEncouragement === 'function'
+      ? pickPersonalEncouragement({
+          justEarnedPoints: points,
+          streakDays: opts.streakDays || 0,
+          vsLastWeekBetter: false,
+          clubShopActive: false,
+          shopRemaining: 0,
+        })
+      : '';
+  }
+
   launchConfetti();
   showScreen('screen-session-complete');
 }
@@ -511,6 +543,14 @@ function _renderReaderCardContent(s) {
     : `<div class="max-rank">🌟 הגעת לדרגה הגבוהה ביותר! 🌟</div>`;
 
   const history = Array.isArray(s.history) ? s.history : [];
+
+  const badges = typeof getReadingLevelInfo === 'function' ? getReadingLevelInfo(mins).badges : [rank];
+  const badgesSection = badges.length
+    ? `<div class="badges-row">
+         ${badges.map(b => `<span class="badge-chip" style="border-color:${b.color};color:${b.color}" title="${b.name}">${b.icon}</span>`).join('')}
+       </div>`
+    : '';
+  const personalBest = typeof computePersonalBest === 'function' ? computePersonalBest(history) : 0;
   const histItems = history.slice(0, 10).map(h => {
     const isApp   = h.type === 'app';
     // Firestore sessions: storyTitle (app) / bookTitle (book); legacy: h.title (book)
@@ -544,6 +584,7 @@ function _renderReaderCardContent(s) {
       <div class="card-name">${s.name || ''}</div>
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
+    ${badgesSection}
     <div class="stats-grid">
       <div class="stat-box">
         <span class="stat-icon-big">⏱️</span>
@@ -564,6 +605,11 @@ function _renderReaderCardContent(s) {
         <span class="stat-icon-big">📚</span>
         <span class="stat-num">${s.bookMinutes || 0}</span>
         <span class="stat-lbl">דק׳ מספרים</span>
+      </div>
+      <div class="stat-box stat-box-wide">
+        <span class="stat-icon-big">🏅</span>
+        <span class="stat-num">${personalBest}</span>
+        <span class="stat-lbl">שיא אישי (דק׳)</span>
       </div>
     </div>
     ${progressSection}
@@ -650,6 +696,25 @@ async function _renderNewClubView(clubId) {
   const posIcons      = ['🥇', '🥈', '🥉'];
   const rowCls        = ['leader-first', 'leader-second', 'leader-third'];
 
+  // Task 1/3: teacher-controlled per-club setting — default 'leaderboard' preserves
+  // today's exact behavior for every existing club with no settings.progressDisplay yet.
+  const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
+  const progressBlock = progressDisplay === 'progressOnly'
+    ? `<div class="class-motivation-panel">
+         <h3>💚 יחד אנחנו קוראים</h3>
+         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins, goalTarget }) : ''}</p>
+       </div>`
+    : `<div class="leaderboard">
+      <h3>🏆 10 הקוראים המובילים</h3>
+      ${active.slice(0, 10).map((m, i) => `
+        <div class="leader-row ${rowCls[i] || ''}">
+          <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
+          ${_avatarHtml(m.emoji || '📚', 'leader-avatar')}
+          <span class="leader-name">${m.name}</span>
+          <span class="leader-pts">${m.totalMinutes} דק׳</span>
+        </div>`).join('')}
+    </div>`;
+
   contentEl.innerHTML = `
     <div class="class-hero">
       <div class="class-big-tree">🌳</div>
@@ -676,16 +741,7 @@ async function _renderNewClubView(clubId) {
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
     </div>
-    <div class="leaderboard">
-      <h3>🏆 10 הקוראים המובילים</h3>
-      ${active.slice(0, 10).map((m, i) => `
-        <div class="leader-row ${rowCls[i] || ''}">
-          <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-          ${_avatarHtml(m.emoji || '📚', 'leader-avatar')}
-          <span class="leader-name">${m.name}</span>
-          <span class="leader-pts">${m.totalMinutes} דק׳</span>
-        </div>`).join('')}
-    </div>`;
+    ${progressBlock}`;
 }
 
 function _renderClassContent(fbStudents) {
