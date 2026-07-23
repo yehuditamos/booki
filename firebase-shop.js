@@ -255,8 +255,11 @@ function fbWatchShopState(clubId, callback) {
 
 /**
  * הפעלה חד-פעמית של החנות למועדון (מורה בלבד).
- * זורעת lifetimeEarned מסכום cachedStats.totalPoints הקיים — קריאה בלבד, לא שינוי היסטוריה —
- * כך שמחזור 1 מתחיל מ-0 התקדמות ולא "מזנק" ליעד מיד עבור כיתות עם היסטוריית קריאה.
+ * זורעת lifetimeEarned מסכום cachedStats.totalPoints הקיים — קריאה בלבד, לא שינוי היסטוריה.
+ * startBaseline מתחיל מ-0 (לא מ-seed): היעד הראשון נמדד מול כל הדקות שהכיתה כבר צברה,
+ * לא רק מדקות מרגע ההפעלה — כדי שכיתה שכבר קראה 5000 דקות ומקבלת יעד 6000 תראה מיד
+ * 5000/6000 (חסרות רק 1000), ולא 0/6000. אם היעד שהמורה בוחרת כבר נמוך מהסה"כ שנצבר,
+ * החנות תיפתח כבר עם ההודעה — התנהגות תקינה ורצויה, לא באג.
  */
 async function fbEnableShopForClub(clubId, initialTarget) {
   if (!_db() || !clubId || !initialTarget) return false;
@@ -275,7 +278,7 @@ async function fbEnableShopForClub(clubId, initialTarget) {
       });
     }
 
-    const cycleId = await fbCreateGoalCycle(clubId, { metric: 'minutes', target: initialTarget, startBaseline: seed });
+    const cycleId = await fbCreateGoalCycle(clubId, { metric: 'minutes', target: initialTarget, startBaseline: 0 });
     if (!cycleId) return false;
 
     await _shopRef(clubId).set({
