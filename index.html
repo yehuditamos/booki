@@ -18,7 +18,7 @@
       <h1 class="welcome-title">וולקאםםםם!</h1>
       <h2 class="welcome-sub">ברוכים הבאים לבוקי 📚</h2>
       <div class="welcome-body">
-        <p>בוקי נמצאת כרגע בגרסת ניסיון.</p>
+        <p>בוקי נמצא כרגע בגרסת ניסיון.</p>
         <p>אם משהו לא עובד, נתקע או נראה מוזר — ממש נשמח לדעת.</p>
         <p>בהמשך יש כפתור קטן לדיווח על תקלות, והוא שולח הודעה ישירות ליהודית.</p>
         <p>תודה שאתם עוזרים לנו לשפר את בוקי ❤️</p>
@@ -124,6 +124,10 @@
     <button class="btn-menu btn-menu-secondary btn-teal" onclick="showClassView()">
       <span class="btn-icon">🏆</span>
       <span class="btn-label">הכיתה שלנו</span>
+    </button>
+    <button id="btn-goto-shop" class="btn-menu btn-menu-shop" style="display:none" onclick="showShop()">
+      <span class="btn-icon">🎁</span>
+      <span class="btn-label">חנות הכיתה</span>
     </button>
   </div>
 </section>
@@ -292,6 +296,17 @@
   <div id="class-content" class="class-content"></div>
 </section>
 
+<!-- ══ חנות הכיתה — תלמיד ═══════════════════════════════════════ -->
+<section id="screen-shop" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2 class="shop-wood-sign">🪧 החנות של בוקי</h2>
+    </div>
+  </div>
+  <div id="shop-student-content" class="shop-student-content"></div>
+</section>
+
 <!-- ══ בחירת מועדון (מועדונים מרובים) ════════════════════════════ -->
 <section id="screen-club-select" class="screen">
   <div class="screen-header sticky-header">
@@ -458,7 +473,26 @@
         <span class="tc-card-sub">כרטיסי כל חברי המועדון</span>
       </div>
     </button>
+    <button class="tc-class-card tc-class-card--sm" onclick="showShopManagement()">
+      <span class="tc-card-icon">🎁</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">חנות הכיתה</span>
+        <span class="tc-card-sub">ניהול פרסים להצבעת התלמידים</span>
+      </div>
+    </button>
   </div>
+</section>
+
+<!-- ══ ניהול חנות הכיתה — מורה ═══════════════════════════════════════ -->
+<section id="screen-shop-teacher" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה →</button>
+      <h2>🎁 חנות הכיתה</h2>
+    </div>
+    <p class="header-sub">הוסיפו פרסים — התלמידים יצביעו על הפרס האהוב עליהם כשהכיתה תגיע ליעד</p>
+  </div>
+  <div id="shop-teacher-content" class="shop-teacher-content"></div>
 </section>
 
 <!-- ══ יצירת מועדון — בחירת סוג ══════════════════════════════════ -->
@@ -835,6 +869,7 @@
 <script src="data-club-types.js?v=1"></script>
 <script src="seed-clubs.js?v=2"></script>
 <script src="firebase-clubs.js?v=3"></script>
+<script src="firebase-shop.js?v=1"></script>
 <script src="auth.js?v=1"></script>
 <script src="analytics.js?v=1"></script>
 
@@ -866,6 +901,7 @@
 <script src="onboarding.js?v=3"></script>
 
 <script src="script.js?v=2"></script>
+<script src="shop.js?v=1"></script>
 <script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>
 <script src="student-profile.js?v=1"></script>

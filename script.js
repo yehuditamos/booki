@@ -66,6 +66,11 @@ function showScreen(id) {
     classViewUnsubscribe();
     classViewUnsubscribe = null;
   }
+  // נקה Firebase listener כשעוזבים את מסך החנות (תלמיד)
+  if (id !== 'screen-shop' && typeof _shopViewUnsubscribe !== 'undefined' && _shopViewUnsubscribe) {
+    _shopViewUnsubscribe();
+    _shopViewUnsubscribe = null;
+  }
 }
 
 // ─── ניהול תלמידים ──────────────────────────────────────────────────
@@ -308,6 +313,10 @@ async function finishAppReading() {
       && typeof fbUpdateMembershipStats === 'function') {
     await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, isApp: true });
   }
+  if (window.currentClubId && !Number.isInteger(currentStudentId)
+      && typeof fbAwardClubEconomy === 'function') {
+    await fbAwardClubEconomy(window.currentClubId, points);
+  }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes,
@@ -391,6 +400,10 @@ async function submitBookReading() {
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbUpdateMembershipStats === 'function') {
     await fbUpdateMembershipStats(window.currentClubId, currentStudentId, { minutes, points, books: 1, isBook: true });
+  }
+  if (window.currentClubId && !Number.isInteger(currentStudentId)
+      && typeof fbAwardClubEconomy === 'function') {
+    await fbAwardClubEconomy(window.currentClubId, points);
   }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {

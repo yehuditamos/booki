@@ -744,6 +744,9 @@ function _enterPersonalHome(userId, profile) {
   const clubBtn = document.getElementById('btn-switch-club');
   if (clubBtn) clubBtn.style.display = _activeClubId ? '' : 'none';
 
+  const shopBtn = document.getElementById('btn-goto-shop');
+  if (shopBtn) shopBtn.style.display = _activeClubId ? '' : 'none';
+
   const backBar = document.getElementById('main-back-club-students');
   if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
 }
@@ -1364,15 +1367,16 @@ async function showTeacherClassScreen() {
   if (contentEl) contentEl.innerHTML = '<p class="class-loading">טוען נתוני כיתה...</p>';
   showScreen('screen-class');
 
-  const [club, memberships] = await Promise.all([
+  const [club, memberships, shopState] = await Promise.all([
     typeof fbLoadClub === 'function'            ? fbLoadClub(clubId)            : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+    typeof fbLoadShopState === 'function'       ? fbLoadShopState(clubId)       : Promise.resolve(null),
   ]);
 
-  _renderTeacherClassContent(club, memberships, clubId);
+  _renderTeacherClassContent(club, memberships, clubId, shopState);
 }
 
-function _renderTeacherClassContent(club, memberships, clubId) {
+function _renderTeacherClassContent(club, memberships, clubId, shopState) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
@@ -1444,6 +1448,13 @@ function _renderTeacherClassContent(club, memberships, clubId) {
         <span class="tcd-stat-lbl">קראו השבוע</span>
       </div>
     </div>
+    ${shopState ? `
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">🎯 יעד הכיתה</span>
+      </div>
+      <p class="class-empty" style="margin:0;padding:8px 0 0">היעד וההתקדמות עברו ל"חנות הכיתה" — שם גם עורכים אותו מעכשיו.</p>
+    </div>` : `
     <div class="tcd-goal-card">
       <div class="tcd-goal-header">
         <span class="tcd-goal-label">🎯 יעד הכיתה</span>
@@ -1458,7 +1469,7 @@ function _renderTeacherClassContent(club, memberships, clubId) {
         <div class="tcd-progress-fill" style="width:${pct}%"></div>
       </div>
       <div class="tcd-goal-pct">${pct}% הושלמו</div>
-    </div>
+    </div>`}
     <div class="tcd-leaderboard">
       <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
       ${membersHtml}

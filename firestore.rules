@@ -123,6 +123,90 @@ service cloud.firestore {
           allow delete: if false;
         }
       }
+
+      // ─── Shop & Gamification ─────────────────────────────────────────────────
+      // rewards: קטלוג הפרסים — קריאה פתוחה, כתיבה למורה/owner בלבד.
+      match /rewards/{rewardId} {
+        allow read:  if true;
+        allow write: if isClubTeacher(clubId) || isOwner();
+      }
+
+      // economy/wallet: הארנק המשותף של הכיתה — lifetimeEarned עולה עם כל קריאה,
+      // lifetimeSpent/balance יורדים רק ברכישה (מורה/owner בלבד).
+      match /economy/{doc} {
+        allow read:   if true;
+        allow create: if isClubTeacher(clubId) || isOwner();
+        allow update: if isClubTeacher(clubId) || isOwner()
+                      // תלמיד — יכול רק להוסיף נקודות, לעולם לא להוציא
+                      || (isSignedIn()
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lifetimeEarned', 'balance', 'updatedAt'])
+                          && request.resource.data.lifetimeEarned >= resource.data.lifetimeEarned
+                          && request.resource.data.balance       >= resource.data.balance);
+      }
+
+      // goalCycles: כל "פרק" ביעד קריאה. מעבר active→completed מאומת מול היתרה בפועל.
+      match /goalCycles/{cycleId} {
+        allow read:   if true;
+        allow create: if isClubTeacher(clubId) || isOwner();
+        allow update: if isClubTeacher(clubId) || isOwner()
+                      || (isSignedIn()
+                          && resource.data.status == 'active'
+                          && request.resource.data.status == 'completed'
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reachedAt', 'eventId'])
+                          // ולידציה אמיתית מול הארנק — לא רק צורת השדות
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/economy/wallet).data.lifetimeEarned
+                             - resource.data.startBaseline >= resource.data.target);
+      }
+
+      // events: יומן אירועי המערכת (Event System) — הבסיס לכל גיימיפיקציה עתידית.
+      // קריאה: מורה/owner בלבד (תלמידים רואים את התוצאה, לא את היומן).
+      match /events/{eventId} {
+        allow read:   if isClubTeacher(clubId) || isOwner();
+        allow create: if isClubTeacher(clubId) || isOwner()
+                      || (isSignedIn() && request.resource.data.type == 'goal_reached');
+        allow update: if isClubTeacher(clubId) || isOwner();
+      }
+
+      // shop/state: מכונת המצבים של החנות. מעבר browsing→GOAL_REACHED_PENDING_SHOP
+      // אוטומטי (כל משתמש מחובר) ומאומת מול goalCycle שהושלם בפועל.
+      // כל שאר המעברים (פתיחת הצבעה, סגירה, רכישה, יעד הבא) — מורה/owner בלבד.
+      match /shop/{doc} {
+        allow read:   if true;
+        allow create: if isClubTeacher(clubId) || isOwner();
+        allow update: if isClubTeacher(clubId) || isOwner()
+                      || (isSignedIn()
+                          && resource.data.state == 'browsing'
+                          && request.resource.data.state == 'GOAL_REACHED_PENDING_SHOP'
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'updatedAt'])
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/goalCycles/$(resource.data.activeCycleId)).data.status == 'completed');
+      }
+
+      // votes: הצבעת הכיתה על הפרס. תוצאות (tally/winnerRewardId) מוצגות רק לאחר סגירה —
+      // המורה בלבד סוגרת/מפרסמת; ballots אישיים גלויים לתלמיד עצמו ולמורה/owner בלבד.
+      match /votes/{voteId} {
+        allow read:          if true;
+        allow create, update: if isClubTeacher(clubId) || isOwner();
+
+        match /ballots/{userId} {
+          // userId כאן הוא אותו מזהה כמו במסמך ה-membership: ל-self-joined זה auth.uid עצמו,
+          // לכרטיס שנוצר ע"י מורה זה ה-cardId היציב — ולכן נבדק גם claimedByUid, בדיוק כמו ב-sessions.
+          allow read:   if isClubTeacher(clubId) || isOwner() || isMe(userId)
+                        || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(userId)).data.get('claimedByUid', null) == request.auth.uid;
+          allow create: if request.resource.data.userId == userId
+                        && (isMe(userId)
+                            || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(userId)).data.get('claimedByUid', null) == request.auth.uid);
+          // הצבעה היא חד-פעמית — אין לשנות קול לאחר שנשלח (גם לא בזמן שההצבעה עדיין פתוחה).
+          allow update: if false;
+          allow delete: if false;
+        }
+      }
+
+      // purchases: היסטוריית רכישות — immutable, כמו readingSessions.
+      match /purchases/{purchaseId} {
+        allow read:           if true;
+        allow create:         if isClubTeacher(clubId) || isOwner();
+        allow update, delete: if false;
+      }
     }
 
     // ─── Collection group: memberships — תמיכה ב-fbLoadMembershipsForUser ────

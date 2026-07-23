@@ -50,15 +50,32 @@
    * מבטיח שיש auth פעיל לתלמיד — anonymous אם אין.
    * ממתין ל-onAuthStateChanged לפני יצירת session חדש, כדי למנוע פיצול UID.
    * Firebase Auth הוא Source of Truth — לעולם לא סומכים על localStorage לבדו.
+   *
+   * לעולם לא מחזירה UID של מורה כזהות תלמיד: אם המכשיר מחובר כרגע כמורה
+   * (למשל מכשיר משותף שהמורה שכחה להתנתק ממנו), מתחברים אנונימית מחדש —
+   * כך שכל פעולת תלמיד תמיד מיוחסת לזהות תלמיד אמיתית, גם במחיר ניתוק סשן
+   * המורה במכשיר הזה בלבד (חשבון המורה עצמו אינו נפגע).
    */
   async function ensureStudentAuth() {
     const a = _auth();
     if (!a) return localStorage.getItem('booki_tmp_uid');
 
-    // Session פעיל — החזר מיד
-    if (a.currentUser) {
+    // Session פעיל וכבר אנונימית — החזר מיד
+    if (a.currentUser && a.currentUser.isAnonymous) {
       localStorage.setItem('booki_tmp_uid', a.currentUser.uid);
       return a.currentUser.uid;
+    }
+
+    // Session פעיל אך זו מורה (non-anonymous) — אסור להחזיר את ה-UID שלה כזהות תלמיד.
+    if (a.currentUser && !a.currentUser.isAnonymous) {
+      try {
+        const cred = await a.signInAnonymously();
+        localStorage.setItem('booki_tmp_uid', cred.user.uid);
+        return cred.user.uid;
+      } catch (e) {
+        console.error('[auth] signInAnonymously (teacher handoff) failed:', e.code, e.message);
+        return null;
+      }
     }
 
     // Firebase עדיין מאתחל ומשחזר session מ-IndexedDB — מחכים לו.
