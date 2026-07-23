@@ -1909,6 +1909,47 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
 }
 .reward-delete-btn:hover { text-decoration: underline; }
 
+/* ─── יעדי הכיתה (Sprint 9 — Task 1/2/3/5) ──────────────────────────────────── */
+.goals-card {
+  background: var(--card); border: 2px solid var(--border); border-radius: 20px;
+  padding: 20px; margin-bottom: 20px;
+}
+.goals-card h3 { font-size: 1.05rem; margin-bottom: 14px; }
+.goals-section { margin-bottom: 16px; }
+.goals-section:last-child { margin-bottom: 0; }
+.goals-label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.goals-toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.goals-toggle-btn {
+  flex: 1; min-width: 140px; padding: 9px 12px; border-radius: 12px;
+  border: 2px solid var(--border); background: #fff;
+  color: var(--text); font-family: inherit; font-weight: 700; font-size: .82rem;
+  transition: all .2s; cursor: pointer;
+}
+.goals-toggle-btn.active { background: var(--green); border-color: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(39,174,96,.25); }
+.goals-toggle-btn:disabled { cursor: default; opacity: .55; }
+.goals-toggle-btn:disabled.active { opacity: 1; }
+.goals-edit-row { display: flex; align-items: center; gap: 8px; }
+.goals-edit-row .input-field { text-align: center; font-weight: 800; flex: 1; min-width: 0; }
+.goals-edit-row span { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+.btn-small-save {
+  padding: 10px 16px; border-radius: 10px; background: var(--green); color: #fff;
+  font-family: inherit; font-weight: 700; font-size: .85rem; white-space: nowrap;
+}
+.goals-progress-line { font-size: .9rem; font-weight: 700; margin-top: 8px; }
+.goals-progress-line span { font-weight: 400; color: var(--muted); }
+.goals-target-msg { font-size: .8rem; color: var(--muted); min-height: 1.1em; margin-top: 4px; }
+
+/* ─── בחירת היעד הבא — quick-picks (Sprint 9 — Task 4) ──────────────────────── */
+.next-goal-picker { margin: 12px 0; text-align: right; }
+.next-goal-quick-picks { display: flex; flex-direction: column; gap: 8px; }
+.quick-pick-btn {
+  padding: 10px 14px; border-radius: 12px; border: 2px solid var(--border); background: #fff;
+  color: var(--text); font-family: inherit; font-weight: 700; font-size: .85rem;
+  text-align: center; transition: all .2s; cursor: pointer;
+}
+.quick-pick-btn.active { background: var(--orange); border-color: var(--orange); color: #fff; box-shadow: 0 3px 10px rgba(230,126,34,.25); }
+.next-goal-custom-row { margin-top: 4px; }
+
 /* ─── חנות הכיתה — הפעלה ראשונית + סטטוס יעד (מורה) ────────────────────────── */
 .shop-setup-card, .shop-status-card {
   background: linear-gradient(145deg, #fff6e0, #ffedc2);

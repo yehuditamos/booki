@@ -671,12 +671,28 @@ async function _renderNewClubView(clubId) {
   if (!contentEl) return;
 
   // Single source of truth: same queries the teacher's class dashboard uses
-  const [club, memberships] = await Promise.all([
-    typeof fbLoadClub          === 'function' ? fbLoadClub(clubId)          : Promise.resolve(null),
+  const [club, memberships, shopState] = await Promise.all([
+    typeof fbLoadClub            === 'function' ? fbLoadClub(clubId)            : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+    typeof fbLoadShopState       === 'function' ? fbLoadShopState(clubId)       : Promise.resolve(null),
   ]);
 
-  const goalTarget = club?.goal?.target || 1500;
+  // Sprint 9: פעם ש-Shop מופעל, ה"יעד הכיתתי" האמיתי הוא ה-goalCycle הפעיל (אותו מקור
+  // בדיוק שמסך המורה משתמש בו) — לא club.goal הישן, שאין לו יותר עורך משלו ועלול
+  // להישאר תקוע/לא מעודכן. כשאין Shop, ההתנהגות זהה ב-1:1 להיום (club.goal + totalMins).
+  let goalTarget = club?.goal?.target || 1500;
+  let cycleProgress = null;
+  if (shopState?.activeCycleId) {
+    const [cycle, econ] = await Promise.all([
+      typeof fbLoadGoalCycle === 'function' ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
+      typeof fbLoadEconomy   === 'function' ? fbLoadEconomy(clubId)   : Promise.resolve(null),
+    ]);
+    if (cycle) {
+      goalTarget = cycle.target || goalTarget;
+      cycleProgress = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle.startBaseline || 0));
+    }
+  }
+
   const active = memberships
     .filter(m => m.status !== 'left')
     .map(m => ({
@@ -693,13 +709,15 @@ async function _renderNewClubView(clubId) {
     return;
   }
 
-  const totalMins     = active.reduce((s, m) => s + m.totalMinutes,  0);
+  const totalMins     = active.reduce((s, m) => s + m.totalMinutes,  0); // lifetime — תמיד לגדול, לעולם לא מתאפס (עץ)
   const totalSessions = active.reduce((s, m) => s + m.totalSessions, 0);
   const leaves        = Math.floor(totalMins / 100);
   const fruits        = Math.floor(totalMins / 500);
-  const blooming      = totalMins >= goalTarget;
-  const pct           = Math.min(100, Math.round((totalMins / goalTarget) * 100));
-  const remaining     = Math.max(0, goalTarget - totalMins);
+  // goalProgress: cycleProgress (מתאפס עם כל יעד חדש) כש-Shop מופעל; אחרת totalMins הישן.
+  const goalProgress  = cycleProgress !== null ? cycleProgress : totalMins;
+  const blooming      = goalProgress >= goalTarget;
+  const pct           = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
+  const remaining     = Math.max(0, goalTarget - goalProgress);
   const posIcons      = ['🥇', '🥈', '🥉'];
   const rowCls        = ['leader-first', 'leader-second', 'leader-third'];
 
@@ -709,7 +727,7 @@ async function _renderNewClubView(clubId) {
   const progressBlock = progressDisplay === 'progressOnly'
     ? `<div class="class-motivation-panel">
          <h3>💚 יחד אנחנו קוראים</h3>
-         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins, goalTarget }) : ''}</p>
+         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins: goalProgress, goalTarget }) : ''}</p>
        </div>`
     : `<div class="leaderboard">
       <h3>🏆 10 הקוראים המובילים</h3>

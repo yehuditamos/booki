@@ -275,12 +275,19 @@ async function fbEnableShopForClub(clubId, initialTarget) {
       });
     }
 
-    const cycleId = await fbCreateGoalCycle(clubId, { metric: 'points', target: initialTarget, startBaseline: seed });
+    const cycleId = await fbCreateGoalCycle(clubId, { metric: 'minutes', target: initialTarget, startBaseline: seed });
     if (!cycleId) return false;
 
     await _shopRef(clubId).set({
       state: 'browsing', activeCycleId: cycleId, activeVoteId: null, activePurchaseId: null, updatedAt: _now(),
     });
+
+    // Sprint 9 — Option A ("opens automatically") הוא ברירת המחדל רק להפעלות חדשות מכאן
+    // ואילך; כיתות שכבר הפעילו את החנות לפני הספרינט הזה אין להן שדה זה כלל, וקוראות
+    // אותו כ-'manual' (ההתנהגות היחידה שהייתה קיימת) — ראו goal_reached ו-fbConfirmPurchase.
+    if (typeof fbSaveClub === 'function') {
+      await fbSaveClub(clubId, { shopSettings: { openMode: 'auto', afterPurchase: 'close' } });
+    }
     return true;
   } catch (e) {
     console.warn('[firebase-shop] fbEnableShopForClub error:', e.message);
@@ -315,11 +322,23 @@ async function emitClubEvent(clubId, type, payload = {}) {
 }
 
 const SHOP_EVENT_HANDLERS = {
-  /** היעד הושג — משלימה את המחזור ואז פותחת את מצב "מוכן לחגיגה" בחנות. */
+  /**
+   * היעד הושג — משלימה את המחזור, פותחת את מצב "מוכן לחגיגה" בחנות (זה בדיוק המסך/הודעה
+   * שהמורה רואה גם במצב Option B הידני — שום דבר חדש לא נדרש עבורו), ואז נקודת ההחלטה
+   * היחידה של Sprint 9: אם shopSettings.openMode=='auto' — ממשיכים באותו הרצף לפתיחת
+   * הצבעה, בקריאה ל-fbOpenShopForVoting עצמה (לא כפילות לוגיקה). 'manual' (ברירת המחדל,
+   * וגם ההתנהגות היחידה שהייתה קיימת לפני הספרינט הזה) פשוט לא ממשיך את הצעד הזה.
+   */
   goal_reached: async (clubId, payload) => {
     if (payload.cycleId) await fbCompleteGoalCycle(clubId, payload.cycleId, payload.eventId);
     // הדגל cycle→completed חייב להצליח קודם — ה-Rule על shop/state מאמתת זאת.
     await _shopRef(clubId).set({ state: 'GOAL_REACHED_PENDING_SHOP', updatedAt: _now() }, { merge: true });
+
+    const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+    const openMode = club?.shopSettings?.openMode || 'manual';
+    if (openMode === 'auto') {
+      await fbOpenShopForVoting(clubId);
+    }
   },
   // future: weekly_challenge_complete, manual_shop_open, seasonal_event, ...
   //         הוספת סוג אירוע עתידי = שורה אחת כאן, שום דבר אחר לא משתנה.
@@ -554,12 +573,38 @@ async function fbLoadPurchases(clubId) {
 }
 
 /**
+ * צעדים משותפים (Sprint 9): פותחת מחזור-יעד הבא ומאפסת את מצב החנות ל-'browsing'.
+ * חייבת לרוץ בתוך transaction קיים (tx) שכבר ביצע את כל ה-tx.get() הדרושים.
+ * נקראת משני מקומות — אף פעם לא מועתקת: (א) מתוך fbConfirmPurchase, מיד באותה
+ * טרנזקציה, כש-afterPurchase=='close' (ברירת המחדל, זהה להתנהגות שהייתה קיימת
+ * תמיד); (ב) מתוך fbStartNextGoalCycle, בטרנזקציה נפרדת מאוחר יותר, כש-
+ * afterPurchase=='manual' והמורה בוחרת מתי לסגור את החנות ולפתוח יעד חדש.
+ */
+function _startNextGoalCycleTx(tx, clubId, oldCycle, lifetimeEarned, nextGoalTarget, purchaseId, now) {
+  // startBaseline מה-lifetimeEarned הנוכחי (לא מושפע מהוצאה) — ההתקדמות מתאפסת
+  // אבל היתרה הנצברת ממשיכה בלי הפרעה.
+  const target = (Number.isFinite(nextGoalTarget) && nextGoalTarget > 0) ? Math.round(nextGoalTarget) : oldCycle.target;
+  const nextCycleRef = _cyclesRef(clubId).doc();
+  tx.set(nextCycleRef, {
+    metric: oldCycle.metric || 'minutes', target, startBaseline: lifetimeEarned || 0,
+    startedAt: now, reachedAt: null, status: 'active', eventId: null,
+  });
+  tx.set(_shopRef(clubId), {
+    state: 'browsing', activeCycleId: nextCycleRef.id, activeVoteId: null,
+    activePurchaseId: purchaseId, updatedAt: now,
+  }, { merge: true });
+  return nextCycleRef.id;
+}
+
+/**
  * מורה מאשרת רכישה של הפרס שנבחר בהצבעה. מבצעת ברצף: ניכוי מהארנק, שמירת רשומת
- * רכישה, פתיחת מחזור היעד הבא (אותו יעד כברירת מחדל, אלא אם המורה שינתה אותו כרגע),
- * ואיפוס מצב החנות. לעולם לא מאפשרת רכישה שהיתרה לא מכסה.
+ * רכישה, ואז לפי shopSettings.afterPurchase (Sprint 9): 'close' (ברירת מחדל, זהה
+ * ב-1:1 להתנהגות הקודמת) — פותחת מיד את מחזור היעד הבא ומאפסת את מצב החנות;
+ * 'manual' — משאירה את החנות במצב 'purchase_complete' עד שהמורה תבחר בעצמה מתי
+ * לפתוח את היעד הבא (fbStartNextGoalCycle). לעולם לא מאפשרת רכישה שהיתרה לא מכסה.
  * @param {string} clubId
  * @param {string} voteId  ההצבעה הסגורה שממנה מגיע המנצח/ת
- * @param {number} [nextGoalTarget]  יעד חדש לסבב הבא — ברירת מחדל: אותו יעד כמו הקודם
+ * @param {number} [nextGoalTarget]  יעד חדש לסבב הבא — רלוונטי רק במצב 'close'; ברירת מחדל: אותו יעד כמו הקודם
  */
 async function fbConfirmPurchase(clubId, voteId, nextGoalTarget) {
   if (!_db() || !clubId || !voteId) return { ok: false, reason: 'missing-data' };
@@ -570,13 +615,15 @@ async function fbConfirmPurchase(clubId, voteId, nextGoalTarget) {
     if (!winner) return { ok: false, reason: 'reward-missing' };
     const cost = winner.cost || 0;
 
-    // "מספר מחזור" קריא לאדם — נגזר מהסדר הכרונולוגי (קריאה זולה, לא קריטית לעסקה,
-    // ולכן נעשית מחוץ ל-transaction).
+    // "מספר מחזור" קריא לאדם, וכן shopSettings.afterPurchase — קריאות זולות, לא קריטיות
+    // לעסקה, ולכן מחוץ ל-transaction (בדיוק כמו cycleNumber היה תמיד).
     const shopPreCheck = await fbLoadShopState(clubId);
     if (!shopPreCheck || shopPreCheck.state !== 'voting_closed') return { ok: false, reason: 'wrong-state' };
     const allCycles = await fbLoadGoalCycles(clubId);
     const ascending = [...allCycles].sort((a, b) => (a.startedAt || '').localeCompare(b.startedAt || ''));
     const cycleNumber = ascending.findIndex(c => c.id === shopPreCheck.activeCycleId) + 1;
+    const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+    const afterPurchase = club?.shopSettings?.afterPurchase || 'close';
 
     const economyRef = _economyRef(clubId);
     const shopRef    = _shopRef(clubId);
@@ -624,28 +671,74 @@ async function fbConfirmPurchase(clubId, voteId, nextGoalTarget) {
         purchasedAt: now,
       });
 
-      // (3) מחזור יעד הבא — startBaseline מה-lifetimeEarned הנוכחי (לא מושפע מהוצאה),
-      //     כך שההתקדמות מתאפסת אבל היתרה הנצברת ממשיכה בלי הפרעה.
-      const target = (Number.isFinite(nextGoalTarget) && nextGoalTarget > 0) ? Math.round(nextGoalTarget) : oldCycle.target;
-      const nextCycleRef = _cyclesRef(clubId).doc();
-      tx.set(nextCycleRef, {
-        metric: oldCycle.metric || 'points', target, startBaseline: econ.lifetimeEarned || 0,
-        startedAt: now, reachedAt: null, status: 'active', eventId: null,
-      });
-
-      // (4) איפוס מצב החנות — נעולה שוב, מחכה ליעד הבא
-      tx.set(shopRef, {
-        state: 'browsing', activeCycleId: nextCycleRef.id, activeVoteId: null,
-        activePurchaseId: purchaseRef.id, updatedAt: now,
-      }, { merge: true });
-
-      outcome = { ok: true, purchaseId: purchaseRef.id, nextCycleId: nextCycleRef.id, balanceAfter };
+      if (afterPurchase === 'manual') {
+        // Task 3: החנות נשארת "סגורה לרגע" — אין מחזור חדש עדיין, עד שהמורה תלחץ
+        // במפורש על "סגרו את החנות והתחילו יעד חדש".
+        tx.set(shopRef, {
+          state: 'purchase_complete', activeCycleId: shop.activeCycleId, activeVoteId: null,
+          activePurchaseId: purchaseRef.id, updatedAt: now,
+        }, { merge: true });
+        outcome = { ok: true, purchaseId: purchaseRef.id, deferred: true, balanceAfter };
+      } else {
+        // (3)+(4) — ברירת המחדל, זהה ב-1:1 להתנהגות שהייתה קיימת לפני הספרינט הזה.
+        const nextCycleId = _startNextGoalCycleTx(tx, clubId, oldCycle, econ.lifetimeEarned || 0, nextGoalTarget, purchaseRef.id, now);
+        outcome = { ok: true, purchaseId: purchaseRef.id, nextCycleId, balanceAfter };
+      }
     });
 
     return outcome;
   } catch (e) {
     console.warn('[firebase-shop] fbConfirmPurchase error:', e.message);
     return { ok: false, reason: 'error' };
+  }
+}
+
+/**
+ * Task 3 (afterPurchase:'manual'): המורה סוגרת את החנות בעצמה ופותחת את מחזור היעד
+ * הבא — בדיוק הצעדים (3)+(4) ש-'close' מבצעת אוטומטית מיד אחרי רכישה, דרך אותה
+ * פונקציית עזר משותפת (_startNextGoalCycleTx). דורשת שהחנות במצב 'purchase_complete'.
+ * @param {string} clubId
+ * @param {number} [nextGoalTarget]  יעד חדש — ברירת מחדל: אותו יעד כמו המחזור שהושלם
+ */
+async function fbStartNextGoalCycle(clubId, nextGoalTarget) {
+  if (!_db() || !clubId) return { ok: false, reason: 'missing-data' };
+  try {
+    const shopRef = _shopRef(clubId);
+    const economyRef = _economyRef(clubId);
+    let outcome;
+    await _db().runTransaction(async tx => {
+      const [shopSnap, econSnap] = await Promise.all([tx.get(shopRef), tx.get(economyRef)]);
+      const shop = shopSnap.exists ? shopSnap.data() : null;
+      const econ = econSnap.exists ? econSnap.data() : null;
+      if (!shop || shop.state !== 'purchase_complete') { outcome = { ok: false, reason: 'wrong-state' }; return; }
+
+      const cycleRef  = _cyclesRef(clubId).doc(shop.activeCycleId);
+      const cycleSnap = await tx.get(cycleRef);
+      if (!cycleSnap.exists) { outcome = { ok: false, reason: 'no-cycle' }; return; }
+      const oldCycle = cycleSnap.data();
+
+      const now = _now();
+      const nextCycleId = _startNextGoalCycleTx(
+        tx, clubId, oldCycle, econ?.lifetimeEarned || 0, nextGoalTarget, shop.activePurchaseId || null, now
+      );
+      outcome = { ok: true, nextCycleId };
+    });
+    return outcome;
+  } catch (e) {
+    console.warn('[firebase-shop] fbStartNextGoalCycle error:', e.message);
+    return { ok: false, reason: 'error' };
+  }
+}
+
+/** Task 1: מורה משנה את יעד המחזור הפעיל (לפני שהושג) — כתיבה ישירה, מותרת למורה ללא תנאי. */
+async function fbUpdateGoalCycleTarget(clubId, cycleId, target) {
+  if (!_db() || !clubId || !cycleId || !(target > 0)) return false;
+  try {
+    await _cyclesRef(clubId).doc(cycleId).update({ target: Math.round(target) });
+    return true;
+  } catch (e) {
+    console.warn('[firebase-shop] fbUpdateGoalCycleTarget error:', e.message);
+    return false;
   }
 }
 
@@ -665,6 +758,7 @@ Object.assign(window, {
   fbLoadGoalCycle,
   fbLoadGoalCycles,
   fbCompleteGoalCycle,
+  fbUpdateGoalCycleTarget,
   // Shop State
   fbLoadShopState,
   fbWatchShopState,
@@ -683,4 +777,5 @@ Object.assign(window, {
   // Purchases
   fbLoadPurchases,
   fbConfirmPurchase,
+  fbStartNextGoalCycle,
 });

@@ -178,14 +178,34 @@ service cloud.firestore {
                           && resource.data.state == 'browsing'
                           && request.resource.data.state == 'GOAL_REACHED_PENDING_SHOP'
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'updatedAt'])
-                          && get(/databases/$(database)/documents/clubs/$(clubId)/goalCycles/$(resource.data.activeCycleId)).data.status == 'completed');
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/goalCycles/$(resource.data.activeCycleId)).data.status == 'completed')
+                      // Sprint 9 — Option A (openMode:'auto'): אותו סשן-תלמיד שהגיע ליעד ממשיך
+                      // ישר לפתיחת הצבעה, בלי לחכות למורה. מאומת מול shopSettings האמיתי בכיתה,
+                      // ולא סתם נסמך על מה שהלקוח טוען — בדיוק כמו הענף הקיים מעל.
+                      || (isSignedIn()
+                          && resource.data.state == 'GOAL_REACHED_PENDING_SHOP'
+                          && request.resource.data.state == 'voting_open'
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['state', 'activeVoteId', 'updatedAt'])
+                          && get(/databases/$(database)/documents/clubs/$(clubId)).data.get('shopSettings', {}).get('openMode', 'manual') == 'auto'
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/votes/$(request.resource.data.activeVoteId)).data.cycleId == resource.data.activeCycleId);
       }
 
       // votes: הצבעת הכיתה על הפרס. תוצאות (tally/winnerRewardId) מוצגות רק לאחר סגירה —
       // המורה בלבד סוגרת/מפרסמת; ballots אישיים גלויים לתלמיד עצמו ולמורה/owner בלבד.
       match /votes/{voteId} {
         allow read:          if true;
-        allow create, update: if isClubTeacher(clubId) || isOwner();
+        allow create: if isClubTeacher(clubId) || isOwner()
+                      // Sprint 9 — Option A: פתיחת סיבוב 1 אוטומטית ע"י סשן-תלמיד, רק כש-
+                      // openMode=='auto' וכשהחנות באמת ב-GOAL_REACHED_PENDING_SHOP עבור המחזור הזה.
+                      // לעולם לא מתיר יצירת סיבוב הכרעה (runoff) — זה תמיד רק דרך fbCloseVoting של המורה.
+                      || (isSignedIn()
+                          && get(/databases/$(database)/documents/clubs/$(clubId)).data.get('shopSettings', {}).get('openMode', 'manual') == 'auto'
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/shop/state).data.state == 'GOAL_REACHED_PENDING_SHOP'
+                          && request.resource.data.cycleId == get(/databases/$(database)/documents/clubs/$(clubId)/shop/state).data.activeCycleId
+                          && request.resource.data.status == 'open'
+                          && request.resource.data.round == 1
+                          && request.resource.data.previousVoteId == null);
+        allow update: if isClubTeacher(clubId) || isOwner();
 
         match /ballots/{userId} {
           // userId כאן הוא אותו מזהה כמו במסמך ה-membership: ל-self-joined זה auth.uid עצמו,

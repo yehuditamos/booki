@@ -62,24 +62,35 @@ async function _renderShopManagement(clubId) {
   ]);
 
   let statusHtml;
+  let goalsCardHtml = '';
+
   if (!shopState) {
     statusHtml = _enableShopSetupHtml(clubId);
-  } else if (shopState.state === 'GOAL_REACHED_PENDING_SHOP') {
-    statusHtml = _goalReachedTeacherHtml(clubId);
-  } else if (shopState.state === 'voting_open') {
-    statusHtml = await _votingOpenTeacherHtml(clubId, shopState.activeVoteId);
-  } else if (shopState.state === 'voting_closed') {
-    statusHtml = await _votingClosedTeacherHtml(clubId, shopState.activeVoteId);
   } else {
-    const [cycle, econ] = await Promise.all([
+    // Task 5: הכל-במקום-אחד — הכרטיס הזה זקוק לאותם club/cycle/econ בלי קשר למצב החנות,
+    // אז הם נטענים פעם אחת כאן, למעלה, ולא בכל ענף בנפרד.
+    const [club, cycle, econ] = await Promise.all([
+      typeof fbLoadClub === 'function' ? fbLoadClub(clubId) : Promise.resolve(null),
       shopState.activeCycleId && typeof fbLoadGoalCycle === 'function'
         ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
       typeof fbLoadEconomy === 'function' ? fbLoadEconomy(clubId) : Promise.resolve(null),
     ]);
-    statusHtml = _browsingProgressHtml(cycle, econ);
+    goalsCardHtml = _classroomGoalsCardHtml(clubId, cycle, econ, club?.shopSettings || {});
+
+    if (shopState.state === 'GOAL_REACHED_PENDING_SHOP') {
+      statusHtml = _goalReachedTeacherHtml(clubId);
+    } else if (shopState.state === 'voting_open') {
+      statusHtml = await _votingOpenTeacherHtml(clubId, shopState.activeVoteId);
+    } else if (shopState.state === 'voting_closed') {
+      statusHtml = await _votingClosedTeacherHtml(clubId, shopState.activeVoteId);
+    } else if (shopState.state === 'purchase_complete') {
+      statusHtml = await _purchaseCompleteTeacherHtml(clubId, shopState, cycle);
+    } else {
+      statusHtml = _browsingProgressHtml(cycle, econ);
+    }
   }
 
-  _renderRewardGrid(clubId, rewards, statusHtml);
+  _renderRewardGrid(clubId, rewards, goalsCardHtml + statusHtml);
 }
 
 function _enableShopSetupHtml(clubId) {
@@ -87,10 +98,15 @@ function _enableShopSetupHtml(clubId) {
     <div class="shop-setup-card">
       <div class="shop-setup-icon">🎯</div>
       <h3>הפעילו את היעד הראשון</h3>
-      <p>הכיתה תצבור נקודות קריאה משותפות. כשהיא תגיע ליעד — בוקי יחגוג, ותיפתח הצבעה על פרס.</p>
+      <p>הכיתה תצבור דקות קריאה משותפות. כשהיא תגיע ליעד — בוקי יחגוג, ותיפתח הצבעה על פרס.</p>
+      <div class="goals-toggle-group">
+        <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
+        <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
+        <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
+      </div>
       <div class="shop-setup-row">
         <input id="shop-setup-target" type="number" class="input-field" value="300" min="10" step="10" />
-        <span>נקודות</span>
+        <span>דקות</span>
       </div>
       <button class="btn-giant btn-green" onclick="submitEnableShop('${clubId}')">🎯 הפעילו את החנות</button>
       <p id="shop-setup-error" class="auth-error"></p>
@@ -124,9 +140,121 @@ function _browsingProgressHtml(cycle, econ) {
   return `
     <div class="shop-status-card">
       <h3>🎯 היעד הנוכחי</h3>
-      <p class="shop-status-nums">${progress.toLocaleString('he-IL')} <span>מתוך</span> ${target.toLocaleString('he-IL')} נקודות</p>
+      <p class="shop-status-nums">${progress.toLocaleString('he-IL')} <span>מתוך</span> ${target.toLocaleString('he-IL')} דקות</p>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     </div>`;
+}
+
+// ─── Classroom Goals (Sprint 9 — Task 1/2/3/5) ────────────────────────────────
+
+function _classroomGoalsCardHtml(clubId, cycle, econ, shopSettings) {
+  const target     = cycle?.target || 0;
+  const progress   = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle?.startBaseline || 0));
+  const openMode      = shopSettings.openMode      || 'manual';
+  const afterPurchase = shopSettings.afterPurchase || 'close';
+  return `
+    <div class="goals-card">
+      <h3>🎯 יעדי הכיתה</h3>
+
+      <div class="goals-section">
+        <span class="goals-label">סוג יעד</span>
+        <div class="goals-toggle-group">
+          <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
+          <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
+          <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
+        </div>
+      </div>
+
+      <div class="goals-section">
+        <span class="goals-label">יעד נוכחי</span>
+        <div class="goals-edit-row">
+          <input id="goals-target-input" type="number" class="input-field" value="${target}" min="10" step="10" />
+          <span>דקות</span>
+          <button type="button" class="btn-small-save" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">שמור</button>
+        </div>
+        <p class="goals-progress-line">${progress.toLocaleString('he-IL')} <span>/</span> ${target.toLocaleString('he-IL')} דקות</p>
+        <p id="goals-target-msg" class="goals-target-msg"></p>
+      </div>
+
+      <div class="goals-section">
+        <span class="goals-label">פתיחת החנות</span>
+        <div class="goals-toggle-group">
+          <button type="button" class="goals-toggle-btn ${openMode === 'auto' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','auto')">✅ אוטומטית כשמגיעים ליעד</button>
+          <button type="button" class="goals-toggle-btn ${openMode === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','manual')">🧑‍🏫 המורה פותחת ידנית</button>
+        </div>
+      </div>
+
+      <div class="goals-section">
+        <span class="goals-label">אחרי רכישה</span>
+        <div class="goals-toggle-group">
+          <button type="button" class="goals-toggle-btn ${afterPurchase === 'close' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','close')">🔒 נסגרת מיד</button>
+          <button type="button" class="goals-toggle-btn ${afterPurchase === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','manual')">🧑‍🏫 המורה סוגרת ידנית</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function saveGoalTargetAction(clubId, cycleId) {
+  const input = document.getElementById('goals-target-input');
+  const msgEl = document.getElementById('goals-target-msg');
+  const target = Math.round(Number(input?.value) || 0);
+  if (msgEl) msgEl.textContent = '';
+  if (!cycleId) { if (msgEl) msgEl.textContent = 'אין מחזור יעד פעיל כרגע.'; return; }
+  if (target < 10) { if (msgEl) msgEl.textContent = 'היעד חייב להיות לפחות 10 דקות'; return; }
+
+  const ok = typeof fbUpdateGoalCycleTarget === 'function' ? await fbUpdateGoalCycleTarget(clubId, cycleId, target) : false;
+  if (!ok) { if (msgEl) msgEl.textContent = 'שגיאה בשמירה — נסה/י שוב'; return; }
+  _renderShopManagement(clubId);
+}
+
+async function saveShopSettingAction(clubId, key, value) {
+  if (typeof fbSaveClub === 'function') {
+    await fbSaveClub(clubId, { shopSettings: { [key]: value } });
+  }
+  _renderShopManagement(clubId);
+}
+
+// ─── Next Goal quick-picks (Sprint 9 — Task 4) — shared between the immediate-purchase
+//     flow and the deferred (afterPurchase:'manual') "start next goal" flow ────────────
+
+function _nextGoalPickerHtml(idPrefix, suggestedTarget) {
+  const base   = suggestedTarget || 300;
+  const plus10 = Math.round((base * 1.1) / 10) * 10;
+  return `
+    <div class="next-goal-picker" id="${idPrefix}-picker" data-mode="same" data-suggested="${base}" data-plus10="${plus10}">
+      <label class="reward-field-label">מה יהיה היעד הבא?</label>
+      <div class="next-goal-quick-picks">
+        <button type="button" class="quick-pick-btn active" onclick="_selectNextGoalQuickPick('${idPrefix}','same')">🔁 אותו יעד (${base.toLocaleString('he-IL')})</button>
+        <button type="button" class="quick-pick-btn" onclick="_selectNextGoalQuickPick('${idPrefix}','plus10')">📈 העלאה ב-10% (${plus10.toLocaleString('he-IL')})</button>
+        <button type="button" class="quick-pick-btn" onclick="_selectNextGoalQuickPick('${idPrefix}','custom')">✏️ יעד אחר</button>
+      </div>
+      <div class="goals-edit-row next-goal-custom-row" style="display:none">
+        <input id="${idPrefix}-input" type="number" class="input-field" value="${base}" min="10" step="10" />
+        <span>דקות</span>
+      </div>
+    </div>`;
+}
+
+function _selectNextGoalQuickPick(idPrefix, mode) {
+  const picker = document.getElementById(idPrefix + '-picker');
+  if (!picker) return;
+  const buttons = picker.querySelectorAll('.quick-pick-btn');
+  buttons.forEach(b => b.classList.remove('active'));
+  const idx = mode === 'same' ? 0 : mode === 'plus10' ? 1 : 2;
+  if (buttons[idx]) buttons[idx].classList.add('active');
+  const customRow = picker.querySelector('.next-goal-custom-row');
+  if (customRow) customRow.style.display = mode === 'custom' ? '' : 'none';
+  picker.dataset.mode = mode;
+}
+
+function _readNextGoalPicker(idPrefix) {
+  const picker = document.getElementById(idPrefix + '-picker');
+  if (!picker) return null;
+  const mode = picker.dataset.mode || 'same';
+  if (mode === 'same')   return Number(picker.dataset.suggested);
+  if (mode === 'plus10') return Number(picker.dataset.plus10);
+  const input = document.getElementById(idPrefix + '-input');
+  return Math.round(Number(input?.value) || 0);
 }
 
 function _goalReachedTeacherHtml(clubId) {
@@ -194,7 +322,10 @@ async function _votingClosedTeacherHtml(clubId, voteId) {
   const vote = typeof fbLoadVote === 'function' ? await fbLoadVote(clubId, voteId) : null;
   const winner = vote?.rewardOptions?.find(o => o.rewardId === vote.winnerRewardId);
 
-  const shopState = typeof fbLoadShopState === 'function' ? await fbLoadShopState(clubId) : null;
+  const [shopState, club] = await Promise.all([
+    typeof fbLoadShopState === 'function' ? fbLoadShopState(clubId) : Promise.resolve(null),
+    typeof fbLoadClub      === 'function' ? fbLoadClub(clubId)      : Promise.resolve(null),
+  ]);
   const [econ, oldCycle] = await Promise.all([
     typeof fbLoadEconomy === 'function' ? fbLoadEconomy(clubId) : Promise.resolve(null),
     shopState?.activeCycleId && typeof fbLoadGoalCycle === 'function'
@@ -206,6 +337,10 @@ async function _votingClosedTeacherHtml(clubId, voteId) {
   const remaining   = Math.max(0, balance - cost);
   const insufficient = balance < cost;
   const suggestedTarget = oldCycle?.target || 300;
+  // Task 3: במצב afterPurchase:'manual' היעד הבא נבחר מאוחר יותר במסך 'purchase_complete' —
+  // הבורר כאן היה מטעה (הערך שלו לא באמת משמש), ולכן לא מוצג כאן במצב הזה.
+  const afterPurchase = club?.shopSettings?.afterPurchase || 'close';
+  const showPicker = afterPurchase !== 'manual';
 
   return `
     <div class="shop-status-card shop-status-celebrate">
@@ -218,24 +353,20 @@ async function _votingClosedTeacherHtml(clubId, voteId) {
         יישאר: ${remaining.toLocaleString('he-IL')}
       </p>
       ${insufficient ? `<p class="auth-error">אין כרגע מספיק נקודות בארנק הכיתה לרכישת הפרס הזה.</p>` : ''}
-      <label class="reward-field-label" for="shop-next-target">יעד לקריאה הבאה</label>
-      <div class="shop-setup-row">
-        <input id="shop-next-target" type="number" class="input-field" value="${suggestedTarget}" min="10" step="10" />
-        <span>נקודות</span>
-      </div>
+      ${showPicker ? _nextGoalPickerHtml('next-goal', suggestedTarget) : `<p class="goals-target-msg">היעד הבא ייבחר אחרי שתסגרו את החנות.</p>`}
       <button class="btn-giant btn-green" ${insufficient ? 'disabled' : ''}
-              onclick="confirmPurchaseAction('${clubId}','${voteId}')">🛍️ אשרו רכישה והתחילו יעד חדש</button>
+              onclick="confirmPurchaseAction('${clubId}','${voteId}')">🛍️ אשרו רכישה${showPicker ? ' והתחילו יעד חדש' : ''}</button>
       <p id="shop-purchase-error" class="auth-error"></p>
     </div>`;
 }
 
 async function confirmPurchaseAction(clubId, voteId) {
   const errEl = document.getElementById('shop-purchase-error');
-  const targetInput = document.getElementById('shop-next-target');
-  const target = Math.round(Number(targetInput?.value) || 0);
+  const hasPicker = !!document.getElementById('next-goal-picker');
+  const target = hasPicker ? _readNextGoalPicker('next-goal') : undefined;
 
   if (errEl) errEl.textContent = '';
-  if (target < 10) { if (errEl) errEl.textContent = 'היעד חייב להיות לפחות 10 נקודות'; return; }
+  if (hasPicker && (!target || target < 10)) { if (errEl) errEl.textContent = 'היעד חייב להיות לפחות 10 דקות'; return; }
 
   const btn = document.querySelector('.shop-status-card .btn-green');
   if (btn) { btn.disabled = true; btn.textContent = 'מבצע רכישה...'; }
@@ -249,7 +380,43 @@ async function confirmPurchaseAction(clubId, voteId) {
       return;
     }
     if (errEl) errEl.textContent = 'שגיאה ברכישה — נסה/י שוב';
-    if (btn) { btn.disabled = false; btn.textContent = '🛍️ אשרו רכישה והתחילו יעד חדש'; }
+    if (btn) { btn.disabled = false; btn.textContent = `🛍️ אשרו רכישה${hasPicker ? ' והתחילו יעד חדש' : ''}`; }
+    return;
+  }
+  _renderShopManagement(clubId);
+}
+
+/** Task 3 (afterPurchase:'manual'): מסך "הפרס אצלכם" — מחכה שהמורה תבחר מתי לפתוח יעד חדש. */
+async function _purchaseCompleteTeacherHtml(clubId, shopState, oldCycle) {
+  const purchases = typeof fbLoadPurchases === 'function' ? await fbLoadPurchases(clubId) : [];
+  const lastPurchase = purchases.find(p => p.id === shopState.activePurchaseId) || purchases[0] || null;
+  const suggestedTarget = oldCycle?.target || 300;
+
+  return `
+    <div class="shop-status-card shop-status-celebrate">
+      <div class="shop-status-icon">🎁</div>
+      <h3>הפרס אצלכם!</h3>
+      ${lastPurchase ? `<div class="shop-winner-chip">🏆 ${_escHtml(lastPurchase.rewardTitle || '')}</div>` : ''}
+      <p>כשתהיו מוכנים — סגרו את החנות ותתחילו יעד קריאה חדש.</p>
+      ${_nextGoalPickerHtml('purchase-next-goal', suggestedTarget)}
+      <button class="btn-giant btn-green" onclick="startNextGoalAction('${clubId}')">🔒 סגרו את החנות והתחילו יעד חדש</button>
+      <p id="shop-next-goal-error" class="auth-error"></p>
+    </div>`;
+}
+
+async function startNextGoalAction(clubId) {
+  const errEl = document.getElementById('shop-next-goal-error');
+  const target = _readNextGoalPicker('purchase-next-goal');
+  if (errEl) errEl.textContent = '';
+  if (!target || target < 10) { if (errEl) errEl.textContent = 'היעד חייב להיות לפחות 10 דקות'; return; }
+
+  const btn = document.querySelector('.shop-status-card .btn-green');
+  if (btn) { btn.disabled = true; btn.textContent = 'פותח יעד חדש...'; }
+
+  const result = typeof fbStartNextGoalCycle === 'function' ? await fbStartNextGoalCycle(clubId, target) : { ok: false };
+  if (!result.ok) {
+    if (errEl) errEl.textContent = 'שגיאה — נסה/י שוב';
+    if (btn) { btn.disabled = false; btn.textContent = '🔒 סגרו את החנות והתחילו יעד חדש'; }
     return;
   }
   _renderShopManagement(clubId);
@@ -672,5 +839,6 @@ Object.assign(window, {
   submitEnableShop,
   openVotingAction, closeVotingAction, castVoteAction,
   confirmPurchaseAction,
+  saveGoalTargetAction, saveShopSettingAction, _selectNextGoalQuickPick, startNextGoalAction,
   _rewardImgFallback,
 });
