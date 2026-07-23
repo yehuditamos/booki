@@ -277,16 +277,44 @@
       <button class="btn-back" onclick="cancelBookiReading()">יציאה →</button>
     </div>
   </div>
-  <div class="booki-say-moment">
-    <span class="booki-say-face">🦉</span>
-    <p class="booki-say-bubble">תיהנה/י מהספר! 📖<br>אני אשמור לך על זמן הקריאה.</p>
+
+  <!-- שלב 1: הכנה — הטיימר עדיין לא רץ -->
+  <div id="booki-prep-view" class="booki-prep-view">
+    <div class="booki-prep-scene">
+      <span class="booki-prep-owl">🦉</span>
+      <span class="booki-prep-clock">🕒</span>
+    </div>
+    <p class="booki-prep-msg">הכל מוכן! 📖<br>כשתהיה/י מוכן/ה להתחיל לקרוא, לחצ/י על הכפתור למטה.</p>
+    <button class="btn-giant btn-booki-read" onclick="beginBookiReadingTimer()">▶ להתחיל לקרוא</button>
   </div>
-  <div class="booki-elapsed-wrap">
-    <span class="booki-elapsed-icon">🕒</span>
-    <span id="booki-elapsed-minutes" class="booki-elapsed-num">0 דקות</span>
+
+  <!-- שלב 2: אנימציית מעבר — "עכשיו הקריאה התחילה" -->
+  <div id="booki-transition-view" class="booki-transition-view" style="display:none">
+    <div class="booki-sparkle-scene">
+      <span class="booki-sparkle-owl">🦉</span>
+      <span class="booki-sparkle bs-1">✨</span>
+      <span class="booki-sparkle bs-2">⭐</span>
+      <span class="booki-sparkle bs-3">🌟</span>
+      <span class="booki-sparkle bs-4">✨</span>
+      <span class="booki-sparkle bs-5">⭐</span>
+      <span class="booki-sparkle bs-6">🌟</span>
+    </div>
+    <p class="booki-transition-msg">הקריאה מתחילה... 📖</p>
   </div>
-  <div class="booki-finish-wrap">
-    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
+
+  <!-- שלב 3: קריאה פעילה — הטיימר רץ -->
+  <div id="booki-running-view" class="booki-running-view" style="display:none">
+    <div class="booki-say-moment">
+      <span class="booki-say-face">🦉</span>
+      <p class="booki-say-bubble">תיהנה/י מהספר! 📖<br>אני אשמור לך על זמן הקריאה.</p>
+    </div>
+    <div class="booki-elapsed-wrap">
+      <span class="booki-elapsed-icon">🕒</span>
+      <span id="booki-elapsed-minutes" class="booki-elapsed-num">0 דקות</span>
+    </div>
+    <div class="booki-finish-wrap">
+      <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
+    </div>
   </div>
 </section>
 

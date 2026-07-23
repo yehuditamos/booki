@@ -11,9 +11,12 @@
 ═══════════════════════════════════════════════════════════════ */
 
 // ─── 1. מחזור חיים של סשן ───────────────────────────────────────────
+// שלושה מצבי-תת-מסך בתוך screen-booki-reading, בכוונה נפרדים מהטיימר עצמו:
+//   prep (הטיימר עוד לא רץ) -> transition (אנימציה קצרה, ~1.4s) -> running (הטיימר רץ)
 
-let _bookiReadingInterval = null;
-let _bookiPendingMinutes  = null;
+let _bookiReadingInterval  = null;
+let _bookiTransitionTimer  = null;
+let _bookiPendingMinutes   = null;
 
 function _bookiSessionKey() {
   return 'booki_reading_' + currentStudentId;
@@ -28,9 +31,18 @@ function _loadBookiSession() {
   }
 }
 
+function _showBookiSubview(name) {
+  const views = { prep: 'booki-prep-view', transition: 'booki-transition-view', running: 'booki-running-view' };
+  for (const key of Object.keys(views)) {
+    const el = document.getElementById(views[key]);
+    if (el) el.style.display = key === name ? '' : 'none';
+  }
+}
+
 function _clearBookiReadingLocal() {
   try { localStorage.removeItem(_bookiSessionKey()); } catch {}
   if (_bookiReadingInterval) { clearInterval(_bookiReadingInterval); _bookiReadingInterval = null; }
+  if (_bookiTransitionTimer) { clearTimeout(_bookiTransitionTimer); _bookiTransitionTimer = null; }
   const banner = document.getElementById('booki-resume-banner');
   if (banner) banner.style.display = 'none';
 }
@@ -58,21 +70,39 @@ function _renderBookiElapsed(startedAt) {
   _bookiReadingInterval = setInterval(update, 5000);
 }
 
+/** מהכרטיס בעמוד הבית — תמיד מציג את מסך ההכנה קודם; הטיימר לא רץ עדיין. */
 function startBookiReading() {
   if (currentStudentId === null || currentStudentId === undefined) return;
-  let session = _loadBookiSession();
-  if (!session?.startedAt) {
-    session = { startedAt: Date.now() };
-    try { localStorage.setItem(_bookiSessionKey(), JSON.stringify(session)); } catch {}
+  const session = _loadBookiSession();
+  if (session?.startedAt) {
+    // סשן כבר רץ (למשל חזרה למסך בלי לעבור דרך ביטול) — אין טעם להראות שוב את ההכנה.
+    _renderBookiElapsed(session.startedAt);
+    _showBookiSubview('running');
+  } else {
+    _showBookiSubview('prep');
   }
-  _renderBookiElapsed(session.startedAt);
   showScreen('screen-booki-reading');
 }
 
+/** נלחץ רק בלחיצה על "להתחיל לקרוא" במסך ההכנה — כאן, ורק כאן, הטיימר באמת מתחיל. */
+function beginBookiReadingTimer() {
+  const startedAt = Date.now();
+  try { localStorage.setItem(_bookiSessionKey(), JSON.stringify({ startedAt })); } catch {}
+  _showBookiSubview('transition');
+  if (_bookiTransitionTimer) clearTimeout(_bookiTransitionTimer);
+  _bookiTransitionTimer = setTimeout(() => {
+    _bookiTransitionTimer = null;
+    _renderBookiElapsed(startedAt);
+    _showBookiSubview('running');
+  }, 1400);
+}
+
+/** מהודעת "להמשיך לקרוא" — סשן כבר קיים, ממשיכים ישר לתצוגת הטיימר הרץ, בלי הכנה ובלי אנימציה. */
 function resumeBookiReading() {
   const session = _loadBookiSession();
   if (!session?.startedAt) return;
   _renderBookiElapsed(session.startedAt);
+  _showBookiSubview('running');
   showScreen('screen-booki-reading');
 }
 
@@ -81,7 +111,9 @@ function discardBookiReading() {
 }
 
 function cancelBookiReading() {
-  if (!confirm('לצאת מהקריאה? הזמן לא יישמר.')) return;
+  // אם הטיימר עוד לא התחיל (עדיין במסך ההכנה) — אין זמן קריאה לאבד, ואין צורך לאשר.
+  const session = _loadBookiSession();
+  if (session?.startedAt && !confirm('לצאת מהקריאה? הזמן לא יישמר.')) return;
   _clearBookiReadingLocal();
   showScreen('screen-main');
 }
