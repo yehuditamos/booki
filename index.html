@@ -104,8 +104,6 @@
       </div>
     </div>
     <div class="switch-group">
-      <button id="btn-switch-club" class="btn-switch btn-sc" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
-      <button class="btn-switch btn-share-sm" title="שתפי בוקי" onclick="shareApp()">📤</button>
       <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
     </div>
   </div>
@@ -150,6 +148,8 @@
       <span class="btn-label">חנות הכיתה</span>
     </button>
   </div>
+
+  <button class="btn-footer-link" onclick="shareApp()">📤 שתפי את בוקי</button>
 </section>
 
 <!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
@@ -294,8 +294,9 @@
       <span class="timer-sparkle ts-5">⭐</span>
       <span class="timer-sparkle ts-6">🌟</span>
     </span>
-    <span id="booki-timer-icon" class="booki-timer-icon">🕒</span>
+    <span id="booki-timer-icon" class="booki-timer-icon">▶</span>
     <span id="booki-timer-label" class="booki-timer-label">התחל</span>
+    <span id="booki-timer-sublabel" class="booki-timer-sublabel"></span>
   </button>
 
   <div class="booki-finish-wrap">
@@ -349,6 +350,7 @@
     <div class="header-row">
       <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
       <h2>👤 כרטיס הקורא שלי</h2>
+      <button id="btn-switch-club" class="btn-switch-reader" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
     </div>
   </div>
   <div id="reader-card-content" class="reader-card-content"></div>

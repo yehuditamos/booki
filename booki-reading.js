@@ -40,22 +40,33 @@ function _setBookiBubble(html) {
   if (bubble) bubble.innerHTML = html;
 }
 
-/** idle/starting/running — קובע גם את מראה הכפתור-העגול וגם את הטקסט שבתוכו. */
+/**
+ * idle/starting/running — קובע את מראה הכפתור-העגול וכל הטקסט שבתוכו, כולל האייקון
+ * (▶ במצב idle -> 🕒 במצב running) והשורה השנייה (מספר הדקות, מוצג רק כשקוראים באמת).
+ * running נשאר עם מסגרת ירוקה + רקע ירוק בהיר כל עוד הסשן פעיל; חוזר למראה המקורי
+ * ברגע שחוזרים ל-idle (סיום/ביטול קריאה) — ר' startBookiReading/cancelBookiReading.
+ */
 function _setBookiTimerState(state) {
   const btn = document.getElementById('booki-timer-btn');
   if (btn) {
     btn.classList.remove('booki-timer-idle', 'booki-timer-starting', 'booki-timer-running');
     btn.classList.add('booki-timer-' + state);
   }
-  const icon  = document.getElementById('booki-timer-icon');
-  const label = document.getElementById('booki-timer-label');
+  const icon     = document.getElementById('booki-timer-icon');
+  const label    = document.getElementById('booki-timer-label');
+  const sublabel = document.getElementById('booki-timer-sublabel');
   if (state === 'idle') {
-    if (icon)  icon.textContent  = '🕒';
-    if (label) label.textContent = 'התחל';
+    if (icon)     icon.textContent     = '▶';
+    if (label)    label.textContent    = 'להתחיל לקרוא';
+    if (sublabel) sublabel.textContent = '';
   } else if (state === 'starting') {
-    if (label) label.textContent = '';
+    if (label)    label.textContent    = '';
+    if (sublabel) sublabel.textContent = '';
+  } else if (state === 'running') {
+    if (icon)     icon.textContent     = '🕒';
+    if (label)    label.textContent    = '🟢 קוראים כרגע';
+    // מספר הדקות עצמו מוזן ע"י _renderBookiElapsed (מתעדכן כל 5 שניות), לא כאן.
   }
-  // running: הטקסט (מספר הדקות) מוזן ע"י _renderBookiElapsed, לא כאן.
 }
 
 function _clearBookiReadingLocal() {
@@ -81,7 +92,7 @@ function _minutesLabel(n) {
 function _renderBookiElapsed(startedAt) {
   const update = () => {
     const mins = Math.max(0, Math.floor((Date.now() - startedAt) / 60000));
-    const el = document.getElementById('booki-timer-label');
+    const el = document.getElementById('booki-timer-sublabel');
     if (el) el.textContent = _minutesLabel(mins);
   };
   update();

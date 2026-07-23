@@ -59,7 +59,7 @@ body {
   margin-bottom: 16px;
 }
 .header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.header-row h2 { font-size: 1.5rem; font-weight: 800; }
+.header-row h2 { font-size: 1.5rem; font-weight: 800; flex: 1; }
 .header-sub { font-size: 0.95rem; color: var(--muted); margin-top: 2px; }
 
 /* ─── Buttons ───────────────────────────────────────────────────── */
@@ -86,7 +86,17 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .btn-back { background: none; font-size: 1rem; font-weight: 700; color: var(--blue2); padding: 6px 0; white-space: nowrap; }
 .btn-switch { font-size: .8rem; font-weight: 600; color: var(--muted); background: #f0f0f0; border-radius: 20px; padding: 6px 14px; }
 .switch-group { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
-.btn-sc { background: rgba(41,128,185,.12); color: var(--blue); border: 1.5px solid rgba(41,128,185,.25); }
+.btn-footer-link {
+  display: block; margin: 4px auto 16px; background: none; border: none;
+  color: var(--muted); font-family: inherit; font-size: .85rem; font-weight: 600;
+  padding: 8px; opacity: .8;
+}
+.btn-footer-link:hover { opacity: 1; text-decoration: underline; }
+.btn-switch-reader {
+  font-size: .78rem; font-weight: 700; color: var(--blue);
+  background: rgba(41,128,185,.1); border: 1.5px solid rgba(41,128,185,.25);
+  border-radius: 20px; padding: 6px 12px; white-space: nowrap;
+}
 
 /* ─── SPLASH ────────────────────────────────────────────────────── */
 #screen-splash,
@@ -268,21 +278,33 @@ label { font-weight: 700; font-size: 1rem; }
 /* אובייקט דינמי אחד: גם כפתור ההתחלה וגם תצוגת הטיימר (לא שני כפתורים נפרדים) */
 .booki-timer-circle {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; margin: 30px auto; width: 200px; height: 200px; border-radius: 50%; border: none;
-  font-family: inherit; box-shadow: var(--shadow); transition: background .4s ease, transform .15s ease;
+  gap: 4px; margin: 30px auto; width: 200px; height: 200px; border-radius: 50%; border: 3px solid transparent;
+  box-sizing: border-box; padding: 0 22px; font-family: inherit; box-shadow: var(--shadow);
+  transition: background .4s ease, border-color .4s ease, transform .15s ease;
 }
 .booki-timer-idle {
   background: linear-gradient(135deg, #FF9A56, #FF6B6B); cursor: pointer;
   animation: bookiTimerInvite 2.2s ease-in-out infinite;
 }
 .booki-timer-idle:active { transform: scale(.96); }
-.booki-timer-starting, .booki-timer-running { background: var(--card); cursor: default; }
+.booki-timer-starting { background: var(--card); cursor: default; }
 @keyframes bookiTimerInvite { 0%, 100% { box-shadow: var(--shadow); } 50% { box-shadow: 0 6px 26px rgba(255,107,107,.45); } }
 
-.booki-timer-icon  { font-size: 2.2rem; }
-.booki-timer-label { font-size: 1.5rem; font-weight: 900; color: #fff; }
-.booki-timer-running .booki-timer-label,
-.booki-timer-running .booki-timer-icon { color: var(--text); }
+/* מצב "קוראים כרגע" — מסגרת ירוקה + רקע ירוק בהיר מאוד, עם פעימה עדינה שלא מסיחה דעת */
+.booki-timer-running {
+  background: #EAF9EE; border-color: #27AE60; cursor: default;
+  animation: bookiTimerActivePulse 2.8s ease-in-out infinite;
+}
+@keyframes bookiTimerActivePulse {
+  0%, 100% { box-shadow: var(--shadow), 0 0 0 0 rgba(39,174,96,.35); }
+  50%      { box-shadow: var(--shadow), 0 0 0 7px rgba(39,174,96,0); }
+}
+
+.booki-timer-icon  { font-size: 2.1rem; }
+.booki-timer-label { font-size: 1.1rem; font-weight: 900; color: #fff; text-align: center; line-height: 1.25; }
+.booki-timer-sublabel { font-size: 1.35rem; font-weight: 900; color: var(--text); }
+.booki-timer-running .booki-timer-label { color: #1e7d3c; font-size: 1rem; }
+.booki-timer-running .booki-timer-icon  { color: #1e7d3c; }
 .booki-timer-starting .booki-timer-icon { opacity: 0; }
 
 /* ניצוצות — האובייקט הדינמי שמלווה את המעבר מ"התחל" למספר הדקות (~1.2s) */
@@ -306,7 +328,7 @@ label { font-weight: 700; font-size: 1rem; }
   100% { opacity: 0; transform: translate(-50%,-50%) scale(.9); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .booki-timer-idle { animation: none; }
+  .booki-timer-idle, .booki-timer-running { animation: none; }
   .timer-sparkle { animation: none !important; opacity: 0 !important; }
 }
 
@@ -436,9 +458,6 @@ label { font-weight: 700; font-size: 1rem; }
   font-family: inherit;
 }
 .btn-share-app:hover { background: rgba(255,255,255,.28); }
-.btn-share-sm { font-size: 1rem; opacity: 0.75; }
-.btn-share-sm:hover { opacity: 1; }
-
 .share-overlay {
   position: fixed; inset: 0; z-index: 9000;
   background: rgba(0,0,0,.5);
