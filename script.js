@@ -67,6 +67,10 @@ function showScreen(id) {
     classViewUnsubscribe = null;
   }
   // נקה Firebase listener כשעוזבים את מסך החנות (תלמיד)
+  if (id !== 'screen-booki-reading' && typeof _bookiReadingInterval !== 'undefined' && _bookiReadingInterval) {
+    clearInterval(_bookiReadingInterval);
+    _bookiReadingInterval = null;
+  }
   if (id !== 'screen-shop' && typeof _shopViewUnsubscribe !== 'undefined' && _shopViewUnsubscribe) {
     _shopViewUnsubscribe();
     _shopViewUnsubscribe = null;
@@ -137,6 +141,7 @@ async function selectStudent(id) {
   document.getElementById('greeting-avatar').textContent      = STUDENT_EMOJIS[id];
   if (typeof setNavVisible === 'function') { setNavVisible(true); setNavTab(''); }
   if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
+  if (typeof checkBookiReadingResume === 'function') checkBookiReadingResume();
   showScreen('screen-main');
   currentStudentData = await loadStudentFull(id);
   document.getElementById('current-student-name').textContent = currentStudentData.name;
@@ -553,14 +558,16 @@ function _renderReaderCardContent(s) {
   const personalBest = typeof computePersonalBest === 'function' ? computePersonalBest(history) : 0;
   const histItems = history.slice(0, 10).map(h => {
     const isApp   = h.type === 'app';
-    // Firestore sessions: storyTitle (app) / bookTitle (book); legacy: h.title (book)
+    const isBooki = h.type === 'booki';
+    // Firestore sessions: storyTitle (app) / bookTitle (book); legacy: h.title (book); booki: none
     const title   = isApp ? (h.storyTitle || '') : (h.bookTitle || h.title || '');
     const dateLbl = h.date    || '';
     const minLbl  = (h.minutes ?? 0) + ' דקות';
     const ptsLbl  = '+' + (h.points ?? 0) + ' נק׳';
+    const icon    = isApp ? '📱' : isBooki ? '🦉' : '📖';
     return `
       <div class="history-item">
-        <span class="history-icon">${isApp ? '📱' : '📖'}</span>
+        <span class="history-icon">${icon}</span>
         <div>
           ${title ? `<span class="history-title">${title}</span>` : ''}
           <span class="history-meta">${[dateLbl, minLbl, ptsLbl].filter(Boolean).join(' · ')}</span>

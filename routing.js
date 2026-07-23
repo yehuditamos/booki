@@ -739,6 +739,7 @@ function _enterPersonalHome(userId, profile) {
   }
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji, createdByTeacher: !!profile?.createdByTeacher });
   if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
+  if (typeof checkBookiReadingResume === 'function') checkBookiReadingResume();
   showScreen('screen-main');
   _updateBugLabel();
 

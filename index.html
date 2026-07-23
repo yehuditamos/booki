@@ -109,12 +109,31 @@
       <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
     </div>
   </div>
+
+  <div class="booki-read-card">
+    <div class="booki-read-icons">
+      <span class="booki-read-clock">🕒</span>
+      <span class="booki-read-book">📖</span>
+      <span class="booki-read-owl">🦉</span>
+    </div>
+    <h3 class="booki-read-title">קריאה עם בוקי</h3>
+    <p class="booki-read-sub">בוקי ישמור לך על זמן הקריאה.</p>
+    <button class="btn-giant btn-booki-read" onclick="startBookiReading()">▶ להתחיל לקרוא</button>
+  </div>
+  <div id="booki-resume-banner" class="booki-resume-banner" style="display:none">
+    <p>נראה שהיית באמצע קריאה עם בוקי 👀</p>
+    <div class="booki-resume-actions">
+      <button class="btn-resume" onclick="resumeBookiReading()">▶ להמשיך לקרוא</button>
+      <button class="btn-discard" onclick="discardBookiReading()">✕ לא הפעם</button>
+    </div>
+  </div>
+
   <div class="main-menu">
-    <button class="btn-menu btn-menu-primary btn-blue" onclick="showLibrary()">
+    <button class="btn-menu btn-menu-secondary btn-blue" onclick="showLibrary()">
       <span class="btn-icon">📚</span>
       <span class="btn-label">לקריאה באפליקציה</span>
     </button>
-    <button class="btn-menu btn-menu-primary btn-orange" onclick="startBookReading()">
+    <button class="btn-menu btn-menu-secondary btn-orange" onclick="startBookReading()">
       <span class="btn-icon">📖</span>
       <span class="btn-label">קראתי מתוך ספר</span>
     </button>
@@ -251,6 +270,39 @@
   </div>
 </section>
 
+<!-- ══ קריאה עם בוקי — מסך טיימר ═══════════════════════════════════ -->
+<section id="screen-booki-reading" class="screen booki-reading-screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="cancelBookiReading()">יציאה →</button>
+    </div>
+  </div>
+  <div class="booki-say-moment">
+    <span class="booki-say-face">🦉</span>
+    <p class="booki-say-bubble">תיהנה/י מהספר! 📖<br>אני אשמור לך על זמן הקריאה.</p>
+  </div>
+  <div class="booki-elapsed-wrap">
+    <span class="booki-elapsed-icon">🕒</span>
+    <span id="booki-elapsed-minutes" class="booki-elapsed-num">0 דקות</span>
+  </div>
+  <div class="booki-finish-wrap">
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
+  </div>
+</section>
+
+<!-- ══ קריאה עם בוקי — רפלקציה קצרה ═══════════════════════════════ -->
+<section id="screen-booki-reflection" class="screen booki-reading-screen">
+  <div class="booki-say-moment">
+    <span class="booki-say-face">📖</span>
+    <p class="booki-say-bubble">ספר/י לי...<br><span id="booki-reflection-question"></span></p>
+  </div>
+  <div class="form-card">
+    <textarea id="booki-reflection-answer" class="input-field textarea-field" placeholder="אפשר לכתוב כאן..."></textarea>
+    <button class="btn-giant btn-orange" onclick="submitBookiReflection()">להמשיך ⬅️</button>
+    <button class="btn-skip" onclick="skipBookiReflection()">לדלג על השאלה</button>
+  </div>
+</section>
+
 <!-- ══ מסך סיום ════════════════════════════════════════════════════ -->
 <section id="screen-session-complete" class="screen complete-screen">
   <div class="complete-content">
@@ -272,6 +324,7 @@
       </div>
     </div>
     <p id="complete-encouragement" class="complete-encouragement"></p>
+    <p class="complete-tree-msg">🌳 כל דקת קריאה עוזרת לעץ שלך לגדול!</p>
     <p class="complete-msg">הדקות והנקודות נוספו לכרטיס הקורא שלך! 📚</p>
     <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 חזרה לתפריט</button>
   </div>
@@ -905,6 +958,7 @@
 
 <script src="script.js?v=2"></script>
 <script src="motivation.js?v=1"></script>
+<script src="booki-reading.js?v=1"></script>
 <script src="shop.js?v=1"></script>
 <script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>
