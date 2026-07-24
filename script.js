@@ -172,6 +172,8 @@ function filterLibrary(filter) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const tabMap = {
       all:            'tab-all',
+      'צעדים ראשונים': 'tab-beginner',
+      'תולעי ספרים':  'tab-bookworms',
       'מוכרים':       'tab-familiar',
       'מקוריים':      'tab-original',
       'ארוכים':       'tab-long',
