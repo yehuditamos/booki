@@ -168,6 +168,25 @@ async function fbGetOrCreateUserProfile(userId, defaults = {}) {
  * כרטיסי pre_ (נוצרו ע"י מורה): נשמרים תחת membership sub-collection (Option B).
  * @returns {Promise<string|null>} מזהה הסשן
  */
+/**
+ * לוג אבחוני מפורט לכשל בשמירת סשן קריאה — הכתיבה הזו היא fire-and-forget (לא חוסמת
+ * את מסך הסיום), ולכן כשלים כאן היו נבלעים בשקט לחלוטין. השדה החשוב ביותר כאן הוא
+ * ההשוואה בין authUid ל-userId: אם הם לא זהים, זו זהות-אימות שלא תואמת את הבעלים
+ * האמיתי של הסשן (permission-denied צפוי), ולא כשל רשת/רולז כללי.
+ */
+function _logReadingSessionSaveFailure(context, userId, session, e) {
+  const authUid = (typeof firebase !== 'undefined' && firebase.auth().currentUser)
+    ? firebase.auth().currentUser.uid : null;
+  console.warn(
+    `[firebase-clubs] fbSaveReadingSession FAILED (${context})`,
+    {
+      code: e?.code, message: e?.message,
+      userId, authUid, uidMismatch: authUid !== null && authUid !== userId,
+      sessionType: session?.type, online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+    }
+  );
+}
+
 async function fbSaveReadingSession(userId, session) {
   if (!_db()) return null;
 
@@ -179,7 +198,10 @@ async function fbSaveReadingSession(userId, session) {
       || null;
     const authUser = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
     const claimedByUid = authUser?.uid || null;
-    if (!clubId || !claimedByUid) return null;
+    if (!clubId || !claimedByUid) {
+      console.warn('[firebase-clubs] fbSaveReadingSession (pre-created) skipped — missing clubId/claimedByUid', { userId, clubId, claimedByUid });
+      return null;
+    }
     try {
       const ref = _db().collection('clubs').doc(clubId)
         .collection('memberships').doc(userId)
@@ -197,7 +219,7 @@ async function fbSaveReadingSession(userId, session) {
       });
       return id;
     } catch (e) {
-      console.warn('[firebase-clubs] fbSaveReadingSession (pre-created) error:', e);
+      _logReadingSessionSaveFailure('pre-created card', userId, session, e);
       return null;
     }
   }
@@ -216,7 +238,7 @@ async function fbSaveReadingSession(userId, session) {
     });
     return id;
   } catch (e) {
-    console.warn('[firebase-clubs] fbSaveReadingSession error:', e);
+    _logReadingSessionSaveFailure('self-joined', userId, session, e);
     return null;
   }
 }

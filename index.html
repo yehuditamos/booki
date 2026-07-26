@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -18,7 +18,7 @@
       <h1 class="welcome-title">וולקאםםםם!</h1>
       <h2 class="welcome-sub">ברוכים הבאים לבוקי 📚</h2>
       <div class="welcome-body">
-        <p>בוקי נמצאת כרגע בגרסת ניסיון.</p>
+        <p>בוקי נמצא כרגע בגרסת ניסיון.</p>
         <p>אם משהו לא עובד, נתקע או נראה מוזר — ממש נשמח לדעת.</p>
         <p>בהמשך יש כפתור קטן לדיווח על תקלות, והוא שולח הודעה ישירות ליהודית.</p>
         <p>תודה שאתם עוזרים לנו לשפר את בוקי ❤️</p>
@@ -100,20 +100,51 @@
       <div>
         <p class="greeting-hi">שלום,</p>
         <h2 class="greeting-name" id="current-student-name">—</h2>
+        <p class="home-encouragement" id="home-encouragement"></p>
       </div>
     </div>
     <div class="switch-group">
-      <button id="btn-switch-club" class="btn-switch btn-sc" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
-      <button class="btn-switch btn-share-sm" title="שתפי בוקי" onclick="shareApp()">📤</button>
       <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
     </div>
   </div>
+
+  <button id="booki-message-indicator" class="booki-message-indicator" style="display:none" onclick="openMessagesModal()">
+    🦉 לבוקי יש הודעה בשבילך!
+  </button>
+
+  <div id="shop-celebration-banner" class="shop-celebration-banner" style="display:none">
+    <div class="confetti-area" id="home-confetti-area"></div>
+    <div class="shop-celebration-icon">🎉</div>
+    <h3>מדהים!</h3>
+    <p>הכיתה שלכם הגיעה ליעד הקריאה!<br>בוקי פתח את חנות הפרסים!</p>
+    <button class="btn-giant btn-booki-read" onclick="enterShopFromCelebration()">🛍️ להיכנס לחנות</button>
+    <button class="btn-footer-link" onclick="dismissShopCelebration()">מאוחר יותר</button>
+  </div>
+
+  <div class="booki-read-card">
+    <div class="booki-read-icons">
+      <span class="booki-read-clock">🕒</span>
+      <span class="booki-read-book">📖</span>
+      <span class="booki-read-owl">🦉</span>
+    </div>
+    <h3 class="booki-read-title">קריאה עם בוקי</h3>
+    <p class="booki-read-sub">בוקי ישמור לך על זמן הקריאה.</p>
+    <button class="btn-giant btn-booki-read" onclick="startBookiReading()">▶ להתחיל לקרוא</button>
+  </div>
+  <div id="booki-resume-banner" class="booki-resume-banner" style="display:none">
+    <p>נראה שהיית באמצע קריאה עם בוקי 👀</p>
+    <div class="booki-resume-actions">
+      <button class="btn-resume" onclick="resumeBookiReading()">▶ להמשיך לקרוא</button>
+      <button class="btn-discard" onclick="discardBookiReading()">✕ לא הפעם</button>
+    </div>
+  </div>
+
   <div class="main-menu">
-    <button class="btn-menu btn-menu-primary btn-blue" onclick="showLibrary()">
+    <button class="btn-menu btn-menu-secondary btn-blue" onclick="showLibrary()">
       <span class="btn-icon">📚</span>
       <span class="btn-label">לקריאה באפליקציה</span>
     </button>
-    <button class="btn-menu btn-menu-primary btn-orange" onclick="startBookReading()">
+    <button class="btn-menu btn-menu-secondary btn-orange" onclick="startBookReading()">
       <span class="btn-icon">📖</span>
       <span class="btn-label">קראתי מתוך ספר</span>
     </button>
@@ -125,7 +156,13 @@
       <span class="btn-icon">🏆</span>
       <span class="btn-label">הכיתה שלנו</span>
     </button>
+    <button id="btn-goto-shop" class="btn-menu btn-menu-shop" style="display:none" onclick="showShop()">
+      <span class="btn-icon">🎁</span>
+      <span class="btn-label">חנות הכיתה</span>
+    </button>
   </div>
+
+  <button class="btn-footer-link" onclick="shareApp()">📤 שתפי את בוקי</button>
 </section>
 
 <!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
@@ -137,6 +174,8 @@
     </div>
     <div class="library-tabs">
       <button class="tab-btn active" id="tab-all"      onclick="filterLibrary('all')">הכל</button>
+      <button class="tab-btn"        id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 צעדים ראשונים</button>
+      <button class="tab-btn"        id="tab-bookworms" onclick="filterLibrary('תולעי ספרים')">📚 תולעי ספרים</button>
       <button class="tab-btn"        id="tab-tanakh"   onclick="filterLibrary('תנ״ך לילדים')">📜 תנ״ך לילדים</button>
       <button class="tab-btn"        id="tab-familiar" onclick="filterLibrary('מוכרים')">📚 מוכרים</button>
       <button class="tab-btn"        id="tab-original" onclick="filterLibrary('מקוריים')">✨ מקוריים</button>
@@ -246,12 +285,60 @@
   </div>
 </section>
 
+<!-- ══ קריאה עם בוקי — מסך טיימר ═══════════════════════════════════ -->
+<section id="screen-booki-reading" class="screen booki-reading-screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="cancelBookiReading()">יציאה →</button>
+    </div>
+  </div>
+
+  <div class="booki-say-moment">
+    <span class="booki-say-face">🦉</span>
+    <p id="booki-say-bubble-text" class="booki-say-bubble">הכל מוכן! 📖<br>לחצ/י על השעון כדי להתחיל לקרוא.</p>
+  </div>
+
+  <!-- אובייקט אחד: גם כפתור ההתחלה וגם תצוגת הטיימר — לא שני כפתורים נפרדים.
+       idle: "התחל" (לחיץ) -> starting: ניצוצות קצרים -> running: מספר הדקות (לא לחיץ) -->
+  <button id="booki-timer-btn" class="booki-timer-circle booki-timer-idle" onclick="beginBookiReadingTimer()">
+    <span class="booki-timer-sparkles">
+      <span class="timer-sparkle ts-1">✨</span>
+      <span class="timer-sparkle ts-2">⭐</span>
+      <span class="timer-sparkle ts-3">🌟</span>
+      <span class="timer-sparkle ts-4">✨</span>
+      <span class="timer-sparkle ts-5">⭐</span>
+      <span class="timer-sparkle ts-6">🌟</span>
+    </span>
+    <span id="booki-timer-icon" class="booki-timer-icon">▶</span>
+    <span id="booki-timer-label" class="booki-timer-label">התחל</span>
+    <span id="booki-timer-sublabel" class="booki-timer-sublabel"></span>
+  </button>
+
+  <div class="booki-finish-wrap">
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
+  </div>
+</section>
+
+<!-- ══ קריאה עם בוקי — רפלקציה קצרה ═══════════════════════════════ -->
+<section id="screen-booki-reflection" class="screen booki-reading-screen">
+  <div class="booki-say-moment">
+    <span class="booki-say-face">📖</span>
+    <p class="booki-say-bubble">ספר/י לי...<br><span id="booki-reflection-question"></span></p>
+  </div>
+  <div class="form-card">
+    <textarea id="booki-reflection-answer" class="input-field textarea-field" placeholder="אפשר לכתוב כאן..."></textarea>
+    <button class="btn-giant btn-orange" onclick="submitBookiReflection()">להמשיך ⬅️</button>
+    <button class="btn-skip" onclick="skipBookiReflection()">לדלג על השאלה</button>
+  </div>
+</section>
+
 <!-- ══ מסך סיום ════════════════════════════════════════════════════ -->
 <section id="screen-session-complete" class="screen complete-screen">
   <div class="complete-content">
     <div class="confetti-area" id="confetti-area"></div>
     <div class="complete-star animate-bounce">🌟</div>
     <h1 class="complete-title">כָּל הַכָּבוֹד!</h1>
+    <div id="levelup-banner" class="levelup-banner" style="display:none"></div>
     <p class="complete-sub">היום קראת:</p>
     <div class="complete-stats">
       <div class="stat-card stat-blue">
@@ -265,6 +352,8 @@
         <span class="stat-label">נקודות חדשות!</span>
       </div>
     </div>
+    <p id="complete-encouragement" class="complete-encouragement"></p>
+    <p class="complete-tree-msg">🌳 כל דקת קריאה עוזרת לעץ שלך לגדול!</p>
     <p class="complete-msg">הדקות והנקודות נוספו לכרטיס הקורא שלך! 📚</p>
     <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 חזרה לתפריט</button>
   </div>
@@ -276,6 +365,7 @@
     <div class="header-row">
       <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
       <h2>👤 כרטיס הקורא שלי</h2>
+      <button id="btn-switch-club" class="btn-switch-reader" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
     </div>
   </div>
   <div id="reader-card-content" class="reader-card-content"></div>
@@ -290,6 +380,18 @@
     </div>
   </div>
   <div id="class-content" class="class-content"></div>
+</section>
+
+<!-- ══ חנות הכיתה — תלמיד ═══════════════════════════════════════ -->
+<section id="screen-shop" class="screen">
+  <div class="confetti-area" id="shop-confetti-area"></div>
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
+      <h2 class="shop-wood-sign">🪧 החנות של בוקי</h2>
+    </div>
+  </div>
+  <div id="shop-student-content" class="shop-student-content"></div>
 </section>
 
 <!-- ══ בחירת מועדון (מועדונים מרובים) ════════════════════════════ -->
@@ -458,7 +560,26 @@
         <span class="tc-card-sub">כרטיסי כל חברי המועדון</span>
       </div>
     </button>
+    <button class="tc-class-card tc-class-card--sm" onclick="showShopManagement()">
+      <span class="tc-card-icon">🎁</span>
+      <div class="tc-card-text">
+        <span class="tc-card-title">חנות הכיתה</span>
+        <span class="tc-card-sub">ניהול פרסים להצבעת התלמידים</span>
+      </div>
+    </button>
   </div>
+</section>
+
+<!-- ══ ניהול חנות הכיתה — מורה ═══════════════════════════════════════ -->
+<section id="screen-shop-teacher" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה →</button>
+      <h2>🎁 חנות הכיתה</h2>
+    </div>
+    <p class="header-sub">הוסיפו פרסים — התלמידים יצביעו על הפרס האהוב עליהם כשהכיתה תגיע ליעד</p>
+  </div>
+  <div id="shop-teacher-content" class="shop-teacher-content"></div>
 </section>
 
 <!-- ══ יצירת מועדון — בחירת סוג ══════════════════════════════════ -->
@@ -835,6 +956,8 @@
 <script src="data-club-types.js?v=1"></script>
 <script src="seed-clubs.js?v=2"></script>
 <script src="firebase-clubs.js?v=3"></script>
+<script src="firebase-shop.js?v=2"></script>
+<script src="firebase-messages.js?v=2"></script>
 <script src="auth.js?v=1"></script>
 <script src="analytics.js?v=1"></script>
 
@@ -856,16 +979,21 @@
 <script src="content/stories-adventure.js?v=1"></script>
 <script src="content/stories-booki.js?v=1"></script>
 <script src="content/stories-reading.js?v=1"></script>
+<script src="content/stories-beginner.js?v=1"></script>
+<script src="content/stories-bookworms.js?v=1"></script>
 
 <!-- אגרגטור + לוגיקה (חייבים לטעון אחרי כל קבצי content/) -->
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=4"></script>
+<script src="routing.js?v=5"></script>
 <script src="admin-setup.js?v=1"></script>
 <script src="onboarding.js?v=3"></script>
 
-<script src="script.js?v=2"></script>
+<script src="script.js?v=3"></script>
+<script src="motivation.js?v=1"></script>
+<script src="booki-reading.js?v=2"></script>
+<script src="shop.js?v=2"></script>
 <script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>
 <script src="student-profile.js?v=1"></script>

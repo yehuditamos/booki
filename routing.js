@@ -738,11 +738,18 @@ function _enterPersonalHome(userId, profile) {
     emojiEl.onclick      = changeStudentAvatar;
   }
   setActiveReader({ userId, clubId: _activeClubId, name: studentData.name, emoji: studentData.emoji, createdByTeacher: !!profile?.createdByTeacher });
+  if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
+  if (typeof checkBookiReadingResume === 'function') checkBookiReadingResume();
+  if (typeof checkShopCelebration === 'function') checkShopCelebration(_activeClubId);
+  if (typeof checkNewMessages === 'function') checkNewMessages(_activeClubId, userId);
   showScreen('screen-main');
   _updateBugLabel();
 
   const clubBtn = document.getElementById('btn-switch-club');
   if (clubBtn) clubBtn.style.display = _activeClubId ? '' : 'none';
+
+  const shopBtn = document.getElementById('btn-goto-shop');
+  if (shopBtn) shopBtn.style.display = _activeClubId ? '' : 'none';
 
   const backBar = document.getElementById('main-back-club-students');
   if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
@@ -1364,19 +1371,29 @@ async function showTeacherClassScreen() {
   if (contentEl) contentEl.innerHTML = '<p class="class-loading">טוען נתוני כיתה...</p>';
   showScreen('screen-class');
 
-  const [club, memberships] = await Promise.all([
+  const [club, memberships, shopState, allMessages] = await Promise.all([
     typeof fbLoadClub === 'function'            ? fbLoadClub(clubId)            : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
+    typeof fbLoadShopState === 'function'       ? fbLoadShopState(clubId)       : Promise.resolve(null),
+    typeof fbLoadAllMessages === 'function'     ? fbLoadAllMessages(clubId)    : Promise.resolve([]),
   ]);
 
-  _renderTeacherClassContent(club, memberships, clubId);
+  // Sprint 11 — Part 8: תגובות תלמיד/ה שהמורה עוד לא ראתה — לפי מי הן ממוענות (toUserId).
+  const _unreadRepliesByStudent = new Set(
+    (allMessages || [])
+      .filter(m => m.senderRole === 'student' && !m.readByTeacher && m.toUserId)
+      .map(m => m.toUserId)
+  );
+
+  _renderTeacherClassContent(club, memberships, clubId, shopState, _unreadRepliesByStudent);
 }
 
-function _renderTeacherClassContent(club, memberships, clubId) {
+function _renderTeacherClassContent(club, memberships, clubId, shopState, unreadRepliesByStudent) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
-  const goalTarget = club?.goal?.target || 1500;
+  const goalTarget      = club?.goal?.target || 1500;
+  const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
   const now        = new Date();
   const active     = memberships.filter(m => m.status !== 'left');
   const sorted     = [...active].sort((a, b) =>
@@ -1421,6 +1438,8 @@ function _renderTeacherClassContent(club, memberships, clubId) {
               <strong class="tcd-m-mins">${mins}</strong>
               <span class="tcd-m-lbl">דק'</span>
             </div>
+            <button class="tcd-m-encourage${unreadRepliesByStudent?.has(m.userId) ? ' tcd-m-encourage-unread' : ''}"
+                    onclick="openEncouragementModal('${clubId}','${m.userId}','${safeName}')" title="שליחת עידוד / הודעות">💙</button>
             <button class="tcd-m-delete" onclick="removeClubMember('${clubId}','${m.userId}','${safeName}')" title="הסר מהמועדון">🗑️</button>
           </div>`;
       }).join('')
@@ -1444,6 +1463,13 @@ function _renderTeacherClassContent(club, memberships, clubId) {
         <span class="tcd-stat-lbl">קראו השבוע</span>
       </div>
     </div>
+    ${shopState ? `
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">🎯 יעד הכיתה</span>
+      </div>
+      <p class="class-empty" style="margin:0;padding:8px 0 0">היעד וההתקדמות עברו ל"חנות הכיתה" — שם גם עורכים אותו מעכשיו.</p>
+    </div>` : `
     <div class="tcd-goal-card">
       <div class="tcd-goal-header">
         <span class="tcd-goal-label">🎯 יעד הכיתה</span>
@@ -1458,11 +1484,201 @@ function _renderTeacherClassContent(club, memberships, clubId) {
         <div class="tcd-progress-fill" style="width:${pct}%"></div>
       </div>
       <div class="tcd-goal-pct">${pct}% הושלמו</div>
+    </div>`}
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">📊 תצוגת התקדמות לתלמידים</span>
+      </div>
+      <p class="class-empty" style="margin:0;padding:4px 0 10px">קובע מה התלמידים רואים במסך "הכיתה שלנו" שלהם. הדשבורד הזה שלך לא משתנה.</p>
+      <div class="progress-display-toggle">
+        <button class="pd-toggle-btn ${progressDisplay === 'leaderboard' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','leaderboard')">🏆 כיתה + טבלת מובילים</button>
+        <button class="pd-toggle-btn ${progressDisplay === 'progressOnly' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','progressOnly')">🌳 התקדמות כיתתית בלבד</button>
+      </div>
+    </div>
+    <div class="tcd-goal-card">
+      <div class="tcd-goal-header">
+        <span class="tcd-goal-label">📢 הודעה לכיתה</span>
+      </div>
+      <p class="class-empty" style="margin:0;padding:4px 0 10px">הודעה אחת שכל התלמידים במועדון יראו כהתראה מבוקי.</p>
+      <textarea id="announce-text" class="input-field textarea-field" maxlength="200"
+                placeholder="לדוגמה: מחר כולם מביאים את ספר הקריאה!"></textarea>
+      <button class="btn-giant btn-orange" onclick="sendAnnouncementAction('${clubId}')">📢 שליחה לכל הכיתה</button>
+      <p id="announce-msg" class="goals-target-msg"></p>
     </div>
     <div class="tcd-leaderboard">
       <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
       ${membersHtml}
     </div>`;
+}
+
+async function sendAnnouncementAction(clubId) {
+  const textEl = document.getElementById('announce-text');
+  const msgEl  = document.getElementById('announce-msg');
+  const text   = (textEl?.value || '').trim();
+  if (msgEl) msgEl.textContent = '';
+  if (!text) { if (msgEl) msgEl.textContent = 'יש לכתוב הודעה'; return; }
+
+  const btn = document.querySelector('.tcd-goal-card .btn-orange');
+  if (btn) { btn.disabled = true; btn.textContent = 'שולח...'; }
+
+  const result = typeof fbSendMessage === 'function'
+    ? await fbSendMessage(clubId, { type: 'announcement', toUserId: null, text })
+    : { ok: false };
+
+  if (btn) { btn.disabled = false; btn.textContent = '📢 שליחה לכל הכיתה'; }
+  // Sprint 11 — Part 3: האישור מוצג רק אחרי שהשמירה במסד הנתונים באמת הצליחה —
+  // בכישלון נשארים על אותה הודעת שגיאה ברורה, בלי לנקות את השדה.
+  if (!result.ok) { if (msgEl) msgEl.textContent = 'שגיאה בשליחה — נסה/י שוב'; return; }
+
+  if (textEl) textEl.value = '';
+  if (msgEl) msgEl.textContent = '✅ ההודעה נשלחה בהצלחה';
+}
+
+// ─── עידוד אישי (Sprint 10 — Part 6) ──────────────────────────────────────────
+
+const ENCOURAGEMENT_PRESETS = [
+  { emoji: '⭐', text: 'עבודה מעולה!' },
+  { emoji: '📚', text: 'תמשיכו לקרוא!' },
+  { emoji: '💙', text: 'אני גאה בך!' },
+  { emoji: '🌟', text: 'את/ה משתפר/ת כל יום!' },
+  { emoji: '👏', text: 'מאמץ מצוין!' },
+];
+
+let _encourageLatestThreadId = null; // Sprint 11 — Part 8: שרשור פעיל להמשך שיחה, אם קיים
+let _encourageStudentName = '';
+
+async function openEncouragementModal(clubId, userId, name) {
+  document.getElementById('encourage-modal')?.remove();
+  _encourageLatestThreadId = null;
+  _encourageStudentName = name;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'encourage-modal';
+  overlay.className = 'av-modal-overlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeEncouragementModal(); });
+
+  overlay.innerHTML = `
+    <div class="av-modal-box" onclick="event.stopPropagation()">
+      <button class="av-modal-close" onclick="closeEncouragementModal()">✕</button>
+      <p class="av-modal-title">💙 שיחה עם ${_escHtml(name)}</p>
+
+      <div id="encourage-thread-area" class="rc-inbox-threads"></div>
+
+      <div class="encourage-presets">
+        ${ENCOURAGEMENT_PRESETS.map(p =>
+          `<button type="button" class="encourage-preset-btn" onclick="_pickEncouragementPreset(this,'${_escHtml(p.emoji + ' ' + p.text).replace(/'/g, "\\'")}')">${p.emoji} ${_escHtml(p.text)}</button>`
+        ).join('')}
+      </div>
+
+      <label class="reward-field-label" for="encourage-text">או כתבו הודעה משלכם</label>
+      <textarea id="encourage-text" class="input-field textarea-field" maxlength="200" placeholder="הודעה אישית..."></textarea>
+
+      <p id="encourage-error" class="auth-error"></p>
+      <button class="btn-giant btn-green" onclick="sendEncouragementAction('${clubId}','${userId}')">💙 שליחה</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  await _loadEncouragementThread(clubId, userId);
+}
+
+/**
+ * Sprint 11 — Part 8: טוען את היסטוריית ההודעות/תגובות עם התלמיד/ה הזה/ו, ומסמן
+ * תגובות שהמורה עדיין לא ראתה כ"נקראו" — בדיוק כמו בכרטיס הקורא של התלמיד/ה, רק
+ * מהצד השני. שומר את מזהה השרשור האחרון כדי שהשליחה הבאה תמשיך את אותה שיחה.
+ */
+async function _loadEncouragementThread(clubId, userId) {
+  const area = document.getElementById('encourage-thread-area');
+  if (!area) return;
+  area.innerHTML = '<div class="rc-inbox-loading">⏳ טוען היסטוריה...</div>';
+
+  let messages = [];
+  try {
+    messages = typeof fbLoadMyMessages === 'function' ? await fbLoadMyMessages(clubId, userId) : [];
+  } catch (e) {
+    area.innerHTML = '<div class="rc-inbox-error">לא הצלחנו לטעון את ההיסטוריה.</div>';
+    return;
+  }
+
+  // רק הודעות אישיות אל/מ התלמיד/ה הזה/ו — הכרזות כיתתיות מנוהלות במקום אחר.
+  const personal = messages.filter(m => m.toUserId === userId);
+  if (!personal.length) { area.innerHTML = ''; _encourageLatestThreadId = null; return; }
+
+  const threads = typeof _groupMessagesIntoThreads === 'function' ? _groupMessagesIntoThreads(personal) : [];
+  _encourageLatestThreadId = threads[0]?.threadId || null;
+
+  area.innerHTML = threads.slice(0, 3).reverse().map(t => `
+    <div class="rc-thread">
+      ${t.messages.map(m => {
+        const fromStudent = m.senderRole === 'student';
+        return `
+          <div class="rc-msg-bubble ${fromStudent ? 'rc-msg-mine' : 'rc-msg-teacher'}">
+            <span class="rc-msg-from">${fromStudent ? '🧒 ' + _escHtml(_encourageStudentName) : '💙 את/ה כתבת'}</span>
+            <p class="rc-msg-text">${_escHtml(m.text || '')}</p>
+            <span class="rc-msg-time">${typeof _fmtMsgTime === 'function' ? _fmtMsgTime(m.createdAt) : ''}</span>
+          </div>`;
+      }).join('')}
+    </div>`).join('');
+
+  personal.forEach(m => {
+    if (m.senderRole === 'student' && !m.readByTeacher) {
+      if (typeof fbMarkMessageRead === 'function') fbMarkMessageRead(clubId, m.id, 'teacher');
+    }
+  });
+}
+
+function _pickEncouragementPreset(btn, text) {
+  const textEl = document.getElementById('encourage-text');
+  if (textEl) textEl.value = text;
+  document.querySelectorAll('#encourage-modal .encourage-preset-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function closeEncouragementModal() {
+  document.getElementById('encourage-modal')?.remove();
+}
+
+async function sendEncouragementAction(clubId, userId) {
+  const textEl = document.getElementById('encourage-text');
+  const errEl  = document.getElementById('encourage-error');
+  const text   = (textEl?.value || '').trim();
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('encourage-success'); }
+  if (!text) { if (errEl) errEl.textContent = 'יש לכתוב הודעה או לבחור אחת מוכנה'; return; }
+
+  const btn = document.querySelector('#encourage-modal .btn-green');
+  if (btn) { btn.disabled = true; btn.textContent = 'שולח...'; }
+
+  // Sprint 11 — Part 8: אם כבר יש שיחה פתוחה עם התלמיד/ה הזה/ו — ממשיכים אותה
+  // שיחה (fbReplyToMessage) במקום לפתוח שרשור חדש בכל הודעה.
+  const isReply = !!_encourageLatestThreadId;
+  const teacherUid = (typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null) || null;
+  const result = isReply
+    ? (typeof fbReplyToMessage === 'function'
+        ? await fbReplyToMessage(clubId, { threadId: _encourageLatestThreadId, toUserId: userId, text, senderRole: 'teacher', senderId: teacherUid })
+        : { ok: false })
+    : (typeof fbSendMessage === 'function'
+        ? await fbSendMessage(clubId, { type: 'encouragement', toUserId: userId, text })
+        : { ok: false });
+
+  if (!result.ok) {
+    // Sprint 11 — Part 3: כישלון = שגיאה ברורה, וחלון השליחה נשאר פתוח (לא נסגר).
+    if (errEl) errEl.textContent = 'שגיאה בשליחה — נסה/י שוב';
+    if (btn) { btn.disabled = false; btn.textContent = '💙 שליחה'; }
+    return;
+  }
+
+  if (textEl) textEl.value = '';
+  if (errEl) { errEl.textContent = '✅ ההודעה נשלחה בהצלחה'; errEl.classList.add('encourage-success'); }
+
+  if (isReply) {
+    // המשך שיחה קיימת — לא סוגרים, רק מרעננים את השרשור כדי שהתגובה תופיע מיד (Part 8).
+    if (btn) { btn.disabled = false; btn.textContent = '💙 שליחה'; }
+    await _loadEncouragementThread(clubId, userId);
+  } else {
+    // הודעה ראשונה (Part 3) — סוגרים אחרי אישור קצר, כמו עד כה.
+    if (btn) btn.textContent = '✅ נשלח';
+    setTimeout(closeEncouragementModal, 1100);
+  }
 }
 
 async function showClubStudents() {
@@ -1589,6 +1805,13 @@ async function editClubGoal(clubId, currentTarget) {
   showTeacherClassScreen();
 }
 
+async function setProgressDisplayMode(clubId, mode) {
+  if (typeof fbSaveClub === 'function') {
+    await fbSaveClub(clubId, { settings: { progressDisplay: mode } });
+  }
+  showTeacherClassScreen();
+}
+
 function goToTeacherArea() {
   const t = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
   if (t) showTeacherDashboard(t);
@@ -1618,7 +1841,7 @@ Object.assign(window, {
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
   showClubStudents, goBackToClubStudents,
-  enterReadingSession, showTeacherClassScreen, editClubGoal, removeClubMember,
+  enterReadingSession, showTeacherClassScreen, editClubGoal, setProgressDisplayMode, removeClubMember,
   toggleAddStudentForm, submitAddStudent,
   _classGoBack, _goBackToTeacherDashboard, _goBackFromWhoReads,
   _updateSplashForRole,
@@ -1628,4 +1851,7 @@ Object.assign(window, {
   changeStudentAvatar, _apmTab, _apmPickEmoji, _apmSave,
   // Solo + Share
   openSoloCard, shareApp, _copyShareText,
+  // Sprint 10 — messaging
+  sendAnnouncementAction,
+  openEncouragementModal, closeEncouragementModal, _pickEncouragementPreset, sendEncouragementAction,
 });

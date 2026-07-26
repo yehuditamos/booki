@@ -4,5 +4,26 @@
     "location": "me-west1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "*.md",
+      "audit.js",
+      "audit_omer.js",
+      "check_omri.js",
+      "debug_omer_device.js",
+      "diagnose_nina.js",
+      "dryrun_omri.js",
+      "fix_alexander.js",
+      "fix_omer_lavhar.js",
+      "fix_omri.js",
+      "fix_shira.js",
+      "firestore.rules",
+      "firestore.indexes.json"
+    ]
   }
 }
