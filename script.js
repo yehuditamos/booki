@@ -598,7 +598,7 @@ function _renderReaderCardContent(s) {
   document.getElementById('reader-card-content').innerHTML = `
     <div class="card-hero">
       <button id="rc-message-badge" class="rc-message-badge" style="display:none"
-              onclick="openReaderCardInbox()" title="ההודעות שלי">
+              onclick="goToMessagesInbox()" title="ההודעות שלי">
         ✉️<span id="rc-message-count" class="rc-message-count"></span>
       </button>
       <div class="card-avatar-wrap">${avatarTag}${changeBtn}</div>
@@ -650,11 +650,16 @@ function _renderReaderCardContent(s) {
 // ─── כרטיס קורא — הודעות (Sprint 11 — Parts 5-7) ─────────────────────
 
 function _readerCardMessageContext() {
-  const clubId = window.currentClubId
-    || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
-  const s = currentStudentData || {};
-  // תלמיד/ה "מקומי/ת" (legacy, מזהה מספרי, בלי מועדון) — אין הודעות רלוונטיות.
-  const userId = (typeof s.id === 'number') ? null : s.id;
+  // אותו סדר-עדיפויות בדיוק כמו _currentReaderUserId ב-shop.js: getActiveReader()
+  // (localStorage, יציב) קודם, ורק אז נופלים ל-currentStudentData/window — כי currentStudentData
+  // הוא let top-level ב-script.js, ו-window.currentStudentData הוא property נפרד על ה-window;
+  // showReaderCard() לפעמים מעדכן רק את ה-window אחד (ר' שורה עם ה-spread enriched למטה),
+  // כך שהשניים יכולים להתבדר — getActiveReader() הוא תמיד המקור האמין.
+  const reader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  const clubId = window.currentClubId || reader?.clubId || null;
+  const s = currentStudentData || window.currentStudentData || {};
+  const fallbackId = (typeof s.id === 'number') ? null : s.id; // legacy מקומי (מספרי) — לא רלוונטי
+  const userId = reader?.userId || fallbackId || null;
   return { clubId, userId };
 }
 
@@ -704,6 +709,20 @@ function _renderReaderCardMessageBadge(unreadCount) {
 
 function openReaderCardInbox() {
   document.getElementById('rc-inbox-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Sprint 11 — Part 5 fix: כל נקודת-כניסה להודעות (ההתראה בעמוד הבית, וגם התג בכרטיס
+ * הקורא עצמו) חייבת בפועל לפתוח את כרטיס הקורא ולהראות שם את "ההודעות שלי" — לא רק
+ * מודל שטוח נפרד (openMessagesModal הישן, Sprint 10) שאין בו תשובה בכלל. אם כבר
+ * נמצאים על כרטיס הקורא רק גוללים; אחרת נכנסים אליו קודם.
+ */
+async function goToMessagesInbox() {
+  const alreadyThere = document.getElementById('screen-reader-card')?.classList.contains('active');
+  if (!alreadyThere && typeof showReaderCard === 'function') {
+    await showReaderCard();
+  }
+  openReaderCardInbox();
 }
 
 function _renderReaderCardInbox(clubId, userId, messages) {
@@ -785,6 +804,10 @@ async function sendReaderCardReply(clubId, userId, threadId) {
   const btn = document.querySelector(`.rc-thread[data-thread-id="${threadId}"] .rc-reply-btn`);
   _rcReplySending = true;
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  // אותו תיקון כמו בהצבעה (Part 2): מבטיחים session אמיתי לפני כתיבה רגישת-זהות,
+  // ולא סומכים על מה שנשמר ב-localStorage בלבד.
+  if (typeof ensureStudentAuth === 'function') { try { await ensureStudentAuth(); } catch (e) {} }
 
   const result = typeof fbReplyToMessage === 'function'
     ? await fbReplyToMessage(clubId, { threadId, toUserId: userId, text, senderRole: 'student', senderId: userId })

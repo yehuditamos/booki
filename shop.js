@@ -977,6 +977,25 @@ async function castVoteAction(clubId, voteId, rewardId) {
   const userId = _currentReaderUserId();
   if (!userId) return;
 
+  // Sprint 11 — Part 2 (real fix, not just better error text): every other sensitive
+  // student write in this app (booki-reading.js, script.js, routing.js, onboarding.js,
+  // student-profile.js) calls ensureStudentAuth() first, to guarantee a live, valid
+  // anonymous session before writing — shop.js never did. Without it, a lost/rotated
+  // anonymous session (e.g. IndexedDB persistence not surviving in some browser modes)
+  // was invisible until the write itself failed with a bare permission-denied.
+  if (typeof ensureStudentAuth === 'function') { try { await ensureStudentAuth(); } catch (e) {} }
+
+  const reader  = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  const authUid = (typeof firebase !== 'undefined' && firebase.auth().currentUser)
+    ? firebase.auth().currentUser.uid : null;
+  console.log('[VOTE IDENTITY DEBUG]', {
+    activeStudentId: reader?.userId ?? null,
+    payloadStudentId: userId,
+    storedStudentId: window.currentStudentData?.id ?? null,
+    createdByTeacher: !!reader?.createdByTeacher,
+    authUid, clubId, voteId, rewardId,
+  });
+
   document.querySelectorAll('.reward-vote-btn').forEach(b => { b.disabled = true; b.textContent = '...'; });
 
   const result = typeof fbCastVote === 'function'

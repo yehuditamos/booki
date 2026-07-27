@@ -106,6 +106,10 @@ function fbWatchRewards(clubId, callback, { activeOnly = false } = {}) {
   if (!_db() || !clubId) { callback([]); return () => {}; }
   return _rewardsRef(clubId).onSnapshot(
     snap => {
+      console.log('[REWARDS SNAPSHOT]', {
+        clubId, activeOnly, size: snap.size,
+        docs: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+      });
       let rewards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (activeOnly) rewards = rewards.filter(r => r.active !== false);
       rewards.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
