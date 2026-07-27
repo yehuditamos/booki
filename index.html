@@ -6,7 +6,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
 
@@ -575,11 +575,23 @@
   <div class="screen-header sticky-header">
     <div class="header-row">
       <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה →</button>
-      <h2>🎁 חנות הכיתה</h2>
+      <h2>🎁 ניהול פרסים</h2>
+      <button id="btn-goal-settings-gear" class="btn-header-icon" style="display:none" onclick="showGoalSettings()" title="הגדרות יעד">⚙️</button>
     </div>
     <p class="header-sub">הוסיפו פרסים — התלמידים יצביעו על הפרס האהוב עליהם כשהכיתה תגיע ליעד</p>
   </div>
   <div id="shop-teacher-content" class="shop-teacher-content"></div>
+</section>
+
+<!-- ══ הגדרות יעד — מורה ══════════════════════════════════════════ -->
+<section id="screen-goal-settings" class="screen">
+  <div class="screen-header sticky-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="showScreen('screen-shop-teacher')">חזרה →</button>
+      <h2>⚙️ הגדרות יעד</h2>
+    </div>
+  </div>
+  <div id="goal-settings-content" class="goal-settings-content"></div>
 </section>
 
 <!-- ══ יצירת מועדון — בחירת סוג ══════════════════════════════════ -->
@@ -986,14 +998,14 @@
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=7"></script>
+<script src="routing.js?v=8"></script>
 <script src="admin-setup.js?v=1"></script>
 <script src="onboarding.js?v=3"></script>
 
 <script src="script.js?v=5"></script>
 <script src="motivation.js?v=1"></script>
 <script src="booki-reading.js?v=2"></script>
-<script src="shop.js?v=4"></script>
+<script src="shop.js?v=6"></script>
 <script src="owner-dashboard.js?v=3"></script>
 <script src="initial-setup.js?v=1"></script>
 <script src="student-profile.js?v=1"></script>

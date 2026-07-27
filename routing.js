@@ -1485,28 +1485,27 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState, unread
 
   content.innerHTML = `
     <div class="tcd-stats-row">
-      <div class="tcd-stat-card">
-        <span class="tcd-stat-icon">👥</span>
-        <strong class="tcd-stat-num">${active.length}</strong>
-        <span class="tcd-stat-lbl">חברים</span>
+      <div class="ui-stat-chip">
+        <span class="ui-stat-icon">👥</span>
+        <strong class="ui-stat-num">${active.length}</strong>
+        <span class="ui-stat-lbl">חברים</span>
       </div>
-      <div class="tcd-stat-card">
-        <span class="tcd-stat-icon">⏱️</span>
-        <strong class="tcd-stat-num">${Math.round(totalMins)}</strong>
-        <span class="tcd-stat-lbl">דקות קריאה</span>
+      <div class="ui-stat-chip">
+        <span class="ui-stat-icon">⏱️</span>
+        <strong class="ui-stat-num">${Math.round(totalMins)}</strong>
+        <span class="ui-stat-lbl">דק' קריאה</span>
       </div>
-      <div class="tcd-stat-card">
-        <span class="tcd-stat-icon">🟢</span>
-        <strong class="tcd-stat-num">${readersThisWeek}</strong>
-        <span class="tcd-stat-lbl">קראו השבוע</span>
+      <div class="ui-stat-chip">
+        <span class="ui-stat-icon">🟢</span>
+        <strong class="ui-stat-num">${readersThisWeek}</strong>
+        <span class="ui-stat-lbl">קראו השבוע</span>
       </div>
     </div>
+
     ${shopState ? `
-    <div class="tcd-goal-card">
-      <div class="tcd-goal-header">
-        <span class="tcd-goal-label">🎯 יעד הכיתה</span>
-      </div>
-      <p class="class-empty" style="margin:0;padding:8px 0 0">היעד וההתקדמות עברו ל"חנות הכיתה" — שם גם עורכים אותו מעכשיו.</p>
+    <div class="tcd-goal-card tcd-goal-card-compact">
+      <span class="tcd-goal-label">🎯 היעד עבר לניהול בחנות</span>
+      <button class="tcd-goal-hero-link" onclick="showShopManagement()">לחנות הכיתה ←</button>
     </div>` : `
     <div class="tcd-goal-card">
       <div class="tcd-goal-header">
@@ -1523,30 +1522,39 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState, unread
       </div>
       <div class="tcd-goal-pct">${pct}% הושלמו</div>
     </div>`}
-    <div class="tcd-goal-card">
-      <div class="tcd-goal-header">
-        <span class="tcd-goal-label">📊 תצוגת התקדמות לתלמידים</span>
+
+    <div class="tcd-quick-actions">
+      <div class="tcd-qa-view" title="מה התלמידים רואים במסך 'הכיתה שלנו' שלהם">
+        <span class="tcd-qa-view-lbl">תצוגה:</span>
+        <button class="tcd-qa-btn ${progressDisplay === 'leaderboard' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','leaderboard')" title="כיתה + טבלת מובילים">🏆</button>
+        <button class="tcd-qa-btn ${progressDisplay === 'progressOnly' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','progressOnly')" title="התקדמות כיתתית בלבד">🌳</button>
       </div>
-      <p class="class-empty" style="margin:0;padding:4px 0 10px">קובע מה התלמידים רואים במסך "הכיתה שלנו" שלהם. הדשבורד הזה שלך לא משתנה.</p>
-      <div class="progress-display-toggle">
-        <button class="pd-toggle-btn ${progressDisplay === 'leaderboard' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','leaderboard')">🏆 כיתה + טבלת מובילים</button>
-        <button class="pd-toggle-btn ${progressDisplay === 'progressOnly' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','progressOnly')">🌳 התקדמות כיתתית בלבד</button>
-      </div>
+      <button class="tcd-qa-announce" onclick="toggleAnnounceComposer()">📢 הודעה לכיתה</button>
     </div>
-    <div class="tcd-goal-card">
-      <div class="tcd-goal-header">
-        <span class="tcd-goal-label">📢 הודעה לכיתה</span>
-      </div>
-      <p class="class-empty" style="margin:0;padding:4px 0 10px">הודעה אחת שכל התלמידים במועדון יראו כהתראה מבוקי.</p>
+
+    <div id="tcd-announce-composer" class="tcd-announce-composer" style="display:none">
       <textarea id="announce-text" class="input-field textarea-field" maxlength="200"
                 placeholder="לדוגמה: מחר כולם מביאים את ספר הקריאה!"></textarea>
       <button class="btn-giant btn-orange" onclick="sendAnnouncementAction('${clubId}')">📢 שליחה לכל הכיתה</button>
       <p id="announce-msg" class="goals-target-msg"></p>
     </div>
+
     <div class="tcd-leaderboard">
       <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
-      ${membersHtml}
+      <div class="tcd-lb-scroll">
+        ${membersHtml}
+      </div>
     </div>`;
+}
+
+/** תג-הודעה מכווץ כברירת מחדל (Redesign) — פותח/סוגר את תיבת הכתיבה בלחיצה על "📢 הודעה לכיתה". */
+function toggleAnnounceComposer() {
+  const box = document.getElementById('tcd-announce-composer');
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? '' : 'none';
+  if (box.style.display !== 'none') {
+    document.getElementById('announce-text')?.focus();
+  }
 }
 
 async function sendAnnouncementAction(clubId) {
@@ -1556,7 +1564,7 @@ async function sendAnnouncementAction(clubId) {
   if (msgEl) msgEl.textContent = '';
   if (!text) { if (msgEl) msgEl.textContent = 'יש לכתוב הודעה'; return; }
 
-  const btn = document.querySelector('.tcd-goal-card .btn-orange');
+  const btn = document.querySelector('.tcd-announce-composer .btn-orange');
   if (btn) { btn.disabled = true; btn.textContent = 'שולח...'; }
 
   const result = typeof fbSendMessage === 'function'
@@ -1565,11 +1573,17 @@ async function sendAnnouncementAction(clubId) {
 
   if (btn) { btn.disabled = false; btn.textContent = '📢 שליחה לכל הכיתה'; }
   // Sprint 11 — Part 3: האישור מוצג רק אחרי שהשמירה במסד הנתונים באמת הצליחה —
-  // בכישלון נשארים על אותה הודעת שגיאה ברורה, בלי לנקות את השדה.
+  // בכישלון נשארים על אותה הודעת שגיאה ברורה, בלי לנקות את השדה, ובלי לכווץ את התיבה.
   if (!result.ok) { if (msgEl) msgEl.textContent = 'שגיאה בשליחה — נסה/י שוב'; return; }
 
   if (textEl) textEl.value = '';
   if (msgEl) msgEl.textContent = '✅ ההודעה נשלחה בהצלחה';
+  // Redesign: התיבה מכווצת בחזרה כמה שניות אחרי הצלחה, כדי שהאישור עדיין ייראה לרגע.
+  setTimeout(() => {
+    const box = document.getElementById('tcd-announce-composer');
+    if (box) box.style.display = 'none';
+    if (msgEl) msgEl.textContent = '';
+  }, 1800);
 }
 
 // ─── עידוד אישי (Sprint 10 — Part 6) ──────────────────────────────────────────

@@ -62,21 +62,18 @@ async function _renderShopManagement(clubId) {
     typeof fbLoadShopState  === 'function' ? fbLoadShopState(clubId)  : Promise.resolve(null),
   ]);
 
+  // Redesign: הגדרות היעד עברו למסך נפרד (⚙️) — הכפתור מוצג רק אחרי שהחנות הופעלה,
+  // כי לפני זה אין עדיין cycle/shopSettings אמיתיים לערוך.
+  const gearBtn = document.getElementById('btn-goal-settings-gear');
+  if (gearBtn) gearBtn.style.display = shopState ? '' : 'none';
+
   let statusHtml;
-  let goalsCardHtml = '';
 
   if (!shopState) {
     statusHtml = _enableShopSetupHtml(clubId);
   } else {
-    // Task 5: הכל-במקום-אחד — הכרטיס הזה זקוק לאותם club/cycle/econ בלי קשר למצב החנות,
-    // אז הם נטענים פעם אחת כאן, למעלה, ולא בכל ענף בנפרד.
-    const [club, cycle, econ] = await Promise.all([
-      typeof fbLoadClub === 'function' ? fbLoadClub(clubId) : Promise.resolve(null),
-      shopState.activeCycleId && typeof fbLoadGoalCycle === 'function'
-        ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
-      typeof fbLoadEconomy === 'function' ? fbLoadEconomy(clubId) : Promise.resolve(null),
-    ]);
-    goalsCardHtml = _classroomGoalsCardHtml(clubId, cycle, econ, club?.shopSettings || {});
+    const cycle = shopState.activeCycleId && typeof fbLoadGoalCycle === 'function'
+      ? await fbLoadGoalCycle(clubId, shopState.activeCycleId) : null;
 
     if (shopState.state === 'GOAL_REACHED_PENDING_SHOP') {
       statusHtml = _goalReachedTeacherHtml(clubId);
@@ -87,11 +84,42 @@ async function _renderShopManagement(clubId) {
     } else if (shopState.state === 'purchase_complete') {
       statusHtml = await _purchaseCompleteTeacherHtml(clubId, shopState, cycle);
     } else {
+      const econ = typeof fbLoadEconomy === 'function' ? await fbLoadEconomy(clubId) : null;
       statusHtml = _browsingProgressHtml(cycle, econ);
     }
   }
 
-  _renderRewardGrid(clubId, rewards, goalsCardHtml + statusHtml, shopState?.lastWinner?.rewardId || null);
+  _renderRewardGrid(clubId, rewards, statusHtml, shopState?.lastWinner?.rewardId || null);
+}
+
+// ─── Goal Settings — מסך נפרד (Redesign) ──────────────────────────────────────
+
+async function showGoalSettings() {
+  const clubId = window.currentClubId;
+  if (!clubId) return;
+  showScreen('screen-goal-settings');
+  await _renderGoalSettingsScreen(clubId);
+}
+
+async function _renderGoalSettingsScreen(clubId) {
+  const container = document.getElementById('goal-settings-content');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
+
+  const shopState = typeof fbLoadShopState === 'function' ? await fbLoadShopState(clubId) : null;
+  if (!shopState) {
+    container.innerHTML = `<p class="class-empty" style="padding:2rem 1rem;text-align:center">יש להפעיל קודם את החנות דרך מסך "ניהול פרסים".</p>`;
+    return;
+  }
+
+  const [club, cycle, econ] = await Promise.all([
+    typeof fbLoadClub === 'function' ? fbLoadClub(clubId) : Promise.resolve(null),
+    shopState.activeCycleId && typeof fbLoadGoalCycle === 'function'
+      ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
+    typeof fbLoadEconomy === 'function' ? fbLoadEconomy(clubId) : Promise.resolve(null),
+  ]);
+
+  container.innerHTML = _goalSettingsHtml(clubId, cycle, econ, club?.shopSettings || {});
 }
 
 function _enableShopSetupHtml(clubId) {
@@ -146,51 +174,50 @@ function _browsingProgressHtml(cycle, econ) {
     </div>`;
 }
 
-// ─── Classroom Goals (Sprint 9 — Task 1/2/3/5) ────────────────────────────────
+// ─── Goal Settings screen content (Redesign — was _classroomGoalsCardHtml) ────
+//
+// שורות קומפקטיות במקום כרטיס-ענק אחד: כל הגדרה שורה אחת, כדי שהוספת הגדרה עתידית
+// (Scale) תהיה עוד שורה באותה רשימה, לא עיצוב מחדש של כל המסך.
 
-function _classroomGoalsCardHtml(clubId, cycle, econ, shopSettings) {
+function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
   const target     = cycle?.target || 0;
   const progress   = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle?.startBaseline || 0));
   const openMode      = shopSettings.openMode      || 'manual';
   const afterPurchase = shopSettings.afterPurchase || 'close';
   return `
-    <div class="goals-card">
-      <h3>🎯 יעדי הכיתה</h3>
-
-      <div class="goals-section">
-        <span class="goals-label">סוג יעד</span>
-        <div class="goals-toggle-group">
-          <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
-          <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
-          <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
-        </div>
+    <div class="goals-row">
+      <span class="goals-row-label">סוג יעד</span>
+      <div class="goals-toggle-group">
+        <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
+        <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
+        <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
       </div>
+    </div>
 
-      <div class="goals-section">
-        <span class="goals-label">יעד נוכחי</span>
-        <div class="goals-edit-row">
-          <input id="goals-target-input" type="number" class="input-field" value="${target}" min="10" step="10" />
-          <span>דקות</span>
-          <button type="button" class="btn-small-save" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">שמור</button>
-        </div>
-        <p class="goals-progress-line">${progress.toLocaleString('he-IL')} <span>/</span> ${target.toLocaleString('he-IL')} דקות</p>
-        <p id="goals-target-msg" class="goals-target-msg"></p>
+    <div class="goals-row">
+      <span class="goals-row-label">יעד נוכחי</span>
+      <div class="goals-edit-row">
+        <input id="goals-target-input" type="number" class="input-field" value="${target}" min="10" step="10" />
+        <span>דקות</span>
+        <button type="button" class="btn-small-save" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">שמור</button>
       </div>
+      <p class="goals-progress-line">${progress.toLocaleString('he-IL')} <span>/</span> ${target.toLocaleString('he-IL')} דקות</p>
+      <p id="goals-target-msg" class="goals-target-msg"></p>
+    </div>
 
-      <div class="goals-section">
-        <span class="goals-label">פתיחת החנות</span>
-        <div class="goals-toggle-group">
-          <button type="button" class="goals-toggle-btn ${openMode === 'auto' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','auto')">✅ אוטומטית כשמגיעים ליעד</button>
-          <button type="button" class="goals-toggle-btn ${openMode === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','manual')">🧑‍🏫 המורה פותחת ידנית</button>
-        </div>
+    <div class="goals-row">
+      <span class="goals-row-label">מתי החנות נפתחת</span>
+      <div class="ui-toggle">
+        <button type="button" class="ui-toggle-opt ${openMode === 'auto' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','auto')">✅ אוטומטית</button>
+        <button type="button" class="ui-toggle-opt ${openMode === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','manual')">🧑‍🏫 ידנית</button>
       </div>
+    </div>
 
-      <div class="goals-section">
-        <span class="goals-label">אחרי רכישה</span>
-        <div class="goals-toggle-group">
-          <button type="button" class="goals-toggle-btn ${afterPurchase === 'close' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','close')">🔒 נסגרת מיד</button>
-          <button type="button" class="goals-toggle-btn ${afterPurchase === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','manual')">🧑‍🏫 המורה סוגרת ידנית</button>
-        </div>
+    <div class="goals-row">
+      <span class="goals-row-label">אחרי רכישה</span>
+      <div class="ui-toggle">
+        <button type="button" class="ui-toggle-opt ${afterPurchase === 'close' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','close')">🔒 נסגרת מיד</button>
+        <button type="button" class="ui-toggle-opt ${afterPurchase === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','manual')">🧑‍🏫 ידנית</button>
       </div>
     </div>`;
 }
@@ -205,14 +232,14 @@ async function saveGoalTargetAction(clubId, cycleId) {
 
   const ok = typeof fbUpdateGoalCycleTarget === 'function' ? await fbUpdateGoalCycleTarget(clubId, cycleId, target) : false;
   if (!ok) { if (msgEl) msgEl.textContent = 'שגיאה בשמירה — נסה/י שוב'; return; }
-  _renderShopManagement(clubId);
+  _renderGoalSettingsScreen(clubId);
 }
 
 async function saveShopSettingAction(clubId, key, value) {
   if (typeof fbSaveClub === 'function') {
     await fbSaveClub(clubId, { shopSettings: { [key]: value } });
   }
-  _renderShopManagement(clubId);
+  _renderGoalSettingsScreen(clubId);
 }
 
 // ─── Next Goal quick-picks (Sprint 9 — Task 4) — shared between the immediate-purchase
@@ -538,53 +565,154 @@ async function startNextGoalAction(clubId) {
 
 // ─── Reward Grid ──────────────────────────────────────────────────────────────
 
+// ─── Rewards Management list (Redesign) — toolbar + compact rows, built for scale
+//     (search/sort are pure client-side over the already-loaded list, no new query;
+//     the list itself scrolls inside a fixed-height panel so 40-50+ rewards stay
+//     comfortable instead of stretching the whole page) ───────────────────────────
+
+let _rewardMgmtState = { clubId: null, rewards: [], search: '', sort: 'order', lastWinnerRewardId: null };
+
 function _renderRewardGrid(clubId, rewards, statusHtml = '', lastWinnerRewardId = null) {
   const container = document.getElementById('shop-teacher-content');
   if (!container) return;
+  _rewardMgmtState = { clubId, rewards, search: '', sort: 'order', lastWinnerRewardId };
 
-  const emptyBanner = !rewards.length
-    ? `<div class="reward-empty-banner">🛍️ החנות שלכם עדיין ריקה — הוסיפו את הפרס הראשון!</div>`
-    : '';
+  container.innerHTML = statusHtml +
+    `<div class="mgmt-toolbar">
+       <input id="mgmt-search" class="mgmt-search-input" type="search" placeholder="🔍 חיפוש פרס..." oninput="_filterRewardList(this.value)" />
+       <select id="mgmt-sort" class="mgmt-sort-select" onchange="_sortRewardList(this.value)">
+         <option value="order">סדר תצוגה</option>
+         <option value="cost">לפי מחיר</option>
+         <option value="name">לפי שם</option>
+       </select>
+       <button class="btn-mgmt-add" onclick="openRewardEditor('${clubId}', null)">➕ הוספת פרס</button>
+     </div>
+     <div id="mgmt-list-area"></div>`;
 
-  container.innerHTML = statusHtml + emptyBanner +
-    `<div class="reward-grid">` +
-      rewards.map((r, i) => _rewardCardHtml(clubId, r, i, rewards.length, r.id === lastWinnerRewardId)).join('') +
-      `<button class="reward-card reward-card-add" onclick="openRewardEditor('${clubId}', null)">
-         <span class="reward-add-icon">➕</span>
-         <span class="reward-add-label">הוספת פרס</span>
-       </button>` +
-    `</div>`;
+  _renderRewardList();
 }
 
-function _rewardCardHtml(clubId, r, index, total, isClassWinner = false) {
+function _renderRewardList() {
+  const area = document.getElementById('mgmt-list-area');
+  if (!area) return;
+  const { clubId, rewards, search, sort, lastWinnerRewardId } = _rewardMgmtState;
+
+  if (!rewards.length) {
+    area.innerHTML = `<div class="reward-empty-banner">🛍️ החנות שלכם עדיין ריקה — הוסיפו את הפרס הראשון!</div>`;
+    return;
+  }
+
+  const needle = (search || '').trim().toLowerCase();
+  let list = needle ? rewards.filter(r => (r.name || '').toLowerCase().includes(needle)) : rewards.slice();
+  if (sort === 'cost') list.sort((a, b) => (a.cost ?? 0) - (b.cost ?? 0));
+  else if (sort === 'name') list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+  // 'order' (default) keeps fbLoadRewards' own displayOrder sort — no re-sort needed.
+
+  if (!list.length) {
+    area.innerHTML = `<p class="class-empty" style="text-align:center;padding:2rem 1rem">לא נמצאו פרסים תואמים לחיפוש.</p>`;
+    return;
+  }
+
+  // הזזה למעלה/למטה משנה displayOrder אמיתי — הגיונית רק כשרואים את סדר התצוגה
+  // הרגיל, לא באמצע חיפוש/מיון-לפי-מחיר.
+  const reorderable = !needle && sort === 'order';
+
+  area.innerHTML = `<div class="mgmt-list-scroll">` +
+    list.map(r => {
+      const origIndex = rewards.findIndex(x => x.id === r.id);
+      return _mgmtRowHtml(clubId, r, origIndex, rewards.length, r.id === lastWinnerRewardId, reorderable);
+    }).join('') +
+  `</div>`;
+}
+
+function _filterRewardList(value) {
+  _rewardMgmtState.search = value || '';
+  _renderRewardList();
+}
+function _sortRewardList(value) {
+  _rewardMgmtState.sort = value || 'order';
+  _renderRewardList();
+}
+
+function _mgmtRowHtml(clubId, r, index, total, isClassWinner, reorderable) {
   const isActive = r.active !== false;
   const visual = r.imageUrl
-    ? `<img src="${_escHtml(r.imageUrl)}" class="reward-card-img" alt=""
+    ? `<img src="${_escHtml(r.imageUrl)}" class="mgmt-row-img" alt=""
          data-fallback-emoji="${_escHtml(r.emoji || '🎁')}" onerror="_rewardImgFallback(this)">`
-    : `<span class="reward-card-emoji">${_escHtml(r.emoji || '🎁')}</span>`;
+    : `<span class="mgmt-row-emoji">${_escHtml(r.emoji || '🎁')}</span>`;
 
-  return `
-    <div class="reward-card${isActive ? '' : ' reward-card-inactive'}">
-      ${isClassWinner ? '<div class="class-winner-badge">🏆 זוכה הכיתה</div>' : ''}
-      <button class="reward-active-badge" onclick="toggleRewardActive('${clubId}','${r.id}', ${isActive})">
-        ${isActive ? '🟢 פעיל' : '⚪ מוסתר'}
-      </button>
-      <button class="reward-card-body" onclick="openRewardEditor('${clubId}','${r.id}')">
-        <div class="reward-card-visual">${visual}</div>
-        <div class="reward-card-name">${_escHtml(r.name)}</div>
-        <div class="reward-cost-badge">🪙 ${Number(r.cost || 0).toLocaleString('he-IL')}</div>
-      </button>
-      <div class="reward-order-controls">
+  const reorderHtml = reorderable ? `
+      <div class="mgmt-row-reorder">
         <button ${index === 0 ? 'disabled' : ''} onclick="moveRewardUp('${clubId}','${r.id}')" title="הזז למעלה">▲</button>
         <button ${index === total - 1 ? 'disabled' : ''} onclick="moveRewardDown('${clubId}','${r.id}')" title="הזז למטה">▼</button>
+      </div>` : '';
+
+  return `
+    <div class="mgmt-row${isActive ? '' : ' mgmt-row-inactive'}">
+      ${isClassWinner ? '<span class="mgmt-row-winner" title="זוכה הכיתה">🏆</span>' : ''}
+      <div class="mgmt-row-visual">${visual}</div>
+      <button class="mgmt-row-main" onclick="openRewardEditor('${clubId}','${r.id}')">
+        <span class="mgmt-row-name">${_escHtml(r.name)}</span>
+        <span class="mgmt-row-cost">🪙 ${Number(r.cost || 0).toLocaleString('he-IL')}</span>
+      </button>
+      <span class="mgmt-row-status ${isActive ? 'is-active' : 'is-hidden'}">${isActive ? '🟢 פעיל' : '⚪ מוסתר'}</span>
+      ${reorderHtml}
+      <div class="mgmt-overflow">
+        <button class="mgmt-overflow-btn" onclick="_toggleMgmtMenu(event,'${r.id}')" title="עוד פעולות">⋮</button>
+        <div class="mgmt-menu" id="mgmt-menu-${r.id}" style="display:none">
+          <button onclick="_closeMgmtMenus();openRewardEditor('${clubId}','${r.id}')">✏️ עריכה</button>
+          <button onclick="_closeMgmtMenus();duplicateRewardAction('${clubId}','${r.id}')">📋 שכפול</button>
+          <button onclick="_closeMgmtMenus();toggleRewardActive('${clubId}','${r.id}',${isActive})">${isActive ? '🗄️ העברה לארכיון' : '♻️ שחזור'}</button>
+          <button class="mgmt-menu-danger" onclick="_closeMgmtMenus();deleteRewardAction('${clubId}','${r.id}')">🗑️ מחיקה</button>
+        </div>
       </div>
     </div>`;
 }
+
+function _toggleMgmtMenu(event, rewardId) {
+  event.stopPropagation();
+  const menu = document.getElementById('mgmt-menu-' + rewardId);
+  const wasOpen = !!menu && menu.style.display !== 'none';
+  _closeMgmtMenus();
+  if (menu && !wasOpen) menu.style.display = '';
+}
+function _closeMgmtMenus() {
+  document.querySelectorAll('.mgmt-menu').forEach(m => { m.style.display = 'none'; });
+}
+document.addEventListener('click', () => { if (typeof _closeMgmtMenus === 'function') _closeMgmtMenus(); });
 
 async function toggleRewardActive(clubId, rewardId, currentlyActive) {
   const ok = await fbUpdateReward(clubId, rewardId, { active: !currentlyActive });
   if (ok) _renderShopManagement(clubId);
   else alert('שגיאה — נסה/י שוב');
+}
+
+/** שכפול פרס קיים — אותם נתונים, שם עם "(עותק)", בסוף רשימת התצוגה. */
+async function duplicateRewardAction(clubId, rewardId) {
+  const rewards = await fbLoadRewards(clubId);
+  const original = rewards.find(r => r.id === rewardId);
+  if (!original) return;
+  const payload = {
+    name: (original.name || '') + ' (עותק)',
+    description: original.description || '',
+    imageUrl: original.imageUrl || null,
+    emoji: original.emoji || '🎁',
+    cost: original.cost || 1,
+    active: original.active !== false,
+    displayOrder: rewards.length ? Math.max(...rewards.map(r => r.displayOrder ?? 0)) + 1 : 1,
+    createdBy: (typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null) || null,
+  };
+  const ok = await fbCreateReward(clubId, payload);
+  if (!ok) { alert('שגיאה בשכפול — נסה/י שוב'); return; }
+  _renderShopManagement(clubId);
+}
+
+/** מחיקה ישירה מהרשימה (לא רק דרך המודל) — אותו אישור ואותה פעולה כמו deleteRewardEditor. */
+async function deleteRewardAction(clubId, rewardId) {
+  if (!confirm('למחוק את הפרס הזה לצמיתות?')) return;
+  const ok = await fbDeleteReward(clubId, rewardId);
+  if (!ok) { alert('שגיאה במחיקה — נסה/י שוב'); return; }
+  _renderShopManagement(clubId);
 }
 
 // ─── Reordering (up/down — reliable on touch, no drag library needed) ────────
@@ -1112,8 +1240,11 @@ function _studentRewardCardHtml(r) {
 Object.assign(window, {
   showShop,
   showShopManagement,
+  showGoalSettings,
   openRewardEditor, closeRewardEditor, saveRewardEditor, deleteRewardEditor,
   toggleRewardActive, moveRewardUp, moveRewardDown,
+  _filterRewardList, _sortRewardList, _toggleMgmtMenu, _closeMgmtMenus,
+  duplicateRewardAction, deleteRewardAction,
   _rmPickEmoji, _rmStepCost,
   submitEnableShop,
   openVotingAction, closeVotingAction, castVoteAction,

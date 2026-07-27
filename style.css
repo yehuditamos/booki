@@ -1484,61 +1484,88 @@ label { font-weight: 700; font-size: 1rem; }
 .class-m-stats  { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .class-m-mins   { font-weight: 700; font-size: .85rem; color: var(--green); }
 
-/* ─── Teacher Class Dashboard (tcd-*) — Dashboard redesign ─── */
+/* ─── Teacher Class Dashboard (tcd-*) — Admin redesign (compact, single hero) ─── */
 .tcd-stats-row {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;
+  display: flex; background: #fff; border-radius: 14px;
+  box-shadow: var(--shadow-sm); padding: 4px; gap: 4px; margin-bottom: 10px;
 }
-.tcd-stat-card {
-  background: #fff; border-radius: 16px; padding: 16px 10px;
-  text-align: center; box-shadow: 0 3px 14px rgba(0,0,0,.07);
-  display: flex; flex-direction: column; gap: 4px; align-items: center;
+.ui-stat-chip {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 4px; border-radius: 10px;
 }
-.tcd-stat-icon { font-size: 1.6rem; line-height: 1; }
-.tcd-stat-num  { font-size: 1.7rem; font-weight: 900; color: var(--text); line-height: 1.1; }
-.tcd-stat-lbl  { font-size: .72rem; color: var(--muted); font-weight: 600; }
+.ui-stat-chip + .ui-stat-chip { border-inline-start: 1px solid var(--border); }
+.ui-stat-icon { font-size: 1.1rem; line-height: 1; }
+.ui-stat-num  { font-size: 1.05rem; font-weight: 900; color: var(--text); line-height: 1; }
+.ui-stat-lbl  { font-size: .68rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
 
 .tcd-goal-card {
   background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-  border-radius: 20px; padding: 20px 22px;
-  box-shadow: 0 4px 20px rgba(39,174,96,.14);
+  border-radius: 16px; padding: 14px 16px;
+  box-shadow: 0 3px 14px rgba(39,174,96,.12);
   border: 1.5px solid rgba(39,174,96,.25);
+  margin-bottom: 10px;
 }
 .tcd-goal-header {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
-.tcd-goal-label { font-weight: 800; font-size: 1rem; color: #1a5c35; }
-.tcd-goal-nums  { margin-bottom: 12px; line-height: 1; }
-.tcd-goal-done  { font-size: 2.2rem; font-weight: 900; color: #1a5c35; }
-.tcd-goal-sep   { font-size: 1.1rem; color: #4a8c5c; margin: 0 4px; }
-.tcd-goal-target { font-size: 1rem; color: #4a8c5c; }
+.tcd-goal-label { font-weight: 800; font-size: .92rem; color: #1a5c35; }
+.tcd-goal-nums  { margin-bottom: 8px; line-height: 1; }
+.tcd-goal-done  { font-size: 1.7rem; font-weight: 900; color: #1a5c35; }
+.tcd-goal-sep   { font-size: 1rem; color: #4a8c5c; margin: 0 4px; }
+.tcd-goal-target { font-size: .92rem; color: #4a8c5c; }
 .tcd-progress-track {
   background: rgba(255,255,255,.7); border-radius: 99px;
-  height: 16px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
+  height: 10px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
 }
 .tcd-progress-fill {
   background: linear-gradient(90deg, #27AE60, #8BC34A);
   height: 100%; border-radius: 99px; transition: width .6s ease;
 }
-.tcd-goal-pct { text-align: left; font-size: .85rem; color: #2d7a40; margin-top: 6px; font-weight: 700; }
+.tcd-goal-pct { text-align: left; font-size: .78rem; color: #2d7a40; margin-top: 5px; font-weight: 700; }
 
-.progress-display-toggle { display: flex; gap: 10px; flex-wrap: wrap; }
-.pd-toggle-btn {
-  flex: 1; min-width: 150px; padding: 10px 14px; border-radius: 14px;
-  border: 2px solid rgba(39,174,96,.3); background: rgba(255,255,255,.6);
-  color: #2d7a40; font-family: inherit; font-weight: 700; font-size: .85rem;
-  transition: all .2s; cursor: pointer;
+/* מצב מכווץ — כשהיעד עבר לניהול בחנות (שורה אחת, לא כרטיס-הרו מלא) */
+.tcd-goal-card-compact {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 16px;
 }
-.pd-toggle-btn.active { background: #27AE60; border-color: #27AE60; color: #fff; box-shadow: 0 3px 10px rgba(39,174,96,.3); }
+.tcd-goal-hero-link {
+  background: none; border: none; color: var(--green); font-family: inherit;
+  font-weight: 800; font-size: .85rem; cursor: pointer; white-space: nowrap;
+}
+
+/* Quick Actions — מחליף שני כרטיסים מלאים (תצוגה + הודעה) בשורה אחת קומפקטית */
+.tcd-quick-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #fff; border-radius: 14px; padding: 8px 10px;
+  box-shadow: var(--shadow-sm); margin-bottom: 10px;
+}
+.tcd-qa-view { display: flex; align-items: center; gap: 6px; }
+.tcd-qa-view-lbl { font-size: .72rem; color: var(--muted); font-weight: 700; }
+.tcd-qa-btn {
+  background: #f5f5f5; border: 1.5px solid var(--border); border-radius: 9px;
+  width: 32px; height: 32px; font-size: 1rem; cursor: pointer; transition: all .15s;
+}
+.tcd-qa-btn.active { background: var(--green); border-color: var(--green); box-shadow: 0 2px 6px rgba(39,174,96,.3); }
+.tcd-qa-announce {
+  background: none; border: none; color: var(--orange); font-family: inherit;
+  font-weight: 700; font-size: .82rem; cursor: pointer; white-space: nowrap;
+}
+.tcd-announce-composer {
+  background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 10px;
+  box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 8px;
+}
 
 .tcd-leaderboard {
-  background: #fff; border-radius: 20px; padding: 20px 18px 12px;
-  box-shadow: 0 4px 18px rgba(0,0,0,.07);
+  background: #fff; border-radius: 16px; padding: 14px 14px 8px;
+  box-shadow: var(--shadow-sm);
 }
-.tcd-lb-title { font-size: 1.05rem; font-weight: 900; margin-bottom: 14px; color: var(--text); }
+.tcd-lb-title { font-size: .95rem; font-weight: 900; margin-bottom: 10px; color: var(--text); }
+/* Scale: כיתה עם הרבה תלמידים גוללת בתוך פאנל קבוע, לא מותחת את כל הדף */
+.tcd-lb-scroll { max-height: 55vh; overflow-y: auto; padding-inline-end: 2px; }
 .tcd-member-row {
   display: flex; align-items: center; gap: 12px;
-  padding: 11px 12px; border-radius: 14px; margin-bottom: 8px;
+  padding: 9px 10px; border-radius: 12px; margin-bottom: 6px;
   background: #f9f9f9;
 }
 .tcd-gold   { background: linear-gradient(135deg, #FFF9C4, #FFE082); }
@@ -1858,14 +1885,8 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
   color: var(--text);
 }
 
-/* גריד שמתרחב יפה מ-2 עמודות בטלפון ועד כמה שנכנס בדסקטופ — לא צריך עיצוב מחדש
-   כשיתווספו עשרות פרסים */
-.reward-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 14px;
-}
-
+/* .reward-card base (still used by student-facing browsing/voting/winner-picker
+   cards — reward-card-browse, reward-card-pickable, reward-card-voted, etc.) */
 .reward-card {
   position: relative;
   background: var(--card);
@@ -1878,25 +1899,6 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
   transition: transform .15s, box-shadow .15s, opacity .15s;
 }
 .reward-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
-.reward-card-inactive { opacity: .55; }
-
-.reward-active-badge {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
-  background: rgba(255,255,255,.92);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 3px 9px;
-  font-size: .7rem; font-weight: 700;
-  color: var(--muted);
-}
-
-.reward-card-body {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 6px;
-  padding: 34px 12px 16px;
-  background: none; border: none; width: 100%;
-  font-family: inherit; text-align: center; cursor: pointer;
-}
 .reward-card-visual { display: flex; align-items: center; justify-content: center; min-height: 56px; }
 .reward-card-emoji { font-size: 3rem; line-height: 1; }
 .reward-card-img   { width: 72px; height: 72px; object-fit: cover; border-radius: 14px; }
@@ -1914,30 +1916,65 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
   font-weight: 800; font-size: .95rem;
 }
 
-.reward-order-controls {
-  display: flex; border-top: 1px solid #f2e6c2;
+/* ─── Rewards Management — admin list (Redesign) ────────────────────────────── */
+.mgmt-toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.mgmt-search-input {
+  flex: 2; min-width: 120px; padding: 9px 12px; border-radius: 10px;
+  border: 1.5px solid var(--border); font-family: inherit; font-size: .85rem; background: #fff;
 }
-.reward-order-controls button {
-  flex: 1; background: none; border: none; padding: 8px 0;
-  font-size: .95rem; color: var(--muted);
-  border-left: 1px solid #f2e6c2;
+.mgmt-sort-select {
+  flex: 1; min-width: 100px; padding: 9px 8px; border-radius: 10px;
+  border: 1.5px solid var(--border); font-family: inherit; font-size: .8rem; background: #fff; color: var(--text);
 }
-.reward-order-controls button:last-child { border-left: none; }
-.reward-order-controls button:disabled { opacity: .3; cursor: default; }
-.reward-order-controls button:not(:disabled):hover { background: #fff8e1; color: var(--orange); }
+.btn-mgmt-add {
+  background: var(--green); color: #fff; border-radius: 10px; padding: 9px 16px;
+  font-family: inherit; font-weight: 700; font-size: .85rem; white-space: nowrap;
+}
 
-.reward-card-add {
-  background: #fffdf5;
-  border: 2px dashed #f0d78c;
-  border-radius: var(--radius);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 6px; min-height: 150px;
-  color: var(--orange);
-  font-weight: 700; font-family: inherit;
+/* Scale: הרשימה גוללת בתוך פאנל בגובה קבוע — 40-50 פרסים לא מותחים את כל הדף */
+.mgmt-list-scroll { max-height: 60vh; overflow-y: auto; padding-inline-end: 2px; }
+
+.mgmt-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 8px 10px; margin-bottom: 8px; position: relative;
 }
-.reward-card-add:hover { background: #fff8e1; border-color: var(--orange2); }
-.reward-add-icon { font-size: 2.2rem; }
-.reward-add-label { font-size: .9rem; }
+.mgmt-row-inactive { opacity: .55; }
+.mgmt-row-winner { font-size: 1.1rem; flex-shrink: 0; }
+.mgmt-row-visual { flex-shrink: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.mgmt-row-emoji { font-size: 1.6rem; line-height: 1; }
+.mgmt-row-img { width: 36px; height: 36px; object-fit: cover; border-radius: 8px; }
+.mgmt-row-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; font-family: inherit; text-align: start; cursor: pointer; padding: 0;
+}
+.mgmt-row-name { font-weight: 700; font-size: .88rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mgmt-row-cost { font-size: .78rem; font-weight: 700; color: #b8860b; white-space: nowrap; flex-shrink: 0; }
+.mgmt-row-status { font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.mgmt-row-reorder { display: flex; flex-direction: column; flex-shrink: 0; }
+.mgmt-row-reorder button {
+  background: none; border: none; font-size: .7rem; color: var(--muted); padding: 1px 4px; line-height: 1.2;
+}
+.mgmt-row-reorder button:disabled { opacity: .25; }
+.mgmt-row-reorder button:not(:disabled):hover { color: var(--orange); }
+
+.mgmt-overflow { position: relative; flex-shrink: 0; }
+.mgmt-overflow-btn {
+  background: none; border: none; font-size: 1.1rem; color: var(--muted);
+  width: 30px; height: 30px; border-radius: 8px;
+}
+.mgmt-overflow-btn:hover { background: #f5f5f5; }
+.mgmt-menu {
+  position: absolute; inset-inline-end: 0; top: 34px; z-index: 5;
+  background: #fff; border: 1.5px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow); min-width: 150px; overflow: hidden;
+}
+.mgmt-menu button {
+  display: block; width: 100%; text-align: start; background: none; border: none;
+  padding: 10px 14px; font-family: inherit; font-size: .82rem; font-weight: 600; color: var(--text);
+}
+.mgmt-menu button:hover { background: #f7f7f7; }
+.mgmt-menu-danger { color: var(--red) !important; }
 
 /* ─── Reward editor modal ───────────────────────────────────────────────────── */
 .reward-modal-box { max-width: 400px; text-align: right; }
@@ -2003,6 +2040,32 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
 .goals-progress-line { font-size: .9rem; font-weight: 700; margin-top: 8px; }
 .goals-progress-line span { font-weight: 400; color: var(--muted); }
 .goals-target-msg { font-size: .8rem; color: var(--muted); min-height: 1.1em; margin-top: 4px; }
+
+/* ─── Goal Settings screen (Redesign) — שורות קומפקטיות, לא כרטיס אחד גדול ──── */
+.goal-settings-content { padding: 12px 20px 40px; }
+.goals-row {
+  background: var(--card); border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 12px 14px; margin-bottom: 10px;
+}
+.goals-row-label { display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.goals-row .goals-edit-row { margin-bottom: 0; }
+
+/* Toggle switch — מחליף שני כפתורים מלאים בפקד דו-מצבי קומפקטי אחד */
+.ui-toggle {
+  display: flex; background: #f0f0f0; border-radius: 10px; padding: 3px; gap: 2px;
+}
+.ui-toggle-opt {
+  flex: 1; padding: 8px 10px; border-radius: 8px; border: none; background: none;
+  color: var(--muted); font-family: inherit; font-weight: 700; font-size: .8rem;
+  cursor: pointer; transition: all .15s;
+}
+.ui-toggle-opt.active { background: var(--green); color: #fff; box-shadow: 0 2px 6px rgba(39,174,96,.3); }
+
+/* כפתור אייקון קטן בכותרת מסך (⚙️ וכד') — לצד btn-back/h2 ב-header-row */
+.btn-header-icon {
+  background: #f5f5f5; border: 1.5px solid var(--border); border-radius: 10px;
+  width: 34px; height: 34px; font-size: 1rem; flex-shrink: 0;
+}
 
 /* ─── בחירת היעד הבא — quick-picks (Sprint 9 — Task 4) ──────────────────────── */
 .next-goal-picker { margin: 12px 0; text-align: right; }
