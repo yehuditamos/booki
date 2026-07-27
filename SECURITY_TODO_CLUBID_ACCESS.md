@@ -65,3 +65,52 @@ subcollection (HTTP 200) purely by knowing its `clubId`.
    branch to require `isClubMember(clubId) || isClubTeacher(clubId) || isOwner()`.
 4. Treat this as its own reviewed change (rules + a migration/backfill plan for existing
    teacher-created cards), not a drive-by edit — it touches every collection in the app.
+
+---
+
+# Security follow-up: cachedStats/avatar update on a teacher-created card doesn't check WHO is writing
+
+**Status:** open, pre-existing (predates Sprint 11), not fixed. Found while testing the
+Sprint 11 re-claim branch — not introduced by this sprint's changes.
+
+## The issue
+
+`firestore.rules`, `clubs/{clubId}/memberships/{userId}` `allow update`, the branch:
+
+```
+|| (isSignedIn()
+    && resource.data.get('createdByTeacher', false) == true
+    && resource.data.get('claimedByUid', null) != null
+    && request.resource.data.diff(resource.data).affectedKeys()
+       .hasOnly(['cachedStats', 'updatedAt', 'emoji', 'avatar']))
+```
+
+grants **any signed-in session** (not just the card's own `claimedByUid`) permission to
+write `cachedStats`/`emoji`/`avatar` on **any already-claimed teacher-created card in any
+club**, with no check that `request.auth.uid == claimedByUid`. Confirmed live: a
+freshly-created, unrelated anonymous session successfully wrote to another card's fields
+this way.
+
+## Why it wasn't fixed now
+
+Out of scope for this sprint's ask (shop/voting/messaging fixes); found incidentally while
+verifying the new re-claim branch. Fixing it requires deciding the right scope (should
+`cachedStats` writes be increase-only, mirroring the self-joined branch a few lines below
+it, or does teacher-created intentionally allow correction/reset by anyone with access to
+the roster?) — a product decision, not just a rules tweak.
+
+## Risk assessment
+
+Low: this only lets a signed-in session move a *stat number*, emoji, or avatar around on
+someone else's card — it does not expose personal messages, ballots, or any other
+private data (those are gated by the *separate*, correctly-scoped `claimedByUid`-matching
+branches this sprint added/relied on). Worst case is a mischievous classmate resetting or
+inflating another student's displayed stats/avatar, not a privacy or data-integrity issue
+beyond that specific card's own display fields.
+
+## Suggested scope for a future fix
+
+Add `resource.data.get('claimedByUid', null) == request.auth.uid` to this branch's
+conditions (matching the sibling branch just above it), unless there's a deliberate reason
+(e.g. a "teacher resets a stuck stat from any device" use case) to keep it open — confirm
+intent before tightening.

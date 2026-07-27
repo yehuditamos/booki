@@ -31,10 +31,11 @@ function _rewardsRef(clubId) {
 /** יוצר פרס חדש. מחזיר את ה-id או null בשגיאה. */
 async function fbCreateReward(clubId, reward) {
   if (!_db() || !clubId) return null;
+  console.log('[CREATE REWARD START]', { clubId, payload: reward });
   try {
     const ref = _rewardsRef(clubId).doc();
     const now = _now();
-    await ref.set({
+    const data = {
       name:         (reward.name || '').trim(),
       description:  (reward.description || '').trim(),
       imageUrl:     reward.imageUrl || null,
@@ -46,7 +47,13 @@ async function fbCreateReward(clubId, reward) {
       createdAt:    now,
       updatedAt:    now,
       createdBy:    reward.createdBy || null,
-    });
+    };
+    await ref.set(data);
+    console.log('[CREATE REWARD SAVED]', { path: `clubs/${clubId}/rewards/${ref.id}`, id: ref.id, savedData: data });
+
+    const readback = await ref.get();
+    console.log('[CREATE REWARD READBACK]', { exists: readback.exists, path: `clubs/${clubId}/rewards/${ref.id}`, data: readback.data() });
+
     return ref.id;
   } catch (e) {
     console.warn('[firebase-shop] fbCreateReward error:', e.message);

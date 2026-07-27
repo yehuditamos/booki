@@ -644,6 +644,27 @@ async function selectProfile(userId, clubIdHint) {
       await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
     }
 
+    // Sprint 11 — Part 2 (real fix): אחרי ensureStudentAuth(), אם ה-session החי כבר
+    // לא תואם ל-claimedByUid שנשמר (מהפעם שהכרטיס נתבע לראשונה) — ה-session המקורי
+    // אבד (private/incognito, ניקוי מטמון וכו', בדיוק כמו שכבר תועד ל-cachedStats/avatar
+    // למעלה). מתעדת מחדש (fbReclaimCard) כדי ש-ballots/messages, שבודקים claimedByUid
+    // בדיוק, ימשיכו לעבוד — ולא נשארים שבורים לצמיתות רק כי הדפדפן איפס session.
+    if (!isTeacherSession && membership.personalized && membership.claimedByUid) {
+      const _cardAuthUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+      if (_cardAuthUser && _cardAuthUser.uid !== membership.claimedByUid) {
+        console.error('[SELECT PROFILE IDENTITY MISMATCH] (teacher-created card) — reclaiming', {
+          expected: membership.claimedByUid, received: _cardAuthUser.uid,
+          comparison: `membership.claimedByUid (${membership.claimedByUid}) vs live firebase.auth().currentUser.uid (${_cardAuthUser.uid}) after ensureStudentAuth()`,
+          sourceOfExpected: 'membership.claimedByUid — set at last (re-)claim of this card',
+          sourceOfReceived: 'firebase.auth().currentUser.uid — right after ensureStudentAuth()',
+          cardId: userId,
+        });
+        const reclaimed = typeof fbReclaimCard === 'function' ? await fbReclaimCard(targetClubId, userId) : false;
+        console.log('[SELECT PROFILE RECLAIM RESULT]', { cardId: userId, newClaimedByUid: _cardAuthUser.uid, ok: reclaimed });
+        if (reclaimed) membership.claimedByUid = _cardAuthUser.uid;
+      }
+    }
+
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
 
@@ -662,8 +683,25 @@ async function selectProfile(userId, clubIdHint) {
     return;
   }
 
-  // ── תלמיד רגיל ───────────────────────────────────────────────────────────
+  // ── תלמיד רגיל (self-joined: מזהה ה-membership שווה ל-auth.uid מרגע ההצטרפות) ─────
+  // Sprint 11 — פער אמיתי שנמצא: הענף הזה, בניגוד לענף "כרטיס שנוצר ע"י מורה" ממש
+  // מעליו, מעולם לא קרא ל-ensureStudentAuth() — כך שאם ה-session האנונימי המקורי אבד
+  // (איפוס דפדפן/מצב פרטי/IndexedDB שלא שרד), הקוד ממשיך ישר ל-_enterPersonalHome
+  // בלי לוודא כלל שיש session תקין. מוסיפים את הבדיקה, ומתעדים אי-התאמה אם עדיין קיימת —
+  // תלמיד/ה רגיל/ה, בניגוד לכרטיס שנוצר ע"י מורה, אין להם מנגנון claimedByUid להתאושש
+  // דרכו; זו הנקודה המדויקת שבה session שאבד לצמיתות היה נראה תקין עד לכתיבה הראשונה.
   if (profile?.onboardingComplete && targetClubId) {
+    if (typeof ensureStudentAuth === 'function') { try { await ensureStudentAuth(); } catch (e) {} }
+    const _authUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+    if (_authUser && _authUser.uid !== userId) {
+      console.error('[SELECT PROFILE IDENTITY MISMATCH]', {
+        expected: userId, received: _authUser.uid,
+        comparison: `membership/profile userId (${userId}) vs live firebase.auth().currentUser.uid (${_authUser.uid}) after ensureStudentAuth()`,
+        sourceOfExpected: 'profile.userId — the self-joined membership doc id, set at original join time',
+        sourceOfReceived: 'firebase.auth().currentUser.uid — right after ensureStudentAuth()',
+        note: 'self-joined students have no claimedByUid recovery path (unlike teacher-created cards) — a genuinely lost anonymous session cannot be reconciled client-side without a rules change.',
+      });
+    }
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
     _enterPersonalHome(userId, profile);

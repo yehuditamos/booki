@@ -295,6 +295,7 @@ async function _votingOpenTeacherHtml(clubId, voteId) {
   ]);
 
   const rewardOptions = vote?.rewardOptions || [];
+  console.log('[TEACHER VOTE REWARDS]', { path: `clubs/${clubId}/votes/${voteId}`, count: rewardOptions.length, rewards: rewardOptions });
   const tally = typeof _tallyVotes === 'function' ? _tallyVotes(ballots, rewardOptions) : { counts: {} };
   const totalVotes = ballots.length;
 
@@ -986,14 +987,19 @@ async function castVoteAction(clubId, voteId, rewardId) {
   if (typeof ensureStudentAuth === 'function') { try { await ensureStudentAuth(); } catch (e) {} }
 
   const reader  = typeof getActiveReader === 'function' ? getActiveReader() : null;
-  const authUid = (typeof firebase !== 'undefined' && firebase.auth().currentUser)
-    ? firebase.auth().currentUser.uid : null;
+  const authUser = (typeof firebase !== 'undefined') ? firebase.auth().currentUser : null;
   console.log('[VOTE IDENTITY DEBUG]', {
-    activeStudentId: reader?.userId ?? null,
-    payloadStudentId: userId,
-    storedStudentId: window.currentStudentData?.id ?? null,
-    createdByTeacher: !!reader?.createdByTeacher,
-    authUid, clubId, voteId, rewardId,
+    activeReader: reader,
+    currentStudentData: window.currentStudentData,
+    currentStudentId: window.currentStudentId,
+    storedStudentId: (() => { try { return localStorage.getItem('studentId'); } catch { return undefined; } })(),
+    storedReaderId: (() => { try { return localStorage.getItem('readerId'); } catch { return undefined; } })(),
+    // המפתחות האמיתיים שהאפליקציה בפועל משתמשת בהם (routing.js/auth.js) — לא 'studentId'/'readerId':
+    activeReaderRaw: (() => { try { return localStorage.getItem('booki_active_reader'); } catch { return undefined; } })(),
+    bookiTmpUid: (() => { try { return localStorage.getItem('booki_tmp_uid'); } catch { return undefined; } })(),
+    authUid: authUser?.uid ?? null,
+    authIsAnonymous: authUser?.isAnonymous ?? null,
+    clubId, voteId, rewardId,
   });
 
   document.querySelectorAll('.reward-vote-btn').forEach(b => { b.disabled = true; b.textContent = '...'; });
@@ -1015,6 +1021,17 @@ async function castVoteAction(clubId, voteId, rewardId) {
       'identity-mismatch': 'משהו השתבש בזיהוי שלך — נסה/י לרענן את הדף ולהתחבר מחדש.',
       'missing-data':      'חסר מידע כדי לשמור את ההצבעה — רענן/י את הדף ונסה/י שוב.',
     };
+    if (result.reason === 'identity-mismatch') {
+      const freshAuthUser = (typeof firebase !== 'undefined') ? firebase.auth().currentUser : null;
+      console.error('[VOTE IDENTITY MISMATCH]', {
+        expected: userId,
+        received: freshAuthUser?.uid ?? null,
+        comparison: `payload userId (${userId}) vs live firebase.auth().currentUser.uid (${freshAuthUser?.uid ?? null})`,
+        sourceOfExpected: 'getActiveReader().userId (localStorage booki_active_reader) — set at last selectProfile()/join time',
+        sourceOfReceived: 'firebase.auth().currentUser.uid — right after ensureStudentAuth()',
+        createdByTeacher: !!reader?.createdByTeacher,
+      });
+    }
     if (errEl) errEl.textContent = REASON_MESSAGES[result.reason] || 'לא הצלחנו לשמור את ההצבעה שלך — נסה/י שוב.';
     return;
   }

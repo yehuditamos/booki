@@ -106,6 +106,18 @@ service cloud.firestore {
               && resource.data.get('claimedByUid', null) != null
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'updatedAt', 'emoji', 'avatar']))
+          // RE-CLAIM (Sprint 11): אותה סיבה בדיוק כמו הענף הקודם (anon UID יכול להתחלף
+          // בין sessions על אותו מכשיר — session פרטי/incognito, ניקוי מטמון וכו') —
+          // אבל בעבר תוקן רק ל-cachedStats/avatar, לא ל-claimedByUid עצמו. בלי זה,
+          // ברגע שה-session המקורי שתבע כרטיס אבד, ballots/messages (שבודקים
+          // claimedByUid==auth.uid במדויק) נשארים שבורים לצמיתות גם אחרי חידוש ה-session.
+          // מוגבל בכוונה לשדה claimedByUid בלבד, ורק לזהות של הכותב/ת עצמו/ה — אף פעם לא מאפשר
+          // להשתלט על claimedByUid של מישהו אחר.
+          || (isSignedIn()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('claimedByUid', null) != null
+              && request.resource.data.claimedByUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedByUid', 'updatedAt']))
           // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
           || (isSignedIn()
               && isMe(userId)

@@ -496,7 +496,11 @@ async function showReaderCard() {
   // Legacy path (numeric id) — data already in memory/localStorage, render immediately
   if (typeof s.id === 'number') {
     _renderReaderCardContent({ ...s, history: [...(s.history || [])].reverse() });
-    _initReaderCardMessages();
+    // חייבים await: קריאה ל-goToMessagesInbox() אחרי showReaderCard() גוללת מיד ל-#rc-inbox-section
+    // (openReaderCardInbox — scrollIntoView בלבד) — בלי await כאן, ה-Firestore fetch עדיין רץ
+    // ברקע, וההודעה נשארת תקועה על מסך הטעינה "⏳" ברגע שהגלילה קורית (Sprint 11 — באג אמיתי
+    // שנמצא בבדיקה ידנית: הניווט לכרטיס הצליח, אבל תוכן ההודעות עדיין לא היה שם).
+    await _initReaderCardMessages();
     return;
   }
 
@@ -539,7 +543,10 @@ async function showReaderCard() {
   }
 
   _renderReaderCardContent(enriched);
-  _initReaderCardMessages();
+  // Sprint 11 real fix: היה fire-and-forget — goToMessagesInbox() (שקורא ל-showReaderCard()
+  // ואז מיד לscrollIntoView) הגיע לפני שההודעות בכלל נטענו, כך שהתלמיד/ה ראו את פלייסהולדר
+  // הטעינה במקום את ההודעה עצמה. עכשיו הכניסה לכרטיס הקורא ממתינה בפועל לטעינת ההודעות.
+  await _initReaderCardMessages();
 }
 
 function _renderReaderCardContent(s) {
