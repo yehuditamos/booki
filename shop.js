@@ -164,7 +164,9 @@ async function submitEnableShop(clubId) {
 
 function _browsingProgressHtml(cycle, econ) {
   const target   = cycle?.target || 0;
-  const progress = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle?.startBaseline || 0));
+  // Fix (goal/points unification): progress == economy.balance — אותו מספר שכל
+  // שאר המסכים מציגים (dashboard, Goal Settings, מסך הכיתה של התלמיד/ה).
+  const progress = Math.max(0, econ?.balance || 0);
   const pct      = target ? Math.min(100, Math.round((progress / target) * 100)) : 0;
   return `
     <div class="shop-status-card">
@@ -181,9 +183,18 @@ function _browsingProgressHtml(cycle, econ) {
 
 function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
   const target     = cycle?.target || 0;
-  const progress   = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle?.startBaseline || 0));
+  // Fix (goal/points unification): progress == economy.balance, same source everywhere.
+  const progress   = Math.max(0, econ?.balance || 0);
   const openMode      = shopSettings.openMode      || 'manual';
   const afterPurchase = shopSettings.afterPurchase || 'close';
+
+  // טווח הסליידר תמיד משאיר מקום כפול מהגדול מבין היעד/היתרה — כדי שאפשר תמיד
+  // גם להקטין משמעותית וגם לראות "מצב שכבר עברו את היעד" בבירור באמצע הטווח.
+  const sliderStep = 50;
+  const sliderMax = Math.max(500, Math.ceil((Math.max(target, progress) * 2) / sliderStep) * sliderStep);
+  const remaining = Math.max(0, target - progress);
+  const pct = target ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+
   return `
     <div class="goals-row">
       <span class="goals-row-label">סוג יעד</span>
@@ -194,14 +205,22 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
       </div>
     </div>
 
-    <div class="goals-row">
-      <span class="goals-row-label">יעד נוכחי</span>
-      <div class="goals-edit-row">
-        <input id="goals-target-input" type="number" class="input-field" value="${target}" min="10" step="10" />
-        <span>דקות</span>
-        <button type="button" class="btn-small-save" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">שמור</button>
+    <div class="goals-row goals-row-target">
+      <span class="goals-row-label">ניהול היעד</span>
+      <div class="goal-slider-head">
+        <span class="goal-slider-target-num" id="goal-slider-target-num">${target.toLocaleString('he-IL')}</span>
+        <span class="goal-slider-target-lbl">דקות יעד</span>
       </div>
-      <p class="goals-progress-line">${progress.toLocaleString('he-IL')} <span>/</span> ${target.toLocaleString('he-IL')} דקות</p>
+      <input type="range" id="goals-target-input" class="goal-slider"
+             min="10" max="${sliderMax}" step="${sliderStep}" value="${target}"
+             oninput="_onGoalSliderInput(${progress})" />
+      <div class="goal-slider-stats">
+        <div class="goal-slider-stat"><strong>${progress.toLocaleString('he-IL')}</strong><span>יתרה נוכחית</span></div>
+        <div class="goal-slider-stat"><strong id="goal-slider-remaining">${remaining.toLocaleString('he-IL')}</strong><span>נשאר עד היעד</span></div>
+        <div class="goal-slider-stat"><strong id="goal-slider-pct">${pct}%</strong><span>הושלם</span></div>
+      </div>
+      <p id="goal-slider-status" class="goals-target-msg">${progress >= target ? '🎉 הכיתה כבר הגיעה ליעד הזה!' : ''}</p>
+      <button type="button" class="btn-giant btn-green" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">✅ אישור שינוי היעד</button>
       <p id="goals-target-msg" class="goals-target-msg"></p>
     </div>
 
@@ -220,6 +239,26 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
         <button type="button" class="ui-toggle-opt ${afterPurchase === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','manual')">🧑‍🏫 ידנית</button>
       </div>
     </div>`;
+}
+
+/** תצוגה חיה בזמן גרירת הסליידר — לא כותב שום דבר, רק מעדכן את המספרים על המסך. */
+function _onGoalSliderInput(progress) {
+  const input = document.getElementById('goals-target-input');
+  const target = Number(input?.value) || 0;
+
+  const numEl = document.getElementById('goal-slider-target-num');
+  if (numEl) numEl.textContent = target.toLocaleString('he-IL');
+
+  const remaining = Math.max(0, target - progress);
+  const pct = target ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+
+  const remEl = document.getElementById('goal-slider-remaining');
+  if (remEl) remEl.textContent = remaining.toLocaleString('he-IL');
+  const pctEl = document.getElementById('goal-slider-pct');
+  if (pctEl) pctEl.textContent = pct + '%';
+
+  const statusEl = document.getElementById('goal-slider-status');
+  if (statusEl) statusEl.textContent = progress >= target ? '🎉 הכיתה כבר הגיעה ליעד הזה!' : '';
 }
 
 async function saveGoalTargetAction(clubId, cycleId) {
@@ -290,8 +329,8 @@ function _goalReachedTeacherHtml(clubId) {
     <div class="shop-status-card shop-status-celebrate">
       <div class="shop-status-icon">🎉</div>
       <h3>הכיתה הגיעה ליעד!</h3>
-      <p>הגיע הזמן לתת לתלמידים לבחור את הפרס ביחד.</p>
-      <button class="btn-giant btn-green" onclick="openVotingAction('${clubId}')">🎁 פתחו הצבעה</button>
+      <p>לחיצה אחת פותחת את החנות לתלמידים ומתחילה את ההצבעה על הפרס — פעולה אחת, בלי צעדים נפרדים.</p>
+      <button class="btn-giant btn-green" onclick="openVotingAction('${clubId}')">🛍️ פתיחת החנות</button>
       <p id="shop-vote-open-error" class="auth-error"></p>
     </div>`;
 }
@@ -360,7 +399,7 @@ async function _votingOpenTeacherHtml(clubId, voteId) {
     <div class="shop-status-card">
       <div class="shop-status-icon">🗳️</div>
       <h3>ההצבעה פתוחה</h3>
-      <div class="voting-status-banner voting-status-open">🟢 פתוחה</div>
+      <div class="voting-status-banner voting-status-open">🟢 החנות פתוחה — ההצבעה פעילה</div>
       ${roundNote}
       <div class="vote-dash-rewards">${rewardRows}</div>
       <p class="shop-status-nums">
@@ -1250,7 +1289,7 @@ Object.assign(window, {
   openVotingAction, closeVotingAction, castVoteAction,
   _pickWinnerCandidate, confirmWinnerAction,
   confirmPurchaseAction,
-  saveGoalTargetAction, saveShopSettingAction, _selectNextGoalQuickPick, startNextGoalAction,
+  saveGoalTargetAction, saveShopSettingAction, _onGoalSliderInput, _selectNextGoalQuickPick, startNextGoalAction,
   _rewardImgFallback,
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
 });

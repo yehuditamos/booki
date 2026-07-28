@@ -393,7 +393,9 @@ async function evaluateGoalProgress(clubId) {
     const econ = await fbLoadEconomy(clubId);
     if (!econ) return;
 
-    const progress = (econ.lifetimeEarned || 0) - (cycle.startBaseline || 0);
+    // Fix (goal/points unification): progress הוא פשוט economy.balance — אותו מספר
+    // בדיוק שכל שאר המסכים מציגים, בלי חשבון נפרד (lifetimeEarned - startBaseline).
+    const progress = econ.balance || 0;
     if (progress < cycle.target) return;
 
     const eventId = await emitClubEvent(clubId, 'goal_reached', {
@@ -654,7 +656,8 @@ async function fbConfirmVoteWinner(clubId, voteId, rewardId) {
 //
 // זרימה: מחזור פעיל → הצבעה נסגרת עם מנצח/ת → מורה מאשרת רכישה →
 //   (1) ניכוי מהארנק  (2) שמירת רשומת רכישה  (3) פתיחת מחזור יעד הבא
-//   (startBaseline מה-lifetimeEarned הנוכחי — לא מושפע מהוצאה, כך שהיתרה תמיד עוברת הלאה)
+//   (startBaseline מה-lifetimeSpent אחרי הרכישה — כך ש-progress==balance ממשיך
+//   בדיוק מהיתרה שנשארה, לא מתאפס ל-0)
 //   (4) איפוס מצב החנות ל-'browsing' — נעולה שוב עד ליעד הבא.
 
 function _purchasesRef(clubId) {
@@ -681,13 +684,16 @@ async function fbLoadPurchases(clubId) {
  * תמיד); (ב) מתוך fbStartNextGoalCycle, בטרנזקציה נפרדת מאוחר יותר, כש-
  * afterPurchase=='manual' והמורה בוחרת מתי לסגור את החנות ולפתוח יעד חדש.
  */
-function _startNextGoalCycleTx(tx, clubId, oldCycle, lifetimeEarned, nextGoalTarget, purchaseId, now) {
-  // startBaseline מה-lifetimeEarned הנוכחי (לא מושפע מהוצאה) — ההתקדמות מתאפסת
-  // אבל היתרה הנצברת ממשיכה בלי הפרעה.
+function _startNextGoalCycleTx(tx, clubId, oldCycle, lifetimeSpentAtCycleStart, nextGoalTarget, purchaseId, now) {
+  // Fix (goal/points unification): startBaseline := lifetimeSpent (לא lifetimeEarned).
+  // מאחר ש-balance = lifetimeEarned - lifetimeSpent תמיד, ו-lifetimeSpent לא משתנה שוב
+  // עד לרכישה הבאה, זה הופך את progress (= lifetimeEarned - startBaseline) לזהה
+  // אלגברית ל-economy.balance לאורך כל חיי המחזור — ההתקדמות ממשיכה בדיוק מהיתרה
+  // שנשארה אחרי הרכישה, ולא מתאפסת ל-0 (ההתנהגות הקודמת, השגויה).
   const target = (Number.isFinite(nextGoalTarget) && nextGoalTarget > 0) ? Math.round(nextGoalTarget) : oldCycle.target;
   const nextCycleRef = _cyclesRef(clubId).doc();
   tx.set(nextCycleRef, {
-    metric: oldCycle.metric || 'minutes', target, startBaseline: lifetimeEarned || 0,
+    metric: oldCycle.metric || 'minutes', target, startBaseline: lifetimeSpentAtCycleStart || 0,
     startedAt: now, reachedAt: null, status: 'active', eventId: null,
   });
   tx.set(_shopRef(clubId), {
@@ -784,8 +790,10 @@ async function fbConfirmPurchase(clubId, voteId, nextGoalTarget) {
         }, { merge: true });
         outcome = { ok: true, purchaseId: purchaseRef.id, deferred: true, balanceAfter };
       } else {
-        // (3)+(4) — ברירת המחדל, זהה ב-1:1 להתנהגות שהייתה קיימת לפני הספרינט הזה.
-        const nextCycleId = _startNextGoalCycleTx(tx, clubId, oldCycle, econ.lifetimeEarned || 0, nextGoalTarget, purchaseRef.id, now);
+        // (3)+(4). lifetimeSpent החדש (אחרי הניכוי שזה עתה בוצע ל-economyRef למעלה) —
+        // כדי שהמחזור החדש יתחיל עם startBaseline שכבר משקף את הרכישה הזו.
+        const newLifetimeSpent = (econ.lifetimeSpent || 0) + cost;
+        const nextCycleId = _startNextGoalCycleTx(tx, clubId, oldCycle, newLifetimeSpent, nextGoalTarget, purchaseRef.id, now);
         outcome = { ok: true, purchaseId: purchaseRef.id, nextCycleId, balanceAfter };
       }
     });
@@ -822,8 +830,9 @@ async function fbStartNextGoalCycle(clubId, nextGoalTarget) {
       const oldCycle = cycleSnap.data();
 
       const now = _now();
+      // כאן lifetimeSpent כבר משקף את הרכישה (בוצעה בטרנזקציה קודמת ונפרדת) — נקרא ישירות.
       const nextCycleId = _startNextGoalCycleTx(
-        tx, clubId, oldCycle, econ?.lifetimeEarned || 0, nextGoalTarget, shop.activePurchaseId || null, now
+        tx, clubId, oldCycle, econ?.lifetimeSpent || 0, nextGoalTarget, shop.activePurchaseId || null, now
       );
       outcome = { ok: true, nextCycleId };
     });

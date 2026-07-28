@@ -1409,24 +1409,16 @@ async function showTeacherClassScreen() {
   if (contentEl) contentEl.innerHTML = '<p class="class-loading">טוען נתוני כיתה...</p>';
   showScreen('screen-class');
 
-  const [club, memberships, shopState, allMessages] = await Promise.all([
+  const [club, memberships, shopState] = await Promise.all([
     typeof fbLoadClub === 'function'            ? fbLoadClub(clubId)            : Promise.resolve(null),
     typeof fbLoadClubMemberships === 'function' ? fbLoadClubMemberships(clubId) : Promise.resolve([]),
     typeof fbLoadShopState === 'function'       ? fbLoadShopState(clubId)       : Promise.resolve(null),
-    typeof fbLoadAllMessages === 'function'     ? fbLoadAllMessages(clubId)    : Promise.resolve([]),
   ]);
 
-  // Sprint 11 — Part 8: תגובות תלמיד/ה שהמורה עוד לא ראתה — לפי מי הן ממוענות (toUserId).
-  const _unreadRepliesByStudent = new Set(
-    (allMessages || [])
-      .filter(m => m.senderRole === 'student' && !m.readByTeacher && m.toUserId)
-      .map(m => m.toUserId)
-  );
-
-  _renderTeacherClassContent(club, memberships, clubId, shopState, _unreadRepliesByStudent);
+  _renderTeacherClassContent(club, memberships, clubId, shopState);
 }
 
-function _renderTeacherClassContent(club, memberships, clubId, shopState, unreadRepliesByStudent) {
+function _renderTeacherClassContent(club, memberships, clubId, shopState) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
@@ -1476,8 +1468,7 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState, unread
               <strong class="tcd-m-mins">${mins}</strong>
               <span class="tcd-m-lbl">דק'</span>
             </div>
-            <button class="tcd-m-encourage${unreadRepliesByStudent?.has(m.userId) ? ' tcd-m-encourage-unread' : ''}"
-                    onclick="openEncouragementModal('${clubId}','${m.userId}','${safeName}')" title="שליחת עידוד / הודעות">💙</button>
+            <button class="tcd-m-encourage" onclick="openEncouragementModal('${clubId}','${m.userId}','${safeName}')" title="שליחת עידוד">💙</button>
             <button class="tcd-m-delete" onclick="removeClubMember('${clubId}','${m.userId}','${safeName}')" title="הסר מהמועדון">🗑️</button>
           </div>`;
       }).join('')
@@ -1596,13 +1587,8 @@ const ENCOURAGEMENT_PRESETS = [
   { emoji: '👏', text: 'מאמץ מצוין!' },
 ];
 
-let _encourageLatestThreadId = null; // Sprint 11 — Part 8: שרשור פעיל להמשך שיחה, אם קיים
-let _encourageStudentName = '';
-
-async function openEncouragementModal(clubId, userId, name) {
+function openEncouragementModal(clubId, userId, name) {
   document.getElementById('encourage-modal')?.remove();
-  _encourageLatestThreadId = null;
-  _encourageStudentName = name;
 
   const overlay = document.createElement('div');
   overlay.id = 'encourage-modal';
@@ -1612,9 +1598,7 @@ async function openEncouragementModal(clubId, userId, name) {
   overlay.innerHTML = `
     <div class="av-modal-box" onclick="event.stopPropagation()">
       <button class="av-modal-close" onclick="closeEncouragementModal()">✕</button>
-      <p class="av-modal-title">💙 שיחה עם ${_escHtml(name)}</p>
-
-      <div id="encourage-thread-area" class="rc-inbox-threads"></div>
+      <p class="av-modal-title">💙 שליחת עידוד ל${_escHtml(name)}</p>
 
       <div class="encourage-presets">
         ${ENCOURAGEMENT_PRESETS.map(p =>
@@ -1630,53 +1614,6 @@ async function openEncouragementModal(clubId, userId, name) {
     </div>`;
 
   document.body.appendChild(overlay);
-
-  await _loadEncouragementThread(clubId, userId);
-}
-
-/**
- * Sprint 11 — Part 8: טוען את היסטוריית ההודעות/תגובות עם התלמיד/ה הזה/ו, ומסמן
- * תגובות שהמורה עדיין לא ראתה כ"נקראו" — בדיוק כמו בכרטיס הקורא של התלמיד/ה, רק
- * מהצד השני. שומר את מזהה השרשור האחרון כדי שהשליחה הבאה תמשיך את אותה שיחה.
- */
-async function _loadEncouragementThread(clubId, userId) {
-  const area = document.getElementById('encourage-thread-area');
-  if (!area) return;
-  area.innerHTML = '<div class="rc-inbox-loading">⏳ טוען היסטוריה...</div>';
-
-  let messages = [];
-  try {
-    messages = typeof fbLoadMyMessages === 'function' ? await fbLoadMyMessages(clubId, userId) : [];
-  } catch (e) {
-    area.innerHTML = '<div class="rc-inbox-error">לא הצלחנו לטעון את ההיסטוריה.</div>';
-    return;
-  }
-
-  // רק הודעות אישיות אל/מ התלמיד/ה הזה/ו — הכרזות כיתתיות מנוהלות במקום אחר.
-  const personal = messages.filter(m => m.toUserId === userId);
-  if (!personal.length) { area.innerHTML = ''; _encourageLatestThreadId = null; return; }
-
-  const threads = typeof _groupMessagesIntoThreads === 'function' ? _groupMessagesIntoThreads(personal) : [];
-  _encourageLatestThreadId = threads[0]?.threadId || null;
-
-  area.innerHTML = threads.slice(0, 3).reverse().map(t => `
-    <div class="rc-thread">
-      ${t.messages.map(m => {
-        const fromStudent = m.senderRole === 'student';
-        return `
-          <div class="rc-msg-bubble ${fromStudent ? 'rc-msg-mine' : 'rc-msg-teacher'}">
-            <span class="rc-msg-from">${fromStudent ? '🧒 ' + _escHtml(_encourageStudentName) : '💙 את/ה כתבת'}</span>
-            <p class="rc-msg-text">${_escHtml(m.text || '')}</p>
-            <span class="rc-msg-time">${typeof _fmtMsgTime === 'function' ? _fmtMsgTime(m.createdAt) : ''}</span>
-          </div>`;
-      }).join('')}
-    </div>`).join('');
-
-  personal.forEach(m => {
-    if (m.senderRole === 'student' && !m.readByTeacher) {
-      if (typeof fbMarkMessageRead === 'function') fbMarkMessageRead(clubId, m.id, 'teacher');
-    }
-  });
 }
 
 function _pickEncouragementPreset(btn, text) {
@@ -1700,20 +1637,12 @@ async function sendEncouragementAction(clubId, userId) {
   const btn = document.querySelector('#encourage-modal .btn-green');
   if (btn) { btn.disabled = true; btn.textContent = 'שולח...'; }
 
-  // Sprint 11 — Part 8: אם כבר יש שיחה פתוחה עם התלמיד/ה הזה/ו — ממשיכים אותה
-  // שיחה (fbReplyToMessage) במקום לפתוח שרשור חדש בכל הודעה.
-  const isReply = !!_encourageLatestThreadId;
-  const teacherUid = (typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null) || null;
-  const result = isReply
-    ? (typeof fbReplyToMessage === 'function'
-        ? await fbReplyToMessage(clubId, { threadId: _encourageLatestThreadId, toUserId: userId, text, senderRole: 'teacher', senderId: teacherUid })
-        : { ok: false })
-    : (typeof fbSendMessage === 'function'
-        ? await fbSendMessage(clubId, { type: 'encouragement', toUserId: userId, text })
-        : { ok: false });
+  const result = typeof fbSendMessage === 'function'
+    ? await fbSendMessage(clubId, { type: 'encouragement', toUserId: userId, text })
+    : { ok: false };
 
   if (!result.ok) {
-    // Sprint 11 — Part 3: כישלון = שגיאה ברורה, וחלון השליחה נשאר פתוח (לא נסגר).
+    // כישלון = שגיאה ברורה, וחלון השליחה נשאר פתוח (לא נסגר).
     if (errEl) errEl.textContent = 'שגיאה בשליחה — נסה/י שוב';
     if (btn) { btn.disabled = false; btn.textContent = '💙 שליחה'; }
     return;
@@ -1721,16 +1650,8 @@ async function sendEncouragementAction(clubId, userId) {
 
   if (textEl) textEl.value = '';
   if (errEl) { errEl.textContent = '✅ ההודעה נשלחה בהצלחה'; errEl.classList.add('encourage-success'); }
-
-  if (isReply) {
-    // המשך שיחה קיימת — לא סוגרים, רק מרעננים את השרשור כדי שהתגובה תופיע מיד (Part 8).
-    if (btn) { btn.disabled = false; btn.textContent = '💙 שליחה'; }
-    await _loadEncouragementThread(clubId, userId);
-  } else {
-    // הודעה ראשונה (Part 3) — סוגרים אחרי אישור קצר, כמו עד כה.
-    if (btn) btn.textContent = '✅ נשלח';
-    setTimeout(closeEncouragementModal, 1100);
-  }
+  if (btn) btn.textContent = '✅ נשלח';
+  setTimeout(closeEncouragementModal, 1100);
 }
 
 async function showClubStudents() {

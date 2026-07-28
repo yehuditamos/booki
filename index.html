@@ -108,9 +108,11 @@
     </div>
   </div>
 
-  <button id="booki-message-indicator" class="booki-message-indicator" style="display:none" onclick="goToMessagesInbox()">
-    🦉 לבוקי יש הודעה בשבילך!
-  </button>
+  <div id="booki-message-banner" class="booki-message-banner" style="display:none">
+    <span class="booki-message-banner-icon">🦉</span>
+    <p id="booki-message-banner-text" class="booki-message-banner-text"></p>
+    <button class="booki-message-banner-close" onclick="dismissMessageBanner()" title="סגירה">✕</button>
+  </div>
 
   <div id="shop-celebration-banner" class="shop-celebration-banner" style="display:none">
     <div class="confetti-area" id="home-confetti-area"></div>

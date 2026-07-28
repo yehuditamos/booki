@@ -496,11 +496,6 @@ async function showReaderCard() {
   // Legacy path (numeric id) — data already in memory/localStorage, render immediately
   if (typeof s.id === 'number') {
     _renderReaderCardContent({ ...s, history: [...(s.history || [])].reverse() });
-    // חייבים await: קריאה ל-goToMessagesInbox() אחרי showReaderCard() גוללת מיד ל-#rc-inbox-section
-    // (openReaderCardInbox — scrollIntoView בלבד) — בלי await כאן, ה-Firestore fetch עדיין רץ
-    // ברקע, וההודעה נשארת תקועה על מסך הטעינה "⏳" ברגע שהגלילה קורית (Sprint 11 — באג אמיתי
-    // שנמצא בבדיקה ידנית: הניווט לכרטיס הצליח, אבל תוכן ההודעות עדיין לא היה שם).
-    await _initReaderCardMessages();
     return;
   }
 
@@ -543,10 +538,6 @@ async function showReaderCard() {
   }
 
   _renderReaderCardContent(enriched);
-  // Sprint 11 real fix: היה fire-and-forget — goToMessagesInbox() (שקורא ל-showReaderCard()
-  // ואז מיד לscrollIntoView) הגיע לפני שההודעות בכלל נטענו, כך שהתלמיד/ה ראו את פלייסהולדר
-  // הטעינה במקום את ההודעה עצמה. עכשיו הכניסה לכרטיס הקורא ממתינה בפועל לטעינת ההודעות.
-  await _initReaderCardMessages();
 }
 
 function _renderReaderCardContent(s) {
@@ -604,15 +595,10 @@ function _renderReaderCardContent(s) {
 
   document.getElementById('reader-card-content').innerHTML = `
     <div class="card-hero">
-      <button id="rc-message-badge" class="rc-message-badge" style="display:none"
-              onclick="goToMessagesInbox()" title="ההודעות שלי">
-        ✉️<span id="rc-message-count" class="rc-message-count"></span>
-      </button>
       <div class="card-avatar-wrap">${avatarTag}${changeBtn}</div>
       <div class="card-name">${s.name || ''}</div>
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
-    <div id="rc-inbox-section" class="rc-inbox-section"></div>
     ${badgesSection}
     <div class="stats-grid">
       <div class="stat-box">
@@ -652,187 +638,6 @@ function _renderReaderCardContent(s) {
            <p class="no-history">עדיין לא קראת — התחל/י עכשיו!</p>
          </div>`}
   `;
-}
-
-// ─── כרטיס קורא — הודעות (Sprint 11 — Parts 5-7) ─────────────────────
-
-function _readerCardMessageContext() {
-  // אותו סדר-עדיפויות בדיוק כמו _currentReaderUserId ב-shop.js: getActiveReader()
-  // (localStorage, יציב) קודם, ורק אז נופלים ל-currentStudentData/window — כי currentStudentData
-  // הוא let top-level ב-script.js, ו-window.currentStudentData הוא property נפרד על ה-window;
-  // showReaderCard() לפעמים מעדכן רק את ה-window אחד (ר' שורה עם ה-spread enriched למטה),
-  // כך שהשניים יכולים להתבדר — getActiveReader() הוא תמיד המקור האמין.
-  const reader = typeof getActiveReader === 'function' ? getActiveReader() : null;
-  const clubId = window.currentClubId || reader?.clubId || null;
-  const s = currentStudentData || window.currentStudentData || {};
-  const fallbackId = (typeof s.id === 'number') ? null : s.id; // legacy מקומי (מספרי) — לא רלוונטי
-  const userId = reader?.userId || fallbackId || null;
-  return { clubId, userId };
-}
-
-async function _initReaderCardMessages() {
-  const { clubId, userId } = _readerCardMessageContext();
-  const badge   = document.getElementById('rc-message-badge');
-  const section = document.getElementById('rc-inbox-section');
-  if (!clubId || !userId) {
-    if (badge) badge.style.display = 'none';
-    if (section) section.innerHTML = '';
-    return;
-  }
-
-  if (section) {
-    section.innerHTML = `
-      <h3 class="rc-inbox-title">💌 ההודעות שלי</h3>
-      <div class="rc-inbox-loading">⏳ טוען הודעות...</div>`;
-  }
-
-  let result;
-  try {
-    result = typeof checkNewMessages === 'function'
-      ? await checkNewMessages(clubId, userId)
-      : { messages: [], unreadCount: 0 };
-  } catch (e) {
-    if (section) {
-      section.innerHTML = `
-        <h3 class="rc-inbox-title">💌 ההודעות שלי</h3>
-        <div class="rc-inbox-error">לא הצלחנו לטעון את ההודעות — נסה/י שוב.</div>`;
-    }
-    return;
-  }
-
-  _renderReaderCardInbox(clubId, userId, result.messages || []);
-}
-
-function _renderReaderCardMessageBadge(unreadCount) {
-  const badge   = document.getElementById('rc-message-badge');
-  const countEl = document.getElementById('rc-message-count');
-  if (!badge) return;
-  const { clubId, userId } = _readerCardMessageContext();
-  if (!clubId || !userId) { badge.style.display = 'none'; return; }
-  badge.style.display = '';
-  if (countEl) countEl.textContent = unreadCount > 0 ? String(unreadCount) : '';
-  badge.classList.toggle('rc-message-badge-unread', unreadCount > 0);
-}
-
-function openReaderCardInbox() {
-  document.getElementById('rc-inbox-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-/**
- * Sprint 11 — Part 5 fix: כל נקודת-כניסה להודעות (ההתראה בעמוד הבית, וגם התג בכרטיס
- * הקורא עצמו) חייבת בפועל לפתוח את כרטיס הקורא ולהראות שם את "ההודעות שלי" — לא רק
- * מודל שטוח נפרד (openMessagesModal הישן, Sprint 10) שאין בו תשובה בכלל. אם כבר
- * נמצאים על כרטיס הקורא רק גוללים; אחרת נכנסים אליו קודם.
- */
-async function goToMessagesInbox() {
-  const alreadyThere = document.getElementById('screen-reader-card')?.classList.contains('active');
-  if (!alreadyThere && typeof showReaderCard === 'function') {
-    await showReaderCard();
-  }
-  openReaderCardInbox();
-}
-
-function _renderReaderCardInbox(clubId, userId, messages) {
-  const section = document.getElementById('rc-inbox-section');
-  if (!section) return;
-
-  if (!messages.length) {
-    section.innerHTML = `
-      <h3 class="rc-inbox-title">💌 ההודעות שלי</h3>
-      <p class="rc-inbox-empty">עדיין אין לך הודעות מהמורה</p>`;
-    return;
-  }
-
-  const threads = typeof _groupMessagesIntoThreads === 'function' ? _groupMessagesIntoThreads(messages) : [];
-
-  section.innerHTML = `
-    <h3 class="rc-inbox-title">💌 ההודעות שלי</h3>
-    <div class="rc-inbox-threads">
-      ${threads.map(t => _readerCardThreadHtml(clubId, userId, t)).join('')}
-    </div>`;
-
-  // ההודעה מסומנת "נקראה" (במסד הנתונים, לא רק מקומית) ברגע שהיא באמת מוצגת כאן —
-  // מכסה כל הודעה/תגובה של המורה בשרשור הזה, לא רק ההכרזה הכיתתית (שנשארת local-tracked).
-  messages.forEach(m => {
-    if (m.senderRole !== 'student' && m.toUserId != null && !(m.readByStudent || m.readAt)) {
-      if (typeof fbMarkMessageRead === 'function') fbMarkMessageRead(clubId, m.id, 'student');
-    }
-  });
-  try {
-    const seen = JSON.parse(localStorage.getItem('booki_seen_announcements_' + clubId) || '[]');
-    const merged = Array.from(new Set([...seen, ...messages.filter(m => m.toUserId == null).map(m => m.id)]));
-    localStorage.setItem('booki_seen_announcements_' + clubId, JSON.stringify(merged));
-  } catch {}
-  _renderReaderCardMessageBadge(0);
-}
-
-function _readerCardThreadHtml(clubId, userId, thread) {
-  const bubbles = thread.messages.map(m => {
-    const mine  = m.senderRole === 'student';
-    const label = mine ? '' : (m.toUserId == null ? '📢 הכרזה כיתתית' : '💙 המורה');
-    return `
-      <div class="rc-msg-bubble ${mine ? 'rc-msg-mine' : 'rc-msg-teacher'}">
-        ${label ? `<span class="rc-msg-from">${label}</span>` : ''}
-        <p class="rc-msg-text">${_escHtml(m.text || '')}</p>
-        <span class="rc-msg-time">${_fmtMsgTime(m.createdAt)}</span>
-      </div>`;
-  }).join('');
-
-  return `
-    <div class="rc-thread" data-thread-id="${thread.threadId}">
-      ${bubbles}
-      <div class="rc-reply-row">
-        <textarea class="rc-reply-input" id="rc-reply-${thread.threadId}" maxlength="300"
-                  placeholder="כתוב/כתבי תשובה..."></textarea>
-        <button class="rc-reply-btn" onclick="sendReaderCardReply('${clubId}','${userId}','${thread.threadId}')">שליחה</button>
-      </div>
-      <p class="rc-reply-status" id="rc-reply-status-${thread.threadId}"></p>
-    </div>`;
-}
-
-function _fmtMsgTime(iso) {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  } catch (e) { return ''; }
-}
-
-let _rcReplySending = false;
-
-/** Sprint 11 — Part 7: תלמיד/ה עונה בתוך שרשור קיים. */
-async function sendReaderCardReply(clubId, userId, threadId) {
-  if (_rcReplySending) return; // מונע שליחה כפולה מלחיצה כפולה
-  const input    = document.getElementById(`rc-reply-${threadId}`);
-  const statusEl = document.getElementById(`rc-reply-status-${threadId}`);
-  const text     = (input?.value || '').trim();
-  if (statusEl) statusEl.textContent = '';
-  if (!text) { if (statusEl) statusEl.textContent = 'יש לכתוב הודעה'; return; }
-
-  const btn = document.querySelector(`.rc-thread[data-thread-id="${threadId}"] .rc-reply-btn`);
-  _rcReplySending = true;
-  if (btn) { btn.disabled = true; btn.textContent = '...'; }
-
-  // אותו תיקון כמו בהצבעה (Part 2): מבטיחים session אמיתי לפני כתיבה רגישת-זהות,
-  // ולא סומכים על מה שנשמר ב-localStorage בלבד.
-  if (typeof ensureStudentAuth === 'function') { try { await ensureStudentAuth(); } catch (e) {} }
-
-  const result = typeof fbReplyToMessage === 'function'
-    ? await fbReplyToMessage(clubId, { threadId, toUserId: userId, text, senderRole: 'student', senderId: userId })
-    : { ok: false };
-
-  _rcReplySending = false;
-
-  if (!result.ok) {
-    if (btn) { btn.disabled = false; btn.textContent = 'שליחה'; }
-    if (statusEl) { statusEl.textContent = 'לא הצלחנו לשלוח את התשובה — נסה/י שוב.'; statusEl.classList.add('rc-reply-status-error'); }
-    return;
-  }
-
-  // הרענון המלא גורם לתשובה להופיע מיד בשרשור (Part 7) — ואז מציגים את אישור ההצלחה
-  // על אותו אלמנט אחרי שהוא נוצר מחדש (הרינדור מוחק את התוכן הקודם שלו).
-  await _initReaderCardMessages();
-  const freshStatus = document.getElementById(`rc-reply-status-${threadId}`);
-  if (freshStatus) freshStatus.textContent = '✅ ההודעה נשלחה בהצלחה';
 }
 
 // ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
@@ -892,7 +697,10 @@ async function _renderNewClubView(clubId) {
     ]);
     if (cycle) {
       goalTarget = cycle.target || goalTarget;
-      cycleProgress = Math.max(0, (econ?.lifetimeEarned || 0) - (cycle.startBaseline || 0));
+      // Fix (goal/points unification): progress == economy.balance — אותו מספר בדיוק
+      // שהמורה רואה בדשבורד/בהגדרות היעד/בחנות. totalMins (העץ, למטה) נשאר נפרד בכוונה —
+      // זה מד "סה"כ קריאה אי-פעם" שלעולם לא מתאפס, לא מד המרחק ליעד הנוכחי.
+      cycleProgress = Math.max(0, econ?.balance || 0);
     }
   }
 

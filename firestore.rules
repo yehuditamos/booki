@@ -94,11 +94,13 @@ service cloud.firestore {
               && request.resource.data.get('personalized', false) == true
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['claimedByUid', 'personalized', 'emoji', 'firstLoginAt', 'updatedAt']))
-          // cachedStats: כרטיס שנתבע — בדיקת claimedByUid מדויקת
+          // cachedStats/seenMessageIds: כרטיס שנתבע — בדיקת claimedByUid מדויקת.
+          // seenMessageIds (תיקונים — הודעות): מערך "אילו הודעות כבר נראו", נכתב
+          // ע"י התלמיד/ה עצמו/ה בלבד — זו כל ההרשאה הדרושה למנגנון ה"נקרא פעם אחת".
           || (isSignedIn()
               && resource.data.get('claimedByUid', null) == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['cachedStats', 'updatedAt']))
+                 .hasOnly(['cachedStats', 'seenMessageIds', 'updatedAt']))
           // cachedStats + avatar: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
           // נדרש כי ה-anonymous UID עשוי להשתנות בין sessions על אותו מכשיר
           || (isSignedIn()
@@ -118,11 +120,11 @@ service cloud.firestore {
               && resource.data.get('claimedByUid', null) != null
               && request.resource.data.claimedByUid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedByUid', 'updatedAt']))
-          // cachedStats: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
+          // cachedStats/seenMessageIds: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
           || (isSignedIn()
               && isMe(userId)
               && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['cachedStats', 'updatedAt']));
+                 .hasOnly(['cachedStats', 'seenMessageIds', 'updatedAt']));
         allow delete: if isTeacher();
 
         // sessions sub-collection — כרטיסי תלמיד שנוצרו ע"י מורה (Option B)
@@ -165,9 +167,11 @@ service cloud.firestore {
                           && resource.data.status == 'active'
                           && request.resource.data.status == 'completed'
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reachedAt', 'eventId'])
-                          // ולידציה אמיתית מול הארנק — לא רק צורת השדות
-                          && get(/databases/$(database)/documents/clubs/$(clubId)/economy/wallet).data.lifetimeEarned
-                             - resource.data.startBaseline >= resource.data.target);
+                          // Fix (goal/points unification): progress == economy.balance, לא
+                          // lifetimeEarned - startBaseline — startBaseline הפך למשמעות
+                          // lifetimeSpent-at-cycle-start, אז balance כבר משקף את זה ישירות.
+                          && get(/databases/$(database)/documents/clubs/$(clubId)/economy/wallet).data.balance
+                             >= resource.data.target);
       }
 
       // events: יומן אירועי המערכת (Event System) — הבסיס לכל גיימיפיקציה עתידית.
@@ -250,32 +254,15 @@ service cloud.firestore {
       }
 
       // Sprint 10 — Parts 6-8: messages — עידוד אישי (toUserId מוגדר) או הודעה כיתתית
-      // (toUserId==null). קריאה למי שרלוונטי; הנמען היחיד שיכול לסמן "נקרא".
-      // Sprint 11: הרחבה לשיחה דו-כיוונית — תלמיד/ה יכול/ה ליצור תגובה (type=='reply')
-      // בשרשור השייך לו/ה בלבד (senderId==toUserId==הזהות שלו/ה עצמו/ה — אף פעם לא
-      // מזהה של תלמיד/ה אחר/ת), ולסמן readByStudent על הודעות בשרשור הזה; מורה יכולה
-      // לסמן readByTeacher על כל הודעה. readAt (Sprint 10) נשאר נתמך לתאימות לאחור.
+      // (toUserId==null). מפושט: אין thread/reply/read-receipt על ההודעה עצמה —
+      // "נקרא" נשמר בנפרד, כ-seenMessageIds על ה-membership של התלמיד/ה (ר' למטה) —
+      // מורה בלבד יוצרת/מוחקת הודעות; תלמיד/ה אף פעם לא כותב/ת ל-messages.
       match /messages/{messageId} {
         allow read:   if isClubTeacher(clubId) || isOwner()
                       || resource.data.toUserId == null
                       || isMe(resource.data.toUserId)
                       || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(resource.data.toUserId)).data.get('claimedByUid', null) == request.auth.uid;
-        allow create: if isClubTeacher(clubId) || isOwner()
-                      || (isSignedIn()
-                          && request.resource.data.type == 'reply'
-                          && request.resource.data.senderRole == 'student'
-                          && request.resource.data.toUserId == request.resource.data.senderId
-                          && (isMe(request.resource.data.senderId)
-                              || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(request.resource.data.senderId)).data.get('claimedByUid', null) == request.auth.uid));
-        allow update: if (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
-                          && (isClubTeacher(clubId) || isOwner()
-                              || isMe(resource.data.toUserId)
-                              || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(resource.data.toUserId)).data.get('claimedByUid', null) == request.auth.uid))
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readByStudent'])
-                          && (isMe(resource.data.toUserId)
-                              || get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(resource.data.toUserId)).data.get('claimedByUid', null) == request.auth.uid))
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readByTeacher'])
-                          && (isClubTeacher(clubId) || isOwner()));
+        allow create, update: if isClubTeacher(clubId) || isOwner();
         allow delete: if isClubTeacher(clubId) || isOwner();
       }
     }

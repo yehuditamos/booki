@@ -368,50 +368,6 @@ label { font-weight: 700; font-size: 1rem; }
 .reader-card-content { display: flex; flex-direction: column; gap: 16px; padding: 0 16px 20px; }
 .card-hero { position: relative; text-align: center; padding: 28px 20px; background: linear-gradient(135deg, #EBF5FB, #D6EAF8); border-radius: 22px; }
 
-/* Sprint 11 — Part 5: תג התראת הודעות על כרטיס הקורא */
-.rc-message-badge {
-  position: absolute; top: 12px; inset-inline-start: 12px;
-  background: #fff; border: 2px solid var(--gold, #C99A3E); border-radius: 50%;
-  width: 42px; height: 42px; font-size: 1.2rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,.12);
-}
-.rc-message-badge-unread { animation: rcBadgePulse 1.4s ease-in-out infinite; }
-.rc-message-count {
-  position: absolute; top: -6px; inset-inline-end: -6px;
-  background: var(--red, #E74C3C); color: #fff; font-size: .68rem; font-weight: 800;
-  min-width: 18px; height: 18px; border-radius: 9px; padding: 0 4px;
-  display: flex; align-items: center; justify-content: center;
-}
-@keyframes rcBadgePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-
-/* Sprint 11 — Part 6: תיבת "ההודעות שלי" בכרטיס הקורא */
-.rc-inbox-section { margin: 14px 0; text-align: center; }
-.rc-inbox-title { margin: 0 0 8px; font-size: 1rem; }
-.rc-inbox-loading, .rc-inbox-error, .rc-inbox-empty { color: var(--muted); font-size: .9rem; padding: 10px 0; }
-.rc-inbox-error { color: var(--red, #E74C3C); }
-.rc-inbox-threads { display: flex; flex-direction: column; gap: 12px; text-align: start; }
-.rc-thread {
-  background: #fff; border: 1px solid #E4DCCB; border-radius: 16px; padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.rc-msg-bubble { max-width: 85%; border-radius: 14px; padding: 8px 12px; }
-.rc-msg-teacher { align-self: flex-start; background: #EBF5FB; }
-.rc-msg-mine { align-self: flex-end; background: #E8F5E9; }
-.rc-msg-from { display: block; font-size: .72rem; font-weight: 800; color: var(--leather, #8B4A2B); margin-bottom: 2px; }
-.rc-msg-text { margin: 0; font-size: .9rem; word-break: break-word; }
-.rc-msg-time { display: block; font-size: .68rem; color: var(--muted); margin-top: 2px; }
-.rc-reply-row { display: flex; gap: 6px; margin-top: 4px; }
-.rc-reply-input {
-  flex: 1; resize: none; min-height: 38px; border-radius: 10px; border: 1px solid #DCD3BE;
-  padding: 6px 10px; font-family: inherit; font-size: .85rem;
-}
-.rc-reply-btn {
-  background: var(--green2, #2ECC71); color: #fff; border: none; border-radius: 10px;
-  padding: 0 16px; font-weight: 800; font-family: inherit; cursor: pointer;
-}
-.rc-reply-status { margin: 4px 0 0; font-size: .78rem; text-align: center; min-height: 1.1em; color: var(--green, #27AE60); }
-.rc-reply-status.rc-reply-status-error { color: var(--red, #E74C3C); }
 .card-avatar { font-size: 4rem; }
 .card-name   { font-size: 2rem; font-weight: 900; margin-top: 6px; }
 .card-rank   { font-size: 1.2rem; font-weight: 700; margin-top: 6px; }
@@ -2050,6 +2006,29 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
 .goals-row-label { display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
 .goals-row .goals-edit-row { margin-bottom: 0; }
 
+/* Goal Management slider */
+.goal-slider-head { text-align: center; margin-bottom: 6px; }
+.goal-slider-target-num { font-size: 2rem; font-weight: 900; color: var(--green); line-height: 1; }
+.goal-slider-target-lbl { display: block; font-size: .75rem; color: var(--muted); margin-top: 2px; }
+.goal-slider {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  height: 8px; border-radius: 99px; background: #e6e6e6; margin: 14px 0 12px; cursor: pointer;
+}
+.goal-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--green); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(39,174,96,.4);
+}
+.goal-slider::-moz-range-thumb {
+  width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff;
+  background: var(--green); box-shadow: 0 2px 8px rgba(39,174,96,.4);
+}
+.goal-slider-stats { display: flex; gap: 8px; margin-bottom: 4px; }
+.goal-slider-stat {
+  flex: 1; text-align: center; background: #f7f7f7; border-radius: 10px; padding: 8px 4px;
+}
+.goal-slider-stat strong { display: block; font-size: 1.05rem; font-weight: 900; color: var(--text); }
+.goal-slider-stat span { display: block; font-size: .68rem; color: var(--muted); margin-top: 2px; }
+
 /* Toggle switch — מחליף שני כפתורים מלאים בפקד דו-מצבי קומפקטי אחד */
 .ui-toggle {
   display: flex; background: #f0f0f0; border-radius: 10px; padding: 3px; gap: 2px;
@@ -2225,21 +2204,23 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
 .shop-celebration-banner h3 { font-size: 1.3rem; font-weight: 900; color: #6b4a00; margin-bottom: 6px; }
 .shop-celebration-banner p { font-size: .92rem; color: #7a5c00; margin-bottom: 16px; line-height: 1.5; }
 
-/* Sprint 10 — Parts 6-8: התראת הודעה מבוקי בעמוד הבית */
-.booki-message-indicator {
-  display: block; width: calc(100% - 32px); margin: 0 16px 14px;
+/* הודעות (מפושט) — באנר חד-פעמי בעמוד הבית, בלי תיבה/מסך/thread */
+.booki-message-banner {
+  display: flex; align-items: flex-start; gap: 8px;
+  width: calc(100% - 32px); margin: 0 16px 14px;
   background: linear-gradient(135deg, #EBF5FB, #D6EAF8); border: 2px solid var(--blue2);
-  border-radius: 16px; padding: 12px; font-family: inherit; font-weight: 700; font-size: .92rem;
-  color: var(--blue2); animation: bookiTimerInvite 2.4s ease-in-out infinite;
+  border-radius: 16px; padding: 12px 14px; font-family: inherit;
 }
+.booki-message-banner-icon { font-size: 1.3rem; flex-shrink: 0; }
+.booki-message-banner-text { flex: 1; margin: 0; font-weight: 700; font-size: .9rem; color: var(--blue2); line-height: 1.4; }
+.booki-message-banner-close {
+  background: none; border: none; font-size: .9rem; color: var(--blue2); opacity: .6;
+  flex-shrink: 0; padding: 2px;
+}
+.booki-message-banner-close:hover { opacity: 1; }
 
-/* Sprint 10 — Part 6: לב עידוד בטבלת הקוראים */
-.tcd-m-encourage { position: relative; background: none; border: none; font-size: 1rem; cursor: pointer; opacity: .5; padding: 4px; border-radius: 6px; flex-shrink: 0; transition: opacity .15s; }
-.tcd-m-encourage-unread { opacity: 1; }
-.tcd-m-encourage-unread::after {
-  content: ''; position: absolute; top: 0; inset-inline-end: 0;
-  width: 9px; height: 9px; border-radius: 50%; background: var(--red, #E74C3C); border: 1.5px solid #fff;
-}
+/* לב עידוד בטבלת הקוראים — שליחה בלבד, אין יותר "תגובה שלא נקראה" */
+.tcd-m-encourage { background: none; border: none; font-size: 1rem; cursor: pointer; opacity: .5; padding: 4px; border-radius: 6px; flex-shrink: 0; transition: opacity .15s; }
 .tcd-m-encourage:hover { opacity: 1; }
 
 .encourage-presets { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
@@ -2249,15 +2230,6 @@ body:not(.nav-visible) .btn-bug-report { bottom: 14px; }
   transition: all .2s; cursor: pointer;
 }
 .encourage-preset-btn.selected { background: var(--blue2); border-color: var(--blue2); color: #fff; }
-
-.messages-list { display: flex; flex-direction: column; gap: 12px; margin: 10px 0; text-align: right; }
-.message-item { background: #EBF5FB; border-radius: 14px; padding: 12px 14px; }
-.message-from { font-size: .8rem; font-weight: 800; color: var(--blue2); margin-bottom: 4px; }
-.message-text { font-size: .95rem; color: var(--text); line-height: 1.5; }
-
-@media (prefers-reduced-motion: reduce) {
-  .booki-message-indicator { animation: none; }
-}
 
 /* ─── חנות הכיתה — עיון (תלמיד) — "חנות צעצועים קטנה וקסומה" ────────────────── */
 .shop-student-content {
