@@ -73,16 +73,29 @@ function _clearBookiReadingLocal() {
   try { localStorage.removeItem(_bookiSessionKey()); } catch {}
   if (_bookiReadingInterval) { clearInterval(_bookiReadingInterval); _bookiReadingInterval = null; }
   if (_bookiTransitionTimer) { clearTimeout(_bookiTransitionTimer); _bookiTransitionTimer = null; }
-  const banner = document.getElementById('booki-resume-banner');
-  if (banner) banner.style.display = 'none';
+  window._homeBannerWants.resume = false;
+  if (typeof _reconcileHomeBanners === 'function') {
+    _reconcileHomeBanners();
+  } else {
+    const banner = document.getElementById('booki-resume-banner');
+    if (banner) banner.style.display = 'none';
+  }
 }
 
 /** נקרא בכניסה למסך הבית (אותה נקודת-חיבור שבה Sprint 7 קורא ל-renderHomeEncouragement). */
 function checkBookiReadingResume() {
-  const banner = document.getElementById('booki-resume-banner');
-  if (!banner) return;
   const session = _loadBookiSession();
-  banner.style.display = session?.startedAt ? '' : 'none';
+  window._homeBannerWants.resume = !!session?.startedAt;
+  const stageEl = document.getElementById('booki-resume-banner-stage');
+  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('core/states/booki-reading.png', { className: 'booki-resume-banner-char' });
+  }
+  if (typeof _reconcileHomeBanners === 'function') {
+    _reconcileHomeBanners();
+  } else {
+    const banner = document.getElementById('booki-resume-banner');
+    if (banner) banner.style.display = session?.startedAt ? '' : 'none';
+  }
 }
 
 function _minutesLabel(n) {

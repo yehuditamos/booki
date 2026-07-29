@@ -74,3 +74,10 @@ node_modules/
 # One-time migration backup logs (contain account email + prior field values —
 # operational records, not code; kept locally for rollback, not version-controlled)
 scripts/goal_baseline_backup_*.json
+
+# Delivered brand-kit source zips — already extracted into assets/; the zips
+# themselves are large one-off drops, not project source, not deployed.
+*.zip
+
+# Ad-hoc verification screenshots (puppeteer, for user review) — not project source.
+/review-screenshots/

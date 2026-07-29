@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#FFFDF4"/>
+      <stop offset="1" stop-color="#FFF4D9"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="32%" r="48%">
+      <stop stop-color="#F4C34A" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#F4C34A" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="28"/></filter>
+    <pattern id="grain" width="90" height="90" patternUnits="userSpaceOnUse">
+      <circle cx="8" cy="13" r="1.2" fill="#5A3478" opacity=".035"/>
+      <circle cx="56" cy="42" r="1" fill="#477B52" opacity=".04"/>
+      <circle cx="31" cy="76" r=".8" fill="#26354D" opacity=".03"/>
+    </pattern>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#paper)"/>
+  <rect width="1080" height="1920" fill="url(#sun)"/>
+  <path d="M-120 320C120 165 282 178 424 318c-153 29-272 116-369 271C-20 509-75 423-120 320Z" fill="#477B52" opacity=".10"/>
+  <path d="M1185 208c-224-83-393-32-511 136 174-8 322 47 449 166 45-88 66-189 62-302Z" fill="#2AA8AE" opacity=".11"/>
+  <path d="M-80 1535c240-124 453-110 640 42-185 65-342 166-471 304-75-105-131-220-169-346Z" fill="#2AA8AE" opacity=".08"/>
+  <path d="M1155 1404c-218-45-394 21-526 198 175-15 331 30 468 136 43-104 62-215 58-334Z" fill="#5A3478" opacity=".075"/>
+  <g fill="none" stroke="#477B52" stroke-width="8" stroke-linecap="round" opacity=".13">
+    <path d="M130 1010c162-102 326-112 490-30"/>
+    <path d="M953 891c-131-80-267-91-408-34"/>
+  </g>
+  <g opacity=".22">
+    <path d="M174 744c42-35 88-35 137 0-49 6-91 30-126 72-14-25-18-49-11-72Z" fill="#F47A5E"/>
+    <path d="M887 672c-40-33-83-33-129 0 46 6 86 29 119 69 13-24 16-47 10-69Z" fill="#F4C34A"/>
+    <circle cx="860" cy="1135" r="12" fill="#5A3478"/>
+    <circle cx="218" cy="1226" r="9" fill="#2AA8AE"/>
+  </g>
+  <ellipse cx="540" cy="1398" rx="300" ry="78" fill="#477B52" opacity=".09" filter="url(#soft)"/>
+  <rect width="1080" height="1920" fill="url(#grain)"/>
+</svg>

@@ -23,6 +23,8 @@ try {
     ...(typeof STORIES_ADVENTURE !== 'undefined' && Array.isArray(STORIES_ADVENTURE) ? STORIES_ADVENTURE : []),
     ...(typeof STORIES_BOOKI     !== 'undefined' && Array.isArray(STORIES_BOOKI)     ? STORIES_BOOKI     : []),
     ...(typeof STORIES_READING   !== 'undefined' && Array.isArray(STORIES_READING)   ? STORIES_READING   : []),
+    ...(typeof STORIES_BEGINNER  !== 'undefined' && Array.isArray(STORIES_BEGINNER)  ? STORIES_BEGINNER  : []),
+    ...(typeof STORIES_BOOKWORMS !== 'undefined' && Array.isArray(STORIES_BOOKWORMS) ? STORIES_BOOKWORMS : []),
   ];
 } catch (e) {
   STORIES = [];

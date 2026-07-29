@@ -743,7 +743,8 @@ function _enterPersonalHome(userId, profile) {
 
   if (typeof analyticsUserActive === 'function') analyticsUserActive(userId, _activeClubId);
   setNavVisible(true);
-  setNavTab('');
+  setNavTab('home');
+  _ensureHomeHeroStage();
 
   // טוען נתוני קריאה צבורים מ-localStorage (סינכרוני, מהיר)
   const saved = typeof loadStudentLocal === 'function' ? loadStudentLocal(userId) : null;
@@ -780,14 +781,28 @@ function _enterPersonalHome(userId, profile) {
   if (typeof checkBookiReadingResume === 'function') checkBookiReadingResume();
   if (typeof checkShopCelebration === 'function') checkShopCelebration(_activeClubId);
   if (typeof checkNewMessages === 'function') checkNewMessages(_activeClubId, userId);
+  if (typeof checkHomeShopTeaser === 'function') checkHomeShopTeaser(_activeClubId);
   showScreen('screen-main');
+  if (typeof _initHomeMagic === 'function') _initHomeMagic();
   _updateBugLabel();
 
   const clubBtn = document.getElementById('btn-switch-club');
   if (clubBtn) clubBtn.style.display = _activeClubId ? '' : 'none';
 
-  const shopBtn = document.getElementById('btn-goto-shop');
-  if (shopBtn) shopBtn.style.display = _activeClubId ? '' : 'none';
+  const navClassTab = document.getElementById('nav-tab-class');
+  if (navClassTab) navClassTab.style.display = _activeClubId ? '' : 'none';
+
+  // "החלף" — אייקון, מוצג רק אם באמת יש קורא אחר במועדון להחליף אליו (memberCount > 1),
+  // לא רק כי יש מועדון. נטען באופן לא-חוסם כדי לא לעכב את הצגת מסך הבית.
+  const switchHomeBtn = document.getElementById('btn-switch-reader-home');
+  if (switchHomeBtn) {
+    switchHomeBtn.style.display = 'none';
+    if (_activeClubId && typeof fbLoadClub === 'function') {
+      fbLoadClub(_activeClubId).then(club => {
+        if (club && (club.memberCount || 0) > 1) switchHomeBtn.style.display = '';
+      }).catch(() => {});
+    }
+  }
 
   const backBar = document.getElementById('main-back-club-students');
   if (backBar) backBar.style.display = window._returnToClubStudents ? '' : 'none';
@@ -804,6 +819,77 @@ function goWhoReads() {
 }
 
 /** מנקה זהות תלמיד אבל שומר הקשר מועדון — חוזר לרשימת קוראי המועדון */
+/** כפתור "⬅️ החלף" בעמוד הבית. מוצג רק כשיש מועדון (יש קוראים אחרים לבחור
+ *  מביניהם — ר' הצגה/הסתרה ב-_enterPersonalHome/selectStudent). לקורא אישי
+ *  ללא מועדון אין "קורא אחר" להחליף אליו, ולכן במקום logout() גורף (שמוציא
+ *  את הקורא כל הדרך למסך הפתיחה) מסתירים את הכפתור לגמרי; אם בכל זאת נקרא
+ *  (state ישן מהדפדפן) — לא עושים כלום, לא יוצאים מהמערכת.
+ */
+function switchReaderHome() {
+  const clubId = _activeClubId || (typeof getActiveReader === 'function' ? getActiveReader()?.clubId : null);
+  if (clubId) switchReaderInClub();
+}
+
+/** מזריק פעם אחת את איור בוקי הרשמי (booki-start, בגודל מוקטן) מעל קונסולת
+ *  הקריאה בעמוד הבית — מחובר חזותית אליה (margin שלילי + סלקטור ייעודי),
+ *  לא עומד לבד מעל חלל ריק. idempotent, לא נוגע אם כבר הוזרק. */
+function _ensureHomeHeroStage() {
+  const stageEl = document.getElementById('home-console-stage');
+  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('core/states/booki-start.png', { className: 'home-console-char', loading: 'eager' });
+  }
+}
+
+/** טאב "בית" בניווט התחתון — חוזר למסך הבית של הקורא הפעיל, בלי לאבד הקשר. */
+function goReaderHome() {
+  setNavTab('home');
+  showScreen('screen-main');
+  if (typeof _initHomeMagic === 'function') _initHomeMagic();
+}
+
+/** בורר "איך רוצים לקרוא היום?" — נפתח מהכפתור הראשי היחיד במסך הבית.
+ *  שלוש האפשרויות מפעילות בדיוק את פעולות הקריאה הקיימות (ללא שינוי לוגיקה). */
+let _chooserReturnFocusEl = null;
+let _chooserKeydownHandler = null;
+
+function _chooserFocusables(sheetEl) {
+  return Array.from(sheetEl.querySelectorAll('button')).filter(el => !el.disabled);
+}
+
+function openReadingChooser() {
+  const el = document.getElementById('reading-chooser-overlay');
+  if (!el) return;
+  const stageEl = document.getElementById('chooser-header-stage');
+  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('core/states/booki-reading.png', { className: 'chooser-header-char' });
+  }
+  _chooserReturnFocusEl = document.activeElement;
+  el.style.display = 'flex';
+
+  const sheetEl = el.querySelector('.chooser-sheet');
+  const focusables = _chooserFocusables(sheetEl);
+  if (focusables[0]) focusables[0].focus();
+
+  _chooserKeydownHandler = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeReadingChooser(); return; }
+    if (e.key !== 'Tab') return;
+    const f = _chooserFocusables(sheetEl);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener('keydown', _chooserKeydownHandler);
+}
+
+function closeReadingChooser() {
+  const el = document.getElementById('reading-chooser-overlay');
+  if (el) el.style.display = 'none';
+  if (_chooserKeydownHandler) { document.removeEventListener('keydown', _chooserKeydownHandler); _chooserKeydownHandler = null; }
+  if (_chooserReturnFocusEl && typeof _chooserReturnFocusEl.focus === 'function') _chooserReturnFocusEl.focus();
+  _chooserReturnFocusEl = null;
+}
+
 function switchReaderInClub() {
   const clubId = _activeClubId || getActiveReader()?.clubId;
   if (typeof window.initCurrentStudent === 'function') window.initCurrentStudent(null, null);

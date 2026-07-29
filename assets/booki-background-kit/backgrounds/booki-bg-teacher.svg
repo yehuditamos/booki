@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFFCF3"/>
+      <stop offset="1" stop-color="#F4F7F0"/>
+    </linearGradient>
+    <pattern id="grid" width="96" height="96" patternUnits="userSpaceOnUse">
+      <path d="M96 0H0v96" fill="none" stroke="#477B52" stroke-width="1" opacity=".055"/>
+    </pattern>
+    <filter id="blur"><feGaussianBlur stdDeviation="26"/></filter>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#paper)"/>
+  <rect width="1080" height="1920" fill="url(#grid)"/>
+  <path d="M-80 285c237-123 442-112 615 35-183 48-335 141-456 277C6 510-47 406-80 285Z" fill="#477B52" opacity=".055"/>
+  <path d="M1150 278c-212-88-395-55-549 98 174 17 323 88 447 213 58-91 92-195 102-311Z" fill="#2AA8AE" opacity=".055"/>
+  <g fill="none" stroke-linecap="round" opacity=".11">
+    <path d="M118 621h245" stroke="#477B52" stroke-width="10"/>
+    <path d="M118 660h166" stroke="#477B52" stroke-width="7"/>
+    <path d="M717 603h245" stroke="#2AA8AE" stroke-width="10"/>
+    <path d="M796 642h166" stroke="#2AA8AE" stroke-width="7"/>
+  </g>
+  <g opacity=".09" fill="none" stroke="#5A3478" stroke-width="8">
+    <rect x="92" y="1290" width="360" height="250" rx="34"/>
+    <path d="M142 1360h190M142 1410h252M142 1460h145"/>
+    <circle cx="861" cy="1407" r="112"/>
+    <path d="M807 1406l36 38 76-88"/>
+  </g>
+  <ellipse cx="540" cy="1430" rx="280" ry="72" fill="#477B52" opacity=".065" filter="url(#blur)"/>
+</svg>

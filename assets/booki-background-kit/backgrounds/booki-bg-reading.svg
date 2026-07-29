@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFF9E9"/>
+      <stop offset=".58" stop-color="#F2FBF7"/>
+      <stop offset="1" stop-color="#E9F7F6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="39%" r="50%">
+      <stop stop-color="#2AA8AE" stop-opacity=".23"/>
+      <stop offset=".65" stop-color="#2AA8AE" stop-opacity=".055"/>
+      <stop offset="1" stop-color="#2AA8AE" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="24"/></filter>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#paper)"/>
+  <rect width="1080" height="1920" fill="url(#glow)"/>
+  <g fill="none" stroke-linecap="round" opacity=".12">
+    <path d="M-40 518c207-167 404-204 590-110" stroke="#2AA8AE" stroke-width="10"/>
+    <path d="M1120 455c-204-134-389-146-554-35" stroke="#477B52" stroke-width="8"/>
+    <path d="M36 1517c253-94 483-65 690 87" stroke="#5A3478" stroke-width="7"/>
+  </g>
+  <g opacity=".18">
+    <path d="M102 318c83-48 166-43 248 14-101 20-178 69-232 147-23-57-28-110-16-161Z" fill="#2AA8AE"/>
+    <path d="M978 284c-77-45-154-40-230 12 93 19 165 65 215 138 22-52 27-102 15-150Z" fill="#477B52"/>
+    <path d="M123 1054c52-35 105-35 159 0-54 10-98 38-133 85-19-30-28-58-26-85Z" fill="#F47A5E"/>
+    <path d="M928 1127c-51-34-103-34-155 0 52 9 95 37 129 82 18-28 27-56 26-82Z" fill="#F4C34A"/>
+  </g>
+  <g fill="#F4C34A" opacity=".42">
+    <path d="M881 672l9 24 24 9-24 9-9 24-9-24-24-9 24-9Z"/>
+    <path d="M193 746l7 18 18 7-18 7-7 18-7-18-18-7 18-7Z"/>
+    <circle cx="830" cy="922" r="7"/>
+    <circle cx="244" cy="924" r="6"/>
+  </g>
+  <ellipse cx="540" cy="1436" rx="330" ry="88" fill="#2AA8AE" opacity=".11" filter="url(#blur)"/>
+</svg>

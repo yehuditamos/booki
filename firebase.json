@@ -12,6 +12,7 @@
       "**/.*",
       "**/node_modules/**",
       "*.md",
+      "*.zip",
       "audit.js",
       "audit_omer.js",
       "check_omri.js",

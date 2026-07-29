@@ -32,8 +32,88 @@ function showJoinClub() {
 function showJoinClubDirect(clubId) {
   _pendingClubId = clubId;
   _pendingInv    = null;
-  // מציגים ישירות את רשימת חברי המועדון — הרשימה היא נקודת הכניסה
+  _showClubWelcomeTransition(clubId);
+}
+
+// זמן תצוגה מינימלי במסך "בוקי פותח לך את המועדון", נמדד מה-paint הראשון בפועל
+// (Paint Timing API) — לא מרגע הרצת הפונקציה. אם טעינת המועדון+פענוח התמונה
+// כבר ארכו יותר מזה, לא מוסיפים זמן נוסף (ר' _msSinceFirstPaint למטה).
+const _CLUB_WELCOME_MIN_MS = 1800;
+
+function _msSinceFirstPaint() {
+  try {
+    const entries = performance.getEntriesByType('paint');
+    const fcp = entries.find(e => e.name === 'first-contentful-paint') || entries.find(e => e.name === 'first-paint');
+    if (fcp) return performance.now() - fcp.startTime;
+  } catch (e) {}
+  return _CLUB_WELCOME_MIN_MS; // לא ניתן למדוד — לא ממתינים, עדיף לא לעכב מיותר
+}
+
+/** טוען ומפענח תמונה (Image.decode()) לפני שהיא מוצגת, כדי שהרגע הראשון שבו
+ *  בוקי נראה כבר יהיה חלק — לא פריים חצי-טעון. לא נתקע לנצח אם הטעינה נכשלת. */
+function _preloadAndDecode(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { if (img.decode) img.decode().then(resolve).catch(resolve); else resolve(); };
+    img.onerror = resolve;
+    img.src = src;
+  });
+}
+
+/** מסך מעבר ממותג בכניסה מקישור מועדון — עוטף את showWhoReads() הקיים בלי לשנות
+ *  אותו: מטמין ומפענח את איור בוקי, טוען את שם המועדון (fbLoadClub, כבר קיים)
+ *  במקביל לספירת זמן התצוגה המינימלי (מה-paint הראשון, לא מהרצת הפונקציה),
+ *  ועובר אוטומטית ב-fade עדין ברגע ששניהם מוכנים. כישלון → הודעה ידידותית + נסה שוב. */
+async function _showClubWelcomeTransition(clubId) {
+  _pendingClubId = clubId;
+  const contentEl = document.getElementById('club-welcome-content');
+  const stageEl   = document.getElementById('club-welcome-stage');
+  const titleEl   = document.getElementById('club-welcome-title');
+  const textEl    = document.getElementById('club-welcome-text');
+  const subEl     = document.getElementById('club-welcome-subline');
+  const errEl     = document.getElementById('club-welcome-error');
+
+  if (contentEl) contentEl.classList.remove('fade-out');
+  [titleEl, textEl, subEl].forEach(el => { if (el) el.style.display = ''; });
+  if (textEl) textEl.textContent = 'בוקי פותח לך עכשיו את המועדון';
+  if (errEl) errEl.style.display = 'none';
+  showScreen('screen-club-welcome'); // המסך כבר "נצבע" ראשון ע"י ה-CSS ב-<head>; זה רק מסנכרן את מכונת המצבים של JS
+
+  const imgPath = 'assets/booki/onboarding/booki-opening-club.png';
+  await _preloadAndDecode(imgPath);
+  if (stageEl && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('onboarding/booki-opening-club.png', { loading: 'eager' });
+  }
+
+  let club = null;
+  try {
+    club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  } catch (e) {
+    club = null;
+  }
+
+  // ממתינים רק על מה שנשאר מ-1.8 השנייה מאז ה-paint הראשון בפועל — אם הטעינה
+  // כבר ארכה יותר, לא מוסיפים זמן נוסף (ר' דרישה מפורשת).
+  const remaining = _CLUB_WELCOME_MIN_MS - _msSinceFirstPaint();
+  if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
+
+  if (!club) {
+    [titleEl, textEl, subEl].forEach(el => { if (el) el.style.display = 'none'; });
+    if (errEl) errEl.style.display = '';
+    return;
+  }
+
+  if (textEl) textEl.textContent = `בוקי פותח לך עכשיו את מועדון ${club.name || ''}`;
+  if (contentEl) {
+    contentEl.classList.add('fade-out');
+    await new Promise(r => setTimeout(r, 320));
+  }
   if (typeof showWhoReads === 'function') showWhoReads(clubId);
+}
+
+/** כפתור "לנסות שוב" במסך המעבר, אם טעינת המועדון נכשלה. */
+function retryClubWelcome() {
+  if (_pendingClubId) _showClubWelcomeTransition(_pendingClubId);
 }
 
 /** נקרא מ-routing.js כש-URL מכיל ?join=CODE */

@@ -73,7 +73,8 @@ async function fbMarkMessagesSeen(clubId, userId, messageIds) {
 
 async function checkNewMessages(clubId, userId) {
   const banner = document.getElementById('booki-message-banner');
-  if (!clubId || !userId) { if (banner) banner.style.display = 'none'; return; }
+  const wants = () => { window._homeBannerWants.message = false; if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); };
+  if (!clubId || !userId) { wants(); return; }
 
   const [messages, membership] = await Promise.all([
     fbLoadMyMessages(clubId, userId),
@@ -83,7 +84,7 @@ async function checkNewMessages(clubId, userId) {
   const seen = new Set(membership?.seenMessageIds || []);
   const unseen = messages.filter(m => !seen.has(m.id));
 
-  if (!unseen.length) { if (banner) banner.style.display = 'none'; return; }
+  if (!unseen.length) { wants(); return; }
 
   // מוצגת רק ההודעה האחרונה שלא נראתה — אין רשימה, אין היסטוריה. "ראייתה" (הצגתה
   // כאן) מספיקה כדי לסמן אותה (ואת כל השאר הממתינות) כ-seen מיד, בהתאם לדרישה
@@ -91,14 +92,20 @@ async function checkNewMessages(clubId, userId) {
   const latest = unseen[0];
   const textEl = document.getElementById('booki-message-banner-text');
   if (textEl) textEl.textContent = latest.text || '';
-  if (banner) banner.style.display = '';
+  const stageEl = document.getElementById('booki-message-banner-stage');
+  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('class-goal/booki-message.png', { className: 'booki-message-banner-char' });
+  }
+  window._homeBannerWants.message = true;
+  if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); else if (banner) banner.style.display = '';
 
   fbMarkMessagesSeen(clubId, userId, unseen.map(m => m.id)).catch(() => {});
 }
 
 function dismissMessageBanner() {
-  const banner = document.getElementById('booki-message-banner');
-  if (banner) banner.style.display = 'none';
+  window._homeBannerWants.message = false;
+  if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners();
+  else { const banner = document.getElementById('booki-message-banner'); if (banner) banner.style.display = 'none'; }
 }
 
 Object.assign(window, {

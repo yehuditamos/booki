@@ -1,0 +1,103 @@
+:root {
+  --booki-bg: #fff8e8;
+  --booki-text: #26354d;
+  --booki-muted: #5f6b70;
+  --booki-green: #477b52;
+  --booki-turquoise: #2aa8ae;
+  --booki-grape: #5a3478;
+  --booki-coral: #f47a5e;
+  --booki-yellow: #f4c34a;
+  --booki-surface: rgba(255, 253, 244, 0.86);
+  --booki-border: rgba(71, 123, 82, 0.16);
+  --booki-shadow: 0 18px 46px rgba(38, 53, 77, 0.11);
+}
+
+.booki-world {
+  position: relative;
+  min-height: 100dvh;
+  isolation: isolate;
+  overflow-x: clip;
+  color: var(--booki-text);
+  background-color: var(--booki-bg);
+  background-image: var(--booki-world-image);
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.booki-world--home {
+  --booki-world-image: url("./backgrounds/booki-bg-home.svg");
+}
+
+.booki-world--reading {
+  --booki-world-image: url("./backgrounds/booki-bg-reading.svg");
+}
+
+.booki-world--class {
+  --booki-world-image: url("./backgrounds/booki-bg-class.svg");
+}
+
+.booki-world--shop {
+  --booki-world-image: url("./backgrounds/booki-bg-shop.svg");
+}
+
+.booki-world--teacher {
+  --booki-world-image: url("./backgrounds/booki-bg-teacher.svg");
+}
+
+.booki-surface {
+  border: 1px solid var(--booki-border);
+  border-radius: 28px;
+  background: var(--booki-surface);
+  box-shadow: var(--booki-shadow);
+  backdrop-filter: blur(14px);
+}
+
+.booki-character-stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  min-height: clamp(220px, 42vh, 520px);
+}
+
+.booki-character-stage::before {
+  position: absolute;
+  z-index: -1;
+  bottom: 3%;
+  width: min(72%, 420px);
+  height: clamp(36px, 7vw, 70px);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--booki-green) 13%, transparent);
+  filter: blur(18px);
+  content: "";
+}
+
+.booki-character-stage > img {
+  display: block;
+  width: min(76vw, 430px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(38, 53, 77, 0.10));
+}
+
+.booki-world--teacher .booki-character-stage {
+  min-height: 150px;
+}
+
+.booki-world--teacher .booki-character-stage > img {
+  width: min(38vw, 230px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .booki-character-stage > img {
+    animation: booki-breathe 4.8s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+}
+
+@keyframes booki-breathe {
+  0%,
+  100% { transform: translateY(0) rotate(-0.25deg); }
+  50% { transform: translateY(-5px) rotate(0.25deg); }
+}
+

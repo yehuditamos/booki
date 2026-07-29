@@ -26,13 +26,13 @@ const STUDENT_EMOJIS = [
 ];
 
 const RANKS = [
-  { min:    0, name: "קורא מתחיל",  icon: "⭐",   color: "#95A5A6" },
-  { min:   50, name: "קורא סקרן",   icon: "⭐⭐",  color: "#27AE60" },
-  { min:  100, name: "קורא אלוף",   icon: "🏆",   color: "#2980B9" },
-  { min:  200, name: "קורא זהב",    icon: "🥇",   color: "#F39C12" },
-  { min:  300, name: "מלך הספרים",  icon: "👑",   color: "#E74C3C" },
-  { min:  500, name: "אגדת הקריאה", icon: "🌟",   color: "#8E44AD" },
-  { min: 1000, name: "אגדת הקריאה", icon: "🌟✨",  color: "#6C3483" },
+  { min:    0, name: "קורא מתחיל",  nameNk: "קוֹרֵא מַתְחִיל",     icon: "⭐",   color: "#95A5A6" },
+  { min:   50, name: "קורא סקרן",   nameNk: "קוֹרֵא סַקְרָן",      icon: "⭐⭐",  color: "#27AE60" },
+  { min:  100, name: "קורא אלוף",   nameNk: "קוֹרֵא אַלּוּף",      icon: "🏆",   color: "#2980B9" },
+  { min:  200, name: "קורא זהב",    nameNk: "קוֹרֵא זָהָב",       icon: "🥇",   color: "#F39C12" },
+  { min:  300, name: "מלך הספרים",  nameNk: "מֶלֶךְ הַסְּפָרִים",   icon: "👑",   color: "#E74C3C" },
+  { min:  500, name: "אגדת הקריאה", nameNk: "אַגֶּדֶת הַקְּרִיאָה", icon: "🌟",   color: "#8E44AD" },
+  { min: 1000, name: "אגדת הקריאה", nameNk: "אַגֶּדֶת הַקְּרִיאָה", icon: "🌟✨",  color: "#6C3483" },
 ];
 
 const CLASS_GOAL = 1500;
@@ -57,10 +57,16 @@ window.initCurrentStudent = function(id, data) {
 // ─── ניווט מסכים ────────────────────────────────────────────────────
 
 function showScreen(id) {
+  // מסיר את "מגן ההבזק הראשוני" של כניסה מקישור-כיתה (ר' style.css, boot-route-club):
+  // הוא נועד רק למנוע פריים אחד עם המסך הלא-נכון לפני שה-JS השתלט על הניתוב —
+  // ברגע ש-showScreen נקרא בכלל, ה-JS כבר בשליטה, ואם לא מסירים אותו כאן הוא
+  // ממשיך לכפות display:none על כל מסך עתידי (כולל screen-main) לנצח.
+  document.documentElement.classList.remove('boot-route-club');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
+  if (typeof applyNiqud === 'function') applyNiqud();
   // נקה Firebase listener כשעוזבים את מסך הכיתה
   if (id !== 'screen-class' && classViewUnsubscribe) {
     classViewUnsubscribe();
@@ -139,18 +145,47 @@ async function saveStudentFull(data) {
   }
 }
 
+// ─── עדיפות באנרי הבית — מוצג באנר אחד בלבד בכל רגע (סדר: חנות > חידוש קריאה > הודעה) ──
+window._homeBannerWants = { shop: false, resume: false, message: false };
+
+function _reconcileHomeBanners() {
+  const order = [
+    ['shop', 'shop-celebration-overlay'],
+    ['resume', 'booki-resume-banner'],
+    ['message', 'booki-message-banner'],
+  ];
+  const shownDisplay = { shop: 'flex', resume: '', message: '' };
+  const winner = order.find(([key]) => window._homeBannerWants[key]);
+  order.forEach(([key, elId]) => {
+    const el = document.getElementById(elId);
+    if (el) el.style.display = (winner && winner[0] === key) ? shownDisplay[key] : 'none';
+  });
+  return winner ? winner[0] : null;
+}
+
 async function selectStudent(id) {
   currentStudentId = id;
   document.getElementById('current-student-name').textContent = STUDENT_NAMES[id];
   document.getElementById('greeting-avatar').textContent      = STUDENT_EMOJIS[id];
-  if (typeof setNavVisible === 'function') { setNavVisible(true); setNavTab(''); }
+  if (typeof setNavVisible === 'function') { setNavVisible(true); setNavTab('home'); }
+  if (typeof _ensureHomeHeroStage === 'function') _ensureHomeHeroStage();
   if (typeof renderHomeEncouragement === 'function') renderHomeEncouragement();
   if (typeof checkBookiReadingResume === 'function') checkBookiReadingResume();
   if (typeof checkShopCelebration === 'function') checkShopCelebration(window.currentClubId);
   if (typeof checkNewMessages === 'function') checkNewMessages(window.currentClubId, id);
+  if (typeof checkHomeShopTeaser === 'function') checkHomeShopTeaser(window.currentClubId);
+  const navClassTab = document.getElementById('nav-tab-class');
+  if (navClassTab) navClassTab.style.display = window.currentClubId ? '' : 'none';
+  // מועדון legacy (STUDENT_NAMES) — "קורא אחר" קיים אם יש יותר מתלמיד אחד ברשימה.
+  const switchHomeBtn = document.getElementById('btn-switch-reader-home');
+  if (switchHomeBtn) {
+    const hasOthers = window.currentClubId && Array.isArray(STUDENT_NAMES) && STUDENT_NAMES.length > 1;
+    switchHomeBtn.style.display = hasOthers ? '' : 'none';
+  }
   showScreen('screen-main');
   currentStudentData = await loadStudentFull(id);
   document.getElementById('current-student-name').textContent = currentStudentData.name;
+  if (typeof _initHomeMagic === 'function') _initHomeMagic();
 }
 
 function logout() {
@@ -165,12 +200,12 @@ function logout() {
 
 // ─── ספריית סיפורים ─────────────────────────────────────────────────
 
-function showLibrary() {
+function showLibrary(filter = 'all') {
   const listEl = document.getElementById('story-list');
   if (listEl) listEl.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">טוען סיפורים...</p>';
   showScreen('screen-library');
   if (typeof renderForYouSection === 'function') renderForYouSection();
-  setTimeout(() => filterLibrary('all'), 0);
+  setTimeout(() => filterLibrary(filter), 0);
 }
 
 function filterLibrary(filter) {
@@ -491,6 +526,7 @@ function launchConfetti() {
 
 async function showReaderCard() {
   const s = currentStudentData || loadStudentLocal(currentStudentId || 0);
+  if (typeof setNavTab === 'function') setNavTab('card');
   showScreen('screen-reader-card');
 
   // Legacy path (numeric id) — data already in memory/localStorage, render immediately
@@ -563,7 +599,10 @@ function _renderReaderCardContent(s) {
          ${badges.map(b => `<span class="badge-chip" style="border-color:${b.color};color:${b.color}" title="${b.name}">${b.icon}</span>`).join('')}
        </div>`
     : '';
-  const personalBest = typeof computePersonalBest === 'function' ? computePersonalBest(history) : 0;
+  // "שיא אישי" (computePersonalBest, motivation.js) הוסתר מתצוגת התלמיד לפי החלטה —
+  // המדד הקיים ("קריאה רצופה הכי ארוכה") לא ברור/רלוונטי מספיק לילדים ועלול לעודד
+  // דיווח זמן ארוך במקום קריאה איכותית. הפונקציה ונתוני ההיסטוריה לא נמחקו —
+  // מסומן כאפשרות עתידית להגדרה מחדש של המדד.
   const histItems = history.slice(0, 10).map(h => {
     const isApp   = h.type === 'app';
     const isBooki = h.type === 'booki';
@@ -621,11 +660,6 @@ function _renderReaderCardContent(s) {
         <span class="stat-num">${s.bookMinutes || 0}</span>
         <span class="stat-lbl">דק׳ מספרים</span>
       </div>
-      <div class="stat-box stat-box-wide">
-        <span class="stat-icon-big">🏅</span>
-        <span class="stat-num">${personalBest}</span>
-        <span class="stat-lbl">שיא אישי (דק׳)</span>
-      </div>
     </div>
     ${progressSection}
     ${history.length > 0
@@ -642,8 +676,16 @@ function _renderReaderCardContent(s) {
 
 // ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
 
+/** בוקי ליד העץ במסך הכיתה — תנוחה לפי מצב היעד (חוגג כשהעץ פרח, אחרת מעודד). */
+function _classHeroBookiHtml(blooming) {
+  if (typeof bookiStageHtml !== 'function') return '';
+  const img = blooming ? 'class-goal/booki-achievement.png' : 'class-goal/booki-progress.png';
+  return bookiStageHtml(img, { className: 'class-hero-booki-char', loading: 'eager' });
+}
+
 function showClassView() {
   window._classReturnScreen = 'screen-main';
+  if (typeof setNavTab === 'function') setNavTab('class');
   showScreen('screen-class');
   const contentEl = document.getElementById('class-content');
   if (contentEl) contentEl.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
@@ -751,9 +793,18 @@ async function _renderNewClubView(clubId) {
         </div>`).join('')}
     </div>`;
 
+  // כניסה לחנות רק מכאן (או מבאנר החגיגה במסך הבית) — לא טאב קבוע בניווט, ולא
+  // אריח קבוע בגוף מסך הבית; מוצג רק כשהחנות באמת פעילה עבור המחזור הזה.
+  const shopEntryBlock = (shopState?.state === 'GOAL_REACHED_PENDING_SHOP' || shopState?.state === 'voting_open')
+    ? `<button class="btn-giant btn-booki-read class-shop-entry" onclick="showShop()">🛍️ להיכנס לחנות הכיתה</button>`
+    : '';
+
   contentEl.innerHTML = `
     <div class="class-hero">
-      <div class="class-big-tree">🌳</div>
+      <div class="class-hero-row">
+        <div class="class-big-tree">🌳</div>
+        <div class="class-hero-booki-stage">${_classHeroBookiHtml(blooming)}</div>
+      </div>
       <div class="tree-leaves">${'🍃'.repeat(Math.min(leaves, 20))}</div>
       <div class="tree-fruits">${'🍎'.repeat(Math.min(fruits, 10))}</div>
       ${blooming ? '<div class="tree-bloom">🌸🌸🌸 העץ פרח! 🌸🌸🌸</div>' : ''}
@@ -777,6 +828,7 @@ async function _renderNewClubView(clubId) {
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
     </div>
+    ${shopEntryBlock}
     ${progressBlock}`;
 }
 
@@ -809,7 +861,10 @@ function _renderClassContent(fbStudents) {
 
   document.getElementById('class-content').innerHTML = `
     <div class="class-hero">
-      <div class="class-big-tree">🌳</div>
+      <div class="class-hero-row">
+        <div class="class-big-tree">🌳</div>
+        <div class="class-hero-booki-stage">${_classHeroBookiHtml(blooming)}</div>
+      </div>
       <div class="tree-leaves">${'🍃'.repeat(Math.min(leaves, 20))}</div>
       <div class="tree-fruits">${'🍎'.repeat(Math.min(fruits, 10))}</div>
       ${blooming ? '<div class="tree-bloom">🌸🌸🌸 העץ פרח! 🌸🌸🌸</div>' : ''}

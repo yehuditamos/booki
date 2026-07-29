@@ -2,13 +2,40 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- הגנה נוספת (בנוסף לכותרות השרת) מול דפדפנים/WebView שלא תמיד מכבדים
+       Cache-Control מהשרת בצורה עקבית (למשל דפדפן פנימי של אפליקציות הודעות) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=27" />
+  <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
+
+<!-- זיהוי route בתחילת ה-bootstrap, לפני שום ציור מסך — סינכרוני, לפני שאר ה-HTML
+     נטען, כדי שלא יהיה אף פריים אחד של splash/welcome/home ישן בכניסה מקישור כיתה.
+     הפעלה בפועל (showJoinClubDirect) עדיין קורית מאוחר יותר ב-routing.js — כאן רק
+     המסך הנכון "נצבע" ראשון דרך CSS, בלי תלות בתזמון JS/timeout. -->
+<script>
+(function () {
+  if (/[?&]club=/.test(location.search)) {
+    document.documentElement.classList.add('boot-route-club');
+  }
+})();
+</script>
+
+<!-- הגנת bfcache: אם הדף משוחזר מ-back-forward cache (למשל חזרה מ-Safari/WhatsApp
+     בלי טעינה מחדש אמיתית מהרשת) — ה-JS לא רץ מחדש כלל, כך שתיקוני הניתוב לא
+     יופעלו. טעינה מחדש אמיתית (לא מ-cache) פותרת את זה בוודאות. -->
+<script>
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) location.reload();
+});
+</script>
 
 <!-- ══ מסך ברוכים הבאים — חד-פעמי ═══════════════════════════════ -->
 <section id="screen-welcome" class="screen">
@@ -16,7 +43,7 @@
     <div class="welcome-card">
       <p class="welcome-wave">👋</p>
       <h1 class="welcome-title">וולקאםםםם!</h1>
-      <h2 class="welcome-sub">ברוכים הבאים לבוקי 📚</h2>
+      <h2 class="welcome-sub"><span data-nk="בְּרוּכִים הַבָּאִים לְבוּקִי">ברוכים הבאים לבוקי</span> 📚</h2>
       <div class="welcome-body">
         <p>בוקי נמצא כרגע בגרסת ניסיון.</p>
         <p>אם משהו לא עובד, נתקע או נראה מוזר — ממש נשמח לדעת.</p>
@@ -30,39 +57,40 @@
 
 <!-- ══ מסך פתיחה ══════════════════════════════════════════════════ -->
 <section id="screen-splash" class="screen active">
-  <div class="splash-bg">
-    <div class="splash-tree">
-      <div class="big-tree">🌳</div>
-      <div class="floating-leaves">
-        <span class="leaf l1">🍃</span>
-        <span class="leaf l2">📚</span>
-        <span class="leaf l3">🍃</span>
-        <span class="leaf l4">✨</span>
-        <span class="leaf l5">🍃</span>
+  <div class="splash-book-confetti" aria-hidden="true">
+    <span class="sbc-book sbc-1">📕</span>
+    <span class="sbc-book sbc-2">📗</span>
+    <span class="sbc-book sbc-3">📘</span>
+    <span class="sbc-book sbc-4">📙</span>
+    <span class="sbc-book sbc-5">📖</span>
+    <span class="sbc-book sbc-6">📚</span>
+  </div>
+  <div class="splash2-wrap">
+    <div class="splash2-logo">
+      <span class="splash2-owl">🦉</span>
+      <h1 class="splash2-title">בּוּקִי</h1>
+      <p class="splash2-tagline">יַעַר הַקְּרִיאָה</p>
+    </div>
+
+    <div class="splash2-actions">
+      <button class="splash2-primary" onclick="showWhoReads()">
+        <span class="splash2-primary-icon">📖</span>
+        <span class="splash2-primary-label" data-nk="מִי קוֹרֵא עַכְשָׁיו?">מי קורא עכשיו?</span>
+      </button>
+
+      <div class="splash2-secondary-row">
+        <button class="splash2-secondary" onclick="showJoinClub()">
+          <span class="splash2-secondary-icon">🔑</span>
+          <span data-nk="יֵשׁ לִי קוֹד מוֹעֲדוֹן">יש לי קוד מועדון</span>
+        </button>
+        <button class="splash2-secondary" onclick="openSoloCard()">
+          <span class="splash2-secondary-icon">📚</span>
+          <span data-nk="כַּרְטִיס קְרִיאָה אִישִׁי">כרטיס קריאה אישי</span>
+        </button>
       </div>
     </div>
-    <h1 class="splash-title">בּוּקִי<br><span class="splash-sub">יַעַר הַקְּרִיאָה</span></h1>
-    <p class="splash-tagline">לקריאה מהנה, מדי יום 📖</p>
-    <div class="splash-actions">
-      <button id="splash-btn-create" class="btn-splash-action btn-sa-create" onclick="goToTeacherArea()">
-        <span class="sa-icon">👩‍🏫</span>
-        <div class="sa-text">
-          <span class="sa-label">התחברות למורה / הקמת מועדון חדש</span>
-          <span class="sa-sub">כניסה למורה קיימת או פתיחת מועדון חדש</span>
-        </div>
-      </button>
-      <button class="btn-splash-action btn-sa-reader" onclick="showWhoReads()">
-        <span class="sa-icon">📖</span>
-        <div class="sa-text">
-          <span class="sa-label">מי קורא עכשיו?</span>
-          <span class="sa-sub">כניסה לקריאה</span>
-        </div>
-      </button>
-      <div class="splash-secondary-actions">
-        <button class="btn-splash-secondary" onclick="showJoinClub()">🔑 יש לי קוד מועדון</button>
-        <button class="btn-splash-secondary btn-solo-card" onclick="openSoloCard()">📚 כרטיס קריאה אישי — ללא מועדון</button>
-      </div>
-    </div>
+
+    <button id="splash-btn-create" class="splash2-teacher-link" onclick="goToTeacherArea()"><span data-nk="מוֹרָה? כְּנִיסָה כָּאן">מורה? כניסה כאן</span></button>
   </div>
 </section>
 
@@ -80,117 +108,206 @@
       </div>
     </div>
     <h1 class="splash-title">🌳 יַעַר הַקְּרִיאָה<br><span class="splash-sub">שֶׁל בּוּקִי</span></h1>
-    <p class="splash-tagline">בוחרים מועדון, בוחרים קורא,<br>ומתחילים להצמיח עץ מקריאה 🌱</p>
+    <p class="splash-tagline"><span data-nk="בּוֹחֲרִים מוֹעֲדוֹן, בּוֹחֲרִים קוֹרֵא,">בוחרים מועדון, בוחרים קורא,</span><br><span data-nk="וּמַתְחִילִים לְהַצְמִיחַ עֵץ מִקְּרִיאָה">ומתחילים להצמיח עץ מקריאה</span> 🌱</p>
     <div class="home-actions">
-      <button class="btn-home-start" onclick="startReading()">מתחילים ⬅️</button>
+      <button class="btn-home-start" onclick="startReading()"><span data-nk="מַתְחִילִים">מתחילים</span> ⬅️</button>
     </div>
   </div>
 </section>
 
 <!-- ══ תפריט ראשי ═════════════════════════════════════════════════ -->
-<section id="screen-main" class="screen">
+<section id="screen-main" class="screen booki-world booki-world--home">
+  <div class="home-ambient" aria-hidden="true">
+    <span class="ambient-sparkle as-1"></span>
+    <span class="ambient-sparkle as-2"></span>
+    <span class="ambient-sparkle as-3"></span>
+    <span class="ambient-sparkle as-4"></span>
+    <span class="ambient-cloud ac-1"></span>
+    <span class="ambient-cloud ac-2"></span>
+    <span class="ambient-glow"></span>
+  </div>
+
   <div id="main-back-club-students" class="screen-header sticky-header" style="display:none">
     <div class="header-row">
       <button class="btn-back" onclick="goBackToClubStudents()">חזרה לחברי המועדון →</button>
     </div>
   </div>
-  <div class="main-top">
-    <div class="greeting-row">
-      <span id="greeting-avatar" class="greeting-avatar">📚</span>
-      <div>
-        <p class="greeting-hi">שלום,</p>
-        <h2 class="greeting-name" id="current-student-name">—</h2>
-        <p class="home-encouragement" id="home-encouragement"></p>
-      </div>
-    </div>
-    <div class="switch-group">
-      <button class="btn-switch" onclick="logout()">⬅️ החלף</button>
-    </div>
-  </div>
 
+  <div class="home-header">
+    <div class="home-header-id">
+      <span id="greeting-avatar" class="greeting-avatar">📚</span>
+      <span class="greeting-name" id="current-student-name">—</span>
+    </div>
+    <button id="btn-switch-reader-home" class="btn-switch-icon" style="display:none" onclick="switchReaderHome()" title="החלף קורא" aria-label="החלף קורא">🔁</button>
+  </div>
   <div id="booki-message-banner" class="booki-message-banner" style="display:none">
-    <span class="booki-message-banner-icon">🦉</span>
+    <div id="booki-message-banner-stage" class="booki-message-banner-stage"></div>
     <p id="booki-message-banner-text" class="booki-message-banner-text"></p>
     <button class="booki-message-banner-close" onclick="dismissMessageBanner()" title="סגירה">✕</button>
   </div>
 
-  <div id="shop-celebration-banner" class="shop-celebration-banner" style="display:none">
-    <div class="confetti-area" id="home-confetti-area"></div>
-    <div class="shop-celebration-icon">🎉</div>
-    <h3>מדהים!</h3>
-    <p>הכיתה שלכם הגיעה ליעד הקריאה!<br>בוקי פתח את חנות הפרסים!</p>
-    <button class="btn-giant btn-booki-read" onclick="enterShopFromCelebration()">🛍️ להיכנס לחנות</button>
-    <button class="btn-footer-link" onclick="dismissShopCelebration()">מאוחר יותר</button>
-  </div>
-
-  <div class="booki-read-card">
-    <div class="booki-read-icons">
-      <span class="booki-read-clock">🕒</span>
-      <span class="booki-read-book">📖</span>
-      <span class="booki-read-owl">🦉</span>
-    </div>
-    <h3 class="booki-read-title">קריאה עם בוקי</h3>
-    <p class="booki-read-sub">בוקי ישמור לך על זמן הקריאה.</p>
-    <button class="btn-giant btn-booki-read" onclick="startBookiReading()">▶ להתחיל לקרוא</button>
-  </div>
   <div id="booki-resume-banner" class="booki-resume-banner" style="display:none">
-    <p>נראה שהיית באמצע קריאה עם בוקי 👀</p>
-    <div class="booki-resume-actions">
-      <button class="btn-resume" onclick="resumeBookiReading()">▶ להמשיך לקרוא</button>
-      <button class="btn-discard" onclick="discardBookiReading()">✕ לא הפעם</button>
+    <div id="booki-resume-banner-stage" class="booki-resume-banner-stage"></div>
+    <div class="booki-resume-banner-body">
+      <p><span data-nk="נִרְאֶה שֶׁהָיִיתָ בְּאֶמְצַע קְרִיאָה עִם בּוּקִי">נראה שהיית באמצע קריאה עם בוקי</span> 👀</p>
+      <div class="booki-resume-actions">
+        <button class="btn-resume" onclick="resumeBookiReading()">▶ <span data-nk="לְהַמְשִׁיךְ לִקְרוֹא">להמשיך לקרוא</span></button>
+        <button class="btn-discard" onclick="discardBookiReading()">✕ <span data-nk="לֹא הַפַּעַם">לא הפעם</span></button>
+      </div>
     </div>
   </div>
 
-  <div class="main-menu">
-    <button class="btn-menu btn-menu-secondary btn-blue" onclick="showLibrary()">
-      <span class="btn-icon">📚</span>
-      <span class="btn-label">לקריאה באפליקציה</span>
-    </button>
-    <button class="btn-menu btn-menu-secondary btn-orange" onclick="startBookReading()">
-      <span class="btn-icon">📖</span>
-      <span class="btn-label">קראתי מתוך ספר</span>
-    </button>
-    <button class="btn-menu btn-menu-secondary btn-purple" onclick="showReaderCard()">
-      <span class="btn-icon">👤</span>
-      <span class="btn-label">כרטיס הקורא שלי</span>
-    </button>
-    <button class="btn-menu btn-menu-secondary btn-teal" onclick="showClassView()">
-      <span class="btn-icon">🏆</span>
-      <span class="btn-label">הכיתה שלנו</span>
-    </button>
-    <button id="btn-goto-shop" class="btn-menu btn-menu-shop" style="display:none" onclick="showShop()">
-      <span class="btn-icon">🎁</span>
-      <span class="btn-label">חנות הכיתה</span>
-    </button>
+  <!-- הודעה חד-פעמית: "הגענו ליעד / החנות נפתחה" — modal חגיגי, לא באנר קבוע.
+       מוצג פעם אחת בלבד לכל מחזור-יעד (checkShopCelebration, לוגיקה קיימת ללא שינוי). -->
+  <div id="shop-celebration-overlay" class="shop-celebration-overlay" style="display:none" onclick="if(event.target===this) dismissShopCelebration()">
+    <div class="shop-celebration-modal">
+      <div class="confetti-area" id="home-confetti-area"></div>
+      <div id="shop-celebration-stage" class="shop-celebration-stage"></div>
+      <h3><span data-nk="מַדְהִים!">מדהים!</span></h3>
+      <p><span data-nk="הַכִּתָּה שֶׁלָּכֶם הִגִּיעָה לְיַעַד הַקְּרִיאָה!">הכיתה שלכם הגיעה ליעד הקריאה!</span><br><span data-nk="בּוּקִי פָּתַח אֶת חֲנוּת הַפְּרָסִים!">בוקי פתח את חנות הפרסים!</span></p>
+      <button class="btn-giant btn-booki-read" onclick="enterShopFromCelebration()">🛍️ <span data-nk="לְהִכָּנֵס לַחֲנוּת">להיכנס לחנות</span></button>
+      <button class="btn-footer-link" onclick="dismissShopCelebration()"><span data-nk="מְאֻחָר יוֹתֵר">מאוחר יותר</span></button>
+    </div>
   </div>
 
-  <button class="btn-footer-link" onclick="shareApp()">📤 שתפי את בוקי</button>
+  <!-- קונסולת הקריאה — בוקי + שלוש פעולות הקריאה כפעולה מיידית, לא בורר-ביניים -->
+  <div class="home-console-wrap">
+    <div id="home-console-stage" class="home-console-stage"></div>
+
+    <div class="home-speech-bubble">
+      <p class="home-encouragement" id="home-encouragement"></p>
+      <span class="home-speech-tail" aria-hidden="true"></span>
+    </div>
+
+    <!-- "חדש על המדף" — קיצור אחד, מדף ספרים ויזואלי; מוצג רק אם יש סיפורים חדשים -->
+    <button id="home-shelf-card" class="home-shelf-card" style="display:none" onclick="_openHomeShelf()">
+      <div class="home-shelf-books" aria-hidden="true">
+        <span class="home-shelf-book hsb-1">📕</span>
+        <span class="home-shelf-book hsb-2">📗</span>
+        <span class="home-shelf-book hsb-3">📘</span>
+        <span class="home-shelf-book hsb-4">📙</span>
+      </div>
+      <div class="home-shelf-plank"></div>
+      <div class="home-shelf-label">
+        <span class="home-shelf-title">🆕 <span data-nk="חָדָשׁ עַל הַמַּדָּף">חדש על המדף</span></span>
+        <span id="home-shelf-count" class="home-shelf-count"></span>
+      </div>
+    </button>
+
+    <div id="home-progress-panel" class="home-progress-panel" style="display:none">
+      <div class="home-progress-row">
+        <span id="home-progress-week" class="home-progress-week"></span>
+        <span id="home-progress-streak" class="home-progress-streak" style="display:none"></span>
+      </div>
+      <div class="home-progress-bar-track">
+        <div id="home-progress-fill" class="home-progress-fill" style="width:0%"></div>
+      </div>
+      <div class="home-progress-row home-progress-row-bottom">
+        <span id="home-progress-rank" class="home-progress-rank"></span>
+        <span id="home-progress-remaining" class="home-progress-remaining"></span>
+      </div>
+    </div>
+
+    <div class="console-frame">
+      <span class="console-corner-sparkle ccs-1" aria-hidden="true">✦</span>
+      <span class="console-corner-sparkle ccs-2" aria-hidden="true">✦</span>
+      <span class="console-corner-sparkle ccs-3" aria-hidden="true">✦</span>
+      <div class="console-surface">
+        <span class="console-sparkle console-sparkle-1">✦</span>
+        <span class="console-sparkle console-sparkle-2">✦</span>
+        <div class="console-item">
+          <button class="console-btn console-btn-side console-btn-right" onclick="showLibrary()">
+            <img class="console-btn-icon" src="assets/booki/reading-journey/booki-read-in-app.png" alt="" loading="eager" width="96" height="96">
+          </button>
+          <span class="console-item-label" data-nk="לִקְרוֹא בְּבוּקִי">לקרוא בבוקי</span>
+        </div>
+        <div class="console-item console-item-main">
+          <button class="console-btn console-btn-clock" onclick="startBookiReading()">
+            <img class="console-btn-clock-icon" src="assets/booki/reading-journey/booki-physical-book-timer.png" alt="" loading="eager" width="120" height="120">
+          </button>
+          <span class="console-item-label" data-nk="הַשָּׁעוֹן שֶׁל בּוּקִי">השעון של בוקי</span>
+        </div>
+        <div class="console-item">
+          <button class="console-btn console-btn-side console-btn-left" onclick="startBookReading()">
+            <img class="console-btn-icon" src="assets/booki/reading-journey/booki-report-minutes.png" alt="" loading="eager" width="96" height="96">
+          </button>
+          <span class="console-item-label" data-nk="כְּבָר קָרָאתִי">כבר קראתי</span>
+          <span class="console-item-sublabel" data-nk="לְדַוֵּחַ לְבוּקִי">לדווח לבוקי</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- כרטיס חנות קבוע — נקודות/התקדמות ליעד הכיתה, מוצג רק כשיש הקשר מועדון עם יעד/חנות -->
+  <button id="home-shop-teaser" class="home-shop-teaser" style="display:none" onclick="showShop()">
+    <div id="home-shop-teaser-stage" class="home-shop-teaser-stage"></div>
+    <div class="home-shop-teaser-body">
+      <div class="home-shop-teaser-row">
+        <span class="home-shop-teaser-label">🛍️ <span data-nk="חֲנוּת הַכִּתָּה">חנות הכיתה</span></span>
+        <span id="home-shop-teaser-points" class="home-shop-teaser-points"></span>
+      </div>
+      <div class="home-shop-teaser-bar-track">
+        <div id="home-shop-teaser-fill" class="home-shop-teaser-fill" style="width:0%"></div>
+      </div>
+      <span id="home-shop-teaser-remaining" class="home-shop-teaser-remaining"></span>
+    </div>
+  </button>
+
+  <div id="home-achievement-card" class="home-achievement-card" style="display:none">
+    <span class="home-achievement-icon" aria-hidden="true">🏅</span>
+    <p id="home-achievement-text" class="home-achievement-text"></p>
+  </div>
+
+  <button class="btn-footer-link" onclick="shareApp()">📤 <span data-nk="שַׁתְּפִי אֶת בּוּקִי">שתפי את בוקי</span></button>
 </section>
+
+<!-- בורר: איך רוצים לקרוא היום — נפתח מהכפתור הראשי, שלוש האפשרויות הקיימות בלבד -->
+<div id="reading-chooser-overlay" class="chooser-overlay" style="display:none" onclick="if(event.target===this) closeReadingChooser()" role="dialog" aria-modal="true" aria-labelledby="chooser-title">
+  <div class="chooser-sheet">
+    <div class="chooser-header">
+      <div id="chooser-header-stage" class="chooser-header-stage"></div>
+      <p id="chooser-title" class="chooser-title" data-nk="אֵיךְ רוֹצִים לִקְרוֹא הַיּוֹם?">איך רוצים לקרוא היום?</p>
+    </div>
+    <button class="chooser-option" onclick="closeReadingChooser(); showLibrary();">
+      <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-read-in-app.png" alt="" loading="lazy" width="38" height="38">
+      <span data-nk="לִקְרוֹא סִפּוּר בְּבוּקִי">לקרוא סיפור בבוקי</span>
+    </button>
+    <button class="chooser-option" onclick="closeReadingChooser(); startBookiReading();">
+      <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-physical-book-timer.png" alt="" loading="lazy" width="38" height="38">
+      <span data-nk="לִקְרוֹא סֵפֶר עִם טַיְמֶר">לקרוא ספר עם טיימר</span>
+    </button>
+    <button class="chooser-option" onclick="closeReadingChooser(); startBookReading();">
+      <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-report-minutes.png" alt="" loading="lazy" width="38" height="38">
+      <span data-nk="כְּבָר קָרָאתִי — לְדַוֵּחַ דַּקּוֹת">כבר קראתי — לדווח דקות</span>
+    </button>
+    <button class="chooser-cancel" onclick="closeReadingChooser()"><span data-nk="בִּיטּוּל">ביטול</span></button>
+  </div>
+</div>
 
 <!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
 <section id="screen-library" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
-      <h2>ספריית הסיפורים</h2>
+      <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2 data-nk="סִפְרִיַּת הַסִּפּוּרִים">ספריית הסיפורים</h2>
     </div>
     <div class="library-tabs">
-      <button class="tab-btn active" id="tab-all"      onclick="filterLibrary('all')">הכל</button>
-      <button class="tab-btn"        id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 צעדים ראשונים</button>
-      <button class="tab-btn"        id="tab-bookworms" onclick="filterLibrary('תולעי ספרים')">📚 תולעי ספרים</button>
-      <button class="tab-btn"        id="tab-tanakh"   onclick="filterLibrary('תנ״ך לילדים')">📜 תנ״ך לילדים</button>
-      <button class="tab-btn"        id="tab-familiar" onclick="filterLibrary('מוכרים')">📚 מוכרים</button>
-      <button class="tab-btn"        id="tab-original" onclick="filterLibrary('מקוריים')">✨ מקוריים</button>
-      <button class="tab-btn"        id="tab-long"     onclick="filterLibrary('ארוכים')">📖 ארוכים</button>
-      <button class="tab-btn"        id="tab-values"   onclick="filterLibrary('ערכים וחברות')">💛 ערכים וחברות</button>
-      <button class="tab-btn"        id="tab-nature"   onclick="filterLibrary('טבע וסקרנות')">🌿 טבע וסקרנות</button>
-      <button class="tab-btn"        id="tab-family"   onclick="filterLibrary('משפחה וחגים')">🏠 משפחה וחגים</button>
+      <button class="tab-btn active" id="tab-all"      onclick="filterLibrary('all')"><span data-nk="הַכֹּל">הכל</span></button>
+      <button class="tab-btn"        id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 <span data-nk="צְעָדִים רִאשׁוֹנִים">צעדים ראשונים</span></button>
+      <button class="tab-btn"        id="tab-bookworms" onclick="filterLibrary('תולעי ספרים')">📚 <span data-nk="תּוֹלַעֵי סְפָרִים">תולעי ספרים</span></button>
+      <button class="tab-btn"        id="tab-tanakh"   onclick="filterLibrary('תנ״ך לילדים')">📜 <span data-nk="תַּנַ״ךְ לִילָדִים">תנ״ך לילדים</span></button>
+      <button class="tab-btn"        id="tab-familiar" onclick="filterLibrary('מוכרים')">📚 <span data-nk="מֻכָּרִים">מוכרים</span></button>
+      <button class="tab-btn"        id="tab-original" onclick="filterLibrary('מקוריים')">✨ <span data-nk="מְקוֹרִיִּים">מקוריים</span></button>
+      <button class="tab-btn"        id="tab-long"     onclick="filterLibrary('ארוכים')">📖 <span data-nk="אֲרֻכִּים">ארוכים</span></button>
+      <button class="tab-btn"        id="tab-values"   onclick="filterLibrary('ערכים וחברות')">💛 <span data-nk="עֲרָכִים וַחֲבֵרוּת">ערכים וחברות</span></button>
+      <button class="tab-btn"        id="tab-nature"   onclick="filterLibrary('טבע וסקרנות')">🌿 <span data-nk="טֶבַע וְסַקְרָנוּת">טבע וסקרנות</span></button>
+      <button class="tab-btn"        id="tab-family"   onclick="filterLibrary('משפחה וחגים')">🏠 <span data-nk="מִשְׁפָּחָה וְחַגִּים">משפחה וחגים</span></button>
     </div>
   </div>
   <div id="for-you-section" class="for-you-section" style="display:none">
-    <div class="for-you-header">⭐ במיוחד בשבילך</div>
+    <div class="for-you-header">⭐ <span data-nk="בִּמְיֻחָד בִּשְׁבִילְךָ">במיוחד בשבילך</span></div>
     <div id="for-you-list" class="story-list for-you-list"></div>
-    <div class="for-you-divider">📚 כל הסיפורים</div>
+    <div class="for-you-divider">📚 <span data-nk="כָּל הַסִּפּוּרִים">כל הסיפורים</span></div>
   </div>
   <div id="story-list" class="story-list"></div>
 </section>
@@ -198,7 +315,7 @@
 <!-- ══ קורא סיפורים ════════════════════════════════════════════════ -->
 <section id="screen-reader" class="screen reader-screen">
   <div class="reader-header sticky-header">
-    <button class="btn-back" onclick="exitReader()">יציאה →</button>
+    <button class="btn-back" onclick="exitReader()"><span data-nk="יְצִיאָה">יציאה</span> →</button>
     <span id="reader-page-counter" class="page-counter">עמוד 1 מתוך 1</span>
   </div>
   <h2 id="reader-story-title" class="reader-title"></h2>
@@ -209,11 +326,11 @@
     <div id="page-dots" class="page-dots"></div>
   </div>
   <div class="reader-nav">
-    <button id="btn-prev" class="btn-nav" onclick="prevPage()">הקודם ➡️</button>
-    <button id="btn-next" class="btn-nav btn-nav-primary" onclick="nextPage()">⬅️ הבא</button>
+    <button id="btn-prev" class="btn-nav" onclick="prevPage()"><span data-nk="הַקּוֹדֵם">הקודם</span> ➡️</button>
+    <button id="btn-next" class="btn-nav btn-nav-primary" onclick="nextPage()">⬅️ <span data-nk="הַבָּא">הבא</span></button>
   </div>
   <div id="finish-reading-div" class="finish-reading hidden">
-    <button class="btn-giant btn-green celebrate-btn" onclick="finishAppReading()">🎉 סיימתי להיום!</button>
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishAppReading()">🎉 <span data-nk="סִיַּמְתִּי לְהַיּוֹם!">סיימתי להיום!</span></button>
   </div>
 </section>
 
@@ -221,18 +338,18 @@
 <section id="screen-book-step1" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
-      <h2>📖 קראתי מספר</h2>
+      <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2>📖 <span data-nk="קָרָאתִי מִסֵּפֶר">קראתי מספר</span></h2>
     </div>
     <div class="step-bar"><div class="step-fill" style="width:33%"></div></div>
-    <p class="step-indicator">שלב 1 מתוך 3 — פרטי הספר</p>
+    <p class="step-indicator" data-nk="שָׁלָב 1 מִתּוֹךְ 3 — פְּרָטֵי הַסֵּפֶר">שלב 1 מתוך 3 — פרטי הספר</p>
   </div>
   <div class="form-card">
-    <label for="book-title">שם הספר <span class="required">*</span></label>
+    <label for="book-title"><span data-nk="שֵׁם הַסֵּפֶר">שם הספר</span> <span class="required">*</span></label>
     <input id="book-title" type="text" class="input-field" placeholder="כתוב/י את שם הספר…" />
-    <label for="book-author">שם המחבר/ת <span class="optional">(לא חובה)</span></label>
+    <label for="book-author"><span data-nk="שֵׁם הַמְּחַבֵּר/ת">שם המחבר/ת</span> <span class="optional">(לא חובה)</span></label>
     <input id="book-author" type="text" class="input-field" placeholder="כתוב/י את שם המחבר/ת…" />
-    <button class="btn-giant btn-orange" onclick="bookStep2()">⬅️ המשך</button>
+    <button class="btn-giant btn-orange" onclick="bookStep2()">⬅️ <span data-nk="הֶמְשֵׁךְ">המשך</span></button>
   </div>
 </section>
 
@@ -240,28 +357,28 @@
 <section id="screen-book-step2" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-book-step1')">חזרה →</button>
-      <h2>📖 כמה עמודים קראת?</h2>
+      <button class="btn-back" onclick="showScreen('screen-book-step1')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2>📖 <span data-nk="כַּמָּה עַמּוּדִים קָרָאתָ?">כמה עמודים קראת?</span></h2>
     </div>
     <div class="step-bar"><div class="step-fill" style="width:66%"></div></div>
-    <p class="step-indicator">שלב 2 מתוך 3 — כמות עמודים</p>
+    <p class="step-indicator" data-nk="שָׁלָב 2 מִתּוֹךְ 3 — כַּמּוּת עַמּוּדִים">שלב 2 מתוך 3 — כמות עמודים</p>
   </div>
   <div class="pages-options">
     <button class="btn-pages" onclick="selectPages(event,'1-5',5)">
       <span class="pages-count">1–5</span>
-      <span class="pages-mins">כ-5 דקות</span>
+      <span class="pages-mins" data-nk="כְּ-5 דַּקּוֹת">כ-5 דקות</span>
     </button>
     <button class="btn-pages" onclick="selectPages(event,'6-10',10)">
       <span class="pages-count">6–10</span>
-      <span class="pages-mins">כ-10 דקות</span>
+      <span class="pages-mins" data-nk="כְּ-10 דַּקּוֹת">כ-10 דקות</span>
     </button>
     <button class="btn-pages" onclick="selectPages(event,'11-20',15)">
       <span class="pages-count">11–20</span>
-      <span class="pages-mins">כ-15 דקות</span>
+      <span class="pages-mins" data-nk="כְּ-15 דַּקּוֹת">כ-15 דקות</span>
     </button>
     <button class="btn-pages" onclick="selectPages(event,'21+',25)">
       <span class="pages-count">21+</span>
-      <span class="pages-mins">כ-25 דקות</span>
+      <span class="pages-mins" data-nk="כְּ-25 דַּקּוֹת">כ-25 דקות</span>
     </button>
   </div>
 </section>
@@ -270,20 +387,20 @@
 <section id="screen-book-step3" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-book-step2')">חזרה →</button>
-      <h2>📖 שאלות על הספר</h2>
+      <button class="btn-back" onclick="showScreen('screen-book-step2')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2>📖 <span data-nk="שְׁאֵלוֹת עַל הַסֵּפֶר">שאלות על הספר</span></h2>
     </div>
     <div class="step-bar"><div class="step-fill" style="width:100%"></div></div>
-    <p class="step-indicator">שלב 3 מתוך 3 — הבנת הנקרא</p>
+    <p class="step-indicator" data-nk="שָׁלָב 3 מִתּוֹךְ 3 — הֲבָנַת הַנִּקְרָא">שלב 3 מתוך 3 — הבנת הנקרא</p>
   </div>
   <div class="form-card">
-    <label for="q-character">מי הדמות הראשית בסיפור? <span class="required">*</span></label>
+    <label for="q-character"><span data-nk="מִי הַדְּמוּת הָרָאשִׁית בַּסִּפּוּר?">מי הדמות הראשית בסיפור?</span> <span class="required">*</span></label>
     <input id="q-character" type="text" class="input-field" placeholder="כתוב/י את שם הדמות…" />
-    <label for="q-story">מה קרה בסיפור? <span class="required">*</span></label>
+    <label for="q-story"><span data-nk="מָה קָרָה בַּסִּפּוּר?">מה קרה בסיפור?</span> <span class="required">*</span></label>
     <textarea id="q-story" class="input-field textarea-field" placeholder="ספר/י מה קרה…"></textarea>
-    <label for="q-liked">מה הכי אהבת? <span class="required">*</span></label>
+    <label for="q-liked"><span data-nk="מָה הֲכִי אָהַבְתָּ?">מה הכי אהבת?</span> <span class="required">*</span></label>
     <textarea id="q-liked" class="input-field textarea-field" placeholder="מה הכי אהבת בספר?"></textarea>
-    <button class="btn-giant btn-orange" onclick="submitBookReading()">🎉 סיימתי!</button>
+    <button class="btn-giant btn-orange" onclick="submitBookReading()">🎉 <span data-nk="סִיַּמְתִּי!">סיימתי!</span></button>
   </div>
 </section>
 
@@ -291,7 +408,7 @@
 <section id="screen-booki-reading" class="screen booki-reading-screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="cancelBookiReading()">יציאה →</button>
+      <button class="btn-back" onclick="cancelBookiReading()"><span data-nk="יְצִיאָה">יציאה</span> →</button>
     </div>
   </div>
 
@@ -317,7 +434,7 @@
   </button>
 
   <div class="booki-finish-wrap">
-    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ סיימתי לקרוא</button>
+    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ <span data-nk="סִיַּמְתִּי לִקְרוֹא">סיימתי לקרוא</span></button>
   </div>
 </section>
 
@@ -325,12 +442,12 @@
 <section id="screen-booki-reflection" class="screen booki-reading-screen">
   <div class="booki-say-moment">
     <span class="booki-say-face">📖</span>
-    <p class="booki-say-bubble">ספר/י לי...<br><span id="booki-reflection-question"></span></p>
+    <p class="booki-say-bubble"><span data-nk="סַפֵּר/י לִי...">ספר/י לי...</span><br><span id="booki-reflection-question"></span></p>
   </div>
   <div class="form-card">
     <textarea id="booki-reflection-answer" class="input-field textarea-field" placeholder="אפשר לכתוב כאן..."></textarea>
-    <button class="btn-giant btn-orange" onclick="submitBookiReflection()">להמשיך ⬅️</button>
-    <button class="btn-skip" onclick="skipBookiReflection()">לדלג על השאלה</button>
+    <button class="btn-giant btn-orange" onclick="submitBookiReflection()"><span data-nk="לְהַמְשִׁיךְ">להמשיך</span> ⬅️</button>
+    <button class="btn-skip" onclick="skipBookiReflection()"><span data-nk="לְדַלֵּג עַל הַשְּׁאֵלָה">לדלג על השאלה</span></button>
   </div>
 </section>
 
@@ -341,23 +458,23 @@
     <div class="complete-star animate-bounce">🌟</div>
     <h1 class="complete-title">כָּל הַכָּבוֹד!</h1>
     <div id="levelup-banner" class="levelup-banner" style="display:none"></div>
-    <p class="complete-sub">היום קראת:</p>
+    <p class="complete-sub" data-nk="הַיּוֹם קָרָאתָ:">היום קראת:</p>
     <div class="complete-stats">
       <div class="stat-card stat-blue">
         <span class="stat-icon">⏱️</span>
         <span class="stat-number" id="complete-minutes">0</span>
-        <span class="stat-label">דקות קריאה</span>
+        <span class="stat-label" data-nk="דַּקּוֹת קְרִיאָה">דקות קריאה</span>
       </div>
       <div class="stat-card stat-yellow">
         <span class="stat-icon">⭐</span>
         <span class="stat-number" id="complete-points">0</span>
-        <span class="stat-label">נקודות חדשות!</span>
+        <span class="stat-label" data-nk="נְקֻדּוֹת חֲדָשׁוֹת!">נקודות חדשות!</span>
       </div>
     </div>
     <p id="complete-encouragement" class="complete-encouragement"></p>
-    <p class="complete-tree-msg">🌳 כל דקת קריאה עוזרת לעץ שלך לגדול!</p>
-    <p class="complete-msg">הדקות והנקודות נוספו לכרטיס הקורא שלך! 📚</p>
-    <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 חזרה לתפריט</button>
+    <p class="complete-tree-msg">🌳 <span data-nk="כָּל דַּקַּת קְרִיאָה עוֹזֶרֶת לָעֵץ שֶׁלְּךָ לִגְדֹּל!">כל דקת קריאה עוזרת לעץ שלך לגדול!</span></p>
+    <p class="complete-msg"><span data-nk="הַדַּקּוֹת וְהַנְּקֻדּוֹת נוֹסְפוּ לְכַרְטִיס הַקּוֹרֵא שֶׁלְּךָ!">הדקות והנקודות נוספו לכרטיס הקורא שלך!</span> 📚</p>
+    <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 <span data-nk="חֲזָרָה לַתַּפְרִיט">חזרה לתפריט</span></button>
   </div>
 </section>
 
@@ -365,9 +482,9 @@
 <section id="screen-reader-card" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
-      <h2>👤 כרטיס הקורא שלי</h2>
-      <button id="btn-switch-club" class="btn-switch-reader" style="display:none" onclick="switchReaderInClub()">👥 קורא אחר</button>
+      <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2>👤 <span data-nk="כַּרְטִיס הַקּוֹרֵא שֶׁלִּי">כרטיס הקורא שלי</span></h2>
+      <button id="btn-switch-club" class="btn-switch-reader" style="display:none" onclick="switchReaderInClub()">👥 <span data-nk="קוֹרֵא אַחֵר">קורא אחר</span></button>
     </div>
   </div>
   <div id="reader-card-content" class="reader-card-content"></div>
@@ -377,8 +494,8 @@
 <section id="screen-class" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="_classGoBack()">חזרה →</button>
-      <h2 id="class-screen-title">👨‍👩‍👧‍👦 הכיתה שלנו</h2>
+      <button class="btn-back" onclick="_classGoBack()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2 id="class-screen-title">👨‍👩‍👧‍👦 <span data-nk="הַכִּתָּה שֶׁלָּנוּ">הכיתה שלנו</span></h2>
     </div>
   </div>
   <div id="class-content" class="class-content"></div>
@@ -389,8 +506,8 @@
   <div class="confetti-area" id="shop-confetti-area"></div>
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button>
-      <h2 class="shop-wood-sign">🪧 החנות של בוקי</h2>
+      <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2 class="shop-wood-sign">🪧 <span data-nk="הַחֲנוּת שֶׁל בּוּקִי">החנות של בוקי</span></h2>
     </div>
   </div>
   <div id="shop-student-content" class="shop-student-content"></div>
@@ -400,8 +517,8 @@
 <section id="screen-club-select" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="goBackFromClubSelect()">חזרה →</button>
-      <h2 id="club-select-title">בחר/י מועדון</h2>
+      <button class="btn-back" onclick="goBackFromClubSelect()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2 id="club-select-title"><span data-nk="בְּחַר/י מוֹעֲדוֹן">בחר/י מועדון</span></h2>
     </div>
   </div>
   <div id="club-select-list" class="club-select-list"></div>
@@ -411,14 +528,14 @@
 <section id="screen-who-reads" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="_goBackFromWhoReads()">חזרה →</button>
+      <button class="btn-back" onclick="_goBackFromWhoReads()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2 class="who-reads-title">📖 מי קורא עכשיו?</h2>
     </div>
     <p id="who-reads-club-name" class="who-reads-club"></p>
   </div>
   <div id="who-reads-grid" class="who-reads-grid"></div>
   <div class="who-reads-footer">
-    <button class="btn-join-another" onclick="showJoinClub()">+ התחבר/י עם קוד</button>
+    <button class="btn-join-another" onclick="showJoinClub()">+ <span data-nk="הִתְחַבֵּר/י עִם קוֹד">התחבר/י עם קוד</span></button>
   </div>
 </section>
 
@@ -426,7 +543,7 @@
 <section id="screen-club-dashboard" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="goClubs()">חזרה →</button>
+      <button class="btn-back" onclick="goClubs()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2 id="club-dash-name"></h2>
     </div>
     <p id="club-dash-reader-row" class="header-sub" style="display:none"></p>
@@ -508,7 +625,7 @@
 <section id="screen-teacher-auth" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-splash')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-splash')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>כניסה למורים</h2>
     </div>
   </div>
@@ -540,7 +657,7 @@
 <section id="screen-teacher-club" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="_goBackToTeacherDashboard()">חזרה →</button>
+      <button class="btn-back" onclick="_goBackToTeacherDashboard()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2 id="tc-club-name">המועדון שלי</h2>
     </div>
   </div>
@@ -576,7 +693,7 @@
 <section id="screen-shop-teacher" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-teacher-club')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-teacher-club')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>🎁 ניהול פרסים</h2>
       <button id="btn-goal-settings-gear" class="btn-header-icon" style="display:none" onclick="showGoalSettings()" title="הגדרות יעד">⚙️</button>
     </div>
@@ -589,7 +706,7 @@
 <section id="screen-goal-settings" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-shop-teacher')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-shop-teacher')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>⚙️ הגדרות יעד</h2>
     </div>
   </div>
@@ -600,7 +717,7 @@
 <section id="screen-create-type" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-splash')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-splash')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>יצירת מועדון</h2>
     </div>
     <p class="step-indicator">שלב 1 מתוך 3 — סוג המועדון</p>
@@ -635,7 +752,7 @@
 <section id="screen-create-name" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-create-type')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-create-type')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>יצירת מועדון</h2>
     </div>
     <p class="step-indicator">שלב 2 מתוך 3 — שם ואמוג׳י</p>
@@ -665,7 +782,7 @@
 <section id="screen-create-members" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-create-name')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-create-name')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>יצירת מועדון</h2>
     </div>
     <p class="step-indicator">שלב 3 מתוך 3 — הוספת חברים</p>
@@ -704,7 +821,7 @@
 <section id="screen-create-review" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-create-members')">חזרה →</button>
+      <button class="btn-back" onclick="showScreen('screen-create-members')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>סקירה לפני יצירה</h2>
     </div>
   </div>
@@ -747,34 +864,50 @@
   <div id="success-guide"></div>
 </section>
 
+<!-- ══ מעבר ממותג — כניסה מקישור מועדון ═══════════════════════════ -->
+<section id="screen-club-welcome" class="screen booki-world booki-world--home">
+  <div id="club-welcome-content" class="club-welcome-content">
+    <div id="club-welcome-stage"></div>
+    <h1 id="club-welcome-title" class="club-welcome-title" data-nk="אֵיזֶה כֵּיף שֶׁבָּאתָ!">איזה כיף שבאת!</h1>
+    <!-- club-welcome-text מוחלף ב-JS פעם אחת (onboarding.js) עם שם המועדון האמיתי —
+         ה-data-nk כאן חל רק על הרגע הראשון לפני שהמועדון נטען. -->
+    <p id="club-welcome-text" class="club-welcome-text" data-nk="בּוּקִי פּוֹתֵחַ לְךָ עַכְשָׁיו אֶת הַמּוֹעֲדוֹן…">בוקי פותח לך עכשיו את המועדון…</p>
+    <p id="club-welcome-subline" class="club-welcome-subline" data-nk="עוֹד רֶגַע בּוֹחֲרִים מִי קוֹרֵא">עוד רגע בוחרים מי קורא</p>
+    <div id="club-welcome-error" class="club-welcome-error" style="display:none">
+      <p data-nk="לֹא הִצְלַחְנוּ לִטְעוֹן אֶת הַמּוֹעֲדוֹן כָּרֶגַע.">לא הצלחנו לטעון את המועדון כרגע.</p>
+      <button class="btn-giant btn-booki-read" onclick="retryClubWelcome()">🔄 <span data-nk="לְנַסּוֹת שׁוּב">לנסות שוב</span></button>
+    </div>
+  </div>
+</section>
+
 <!-- ══ הצטרפות למועדון — הזנת קוד ════════════════════════════════ -->
 <section id="screen-join-entry" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="goBackFromJoin()">חזרה →</button>
-      <h2>התחברות למועדון</h2>
+      <button class="btn-back" onclick="goBackFromJoin()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2><span data-nk="הִתְחַבְּרוּת לְמוֹעֲדוֹן">התחברות למועדון</span></h2>
     </div>
   </div>
   <div class="join-code-section">
-    <p class="join-label">הזן/י קוד מועדון</p>
+    <p class="join-label" data-nk="הַזֵּן/י קוֹד מוֹעֲדוֹן">הזן/י קוד מועדון</p>
     <input id="join-code-input" type="text" class="join-code-input"
            maxlength="6" placeholder="ABC123"
            onkeydown="handleCodeKeydown(event)" autocomplete="off" />
     <p id="join-error-msg" class="join-error"></p>
-    <button id="btn-join-code" class="btn-giant btn-blue" onclick="submitJoinCode()">כניסה ⬅️</button>
+    <button id="btn-join-code" class="btn-giant btn-blue" onclick="submitJoinCode()"><span data-nk="כְּנִיסָה">כניסה</span> ⬅️</button>
   </div>
-  <div class="join-divider">— או —</div>
+  <div class="join-divider" data-nk="— אוֹ —">— או —</div>
   <div class="join-channels">
     <button class="join-channel-btn" disabled>
-      <span>📷 סריקת QR</span>
-      <span class="badge-soon">בקרוב</span>
+      <span>📷 <span data-nk="סְרִיקַת QR">סריקת QR</span></span>
+      <span class="badge-soon" data-nk="בְּקָרוֹב">בקרוב</span>
     </button>
     <button class="join-channel-btn" disabled>
-      <span>💬 קישור מ-WhatsApp</span>
-      <span class="badge-soon">בקרוב</span>
+      <span>💬 <span data-nk="קִישּׁוּר מ-WhatsApp">קישור מ-WhatsApp</span></span>
+      <span class="badge-soon" data-nk="בְּקָרוֹב">בקרוב</span>
     </button>
   </div>
-  <div class="join-divider">— מועדונים קיימים —</div>
+  <div class="join-divider" data-nk="— מוֹעֲדוֹנִים קַיָּמִים —">— מועדונים קיימים —</div>
   <div id="existing-clubs-list" class="existing-clubs-list"></div>
 </section>
 
@@ -782,22 +915,22 @@
 <section id="screen-join-name" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="goBackToJoinEntry()">חזרה →</button>
-      <h2>ברוכים הבאים!</h2>
+      <button class="btn-back" onclick="goBackToJoinEntry()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2><span data-nk="בְּרוּכִים הַבָּאִים!">ברוכים הבאים!</span></h2>
     </div>
   </div>
   <div class="join-code-section">
-    <p class="join-invite-label">📚 הוזמנתם להצטרף למועדון:</p>
+    <p class="join-invite-label">📚 <span data-nk="הֻזְמַנְתֶּם לְהִצְטָרֵף לְמוֹעֲדוֹן:">הוזמנתם להצטרף למועדון:</span></p>
     <div class="join-club-banner">
       <span id="join-club-emoji-display"></span>
       <span id="join-club-name-display"></span>
     </div>
-    <p class="join-label">הזינו את שם הילד כדי להצטרף:</p>
+    <p class="join-label" data-nk="הַזִּינוּ אֶת שֵׁם הַיֶּלֶד כְּדֵי לְהִצְטָרֵף:">הזינו את שם הילד כדי להצטרף:</p>
     <input id="join-name-input" type="text" class="join-code-input"
            maxlength="30" placeholder="שם פרטי"
            onkeydown="handleNameKeydown(event)" autocomplete="given-name" />
     <p id="join-name-error" class="join-error"></p>
-    <button id="btn-join-name" class="btn-giant btn-blue" onclick="submitJoinName()">מצטרף/ת ⬅️</button>
+    <button id="btn-join-name" class="btn-giant btn-blue" onclick="submitJoinName()"><span data-nk="מִצְטָרֵף/ת">מצטרף/ת</span> ⬅️</button>
   </div>
 </section>
 
@@ -805,10 +938,10 @@
 <section id="screen-join-welcome" class="screen welcome-full-screen">
   <div class="welcome-content">
     <div class="welcome-icon">🎉</div>
-    <h1 class="welcome-title">היי, <span id="welcome-name">קורא/ת</span>!</h1>
-    <p class="welcome-sub">הכרטיס שלך כבר מחכה לך 📖</p>
-    <p class="welcome-hint">בוא/י נשלים את פרופיל הקריאה שלך</p>
-    <button class="btn-giant btn-white-on-purple" style="margin-top:30px" onclick="startProfile()">בואו נתחיל! ⬅️</button>
+    <h1 class="welcome-title"><span data-nk="הֵיי,">היי,</span> <span id="welcome-name">קורא/ת</span>!</h1>
+    <p class="welcome-sub"><span data-nk="הַכַּרְטִיס שֶׁלְּךָ כְּבָר מְחַכֶּה לְךָ">הכרטיס שלך כבר מחכה לך</span> 📖</p>
+    <p class="welcome-hint" data-nk="בּוֹא/י נַשְׁלִים אֶת פְּרוֹפִיל הַקְּרִיאָה שֶׁלְּךָ">בוא/י נשלים את פרופיל הקריאה שלך</p>
+    <button class="btn-giant btn-white-on-purple" style="margin-top:30px" onclick="startProfile()"><span data-nk="בּוֹאוּ נַתְחִיל!">בואו נתחיל!</span> ⬅️</button>
   </div>
 </section>
 
@@ -816,30 +949,30 @@
 <section id="screen-onboard-grade" class="screen">
   <div class="onboard-header">
     <div class="ob-back-row">
-      <button class="ob-back-btn" onclick="showScreen('screen-join-welcome')">חזרה →</button>
-      <p class="onboard-step">שלב 1 מתוך 4</p>
+      <button class="ob-back-btn" onclick="showScreen('screen-join-welcome')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <p class="onboard-step" data-nk="שָׁלָב 1 מִתּוֹךְ 4">שלב 1 מתוך 4</p>
     </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:25%"></div></div>
   </div>
-  <p class="onboard-question">באיזו כיתה אתה/את?</p>
+  <p class="onboard-question" data-nk="בְּאֵיזוֹ כִּתָּה אַתָּה/אַתְּ?">באיזו כיתה אתה/את?</p>
   <div class="grade-grid">
     <button class="grade-btn" onclick="selectGrade('grade-1',this)">
-      <span class="grade-letter">א׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">א׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
     <button class="grade-btn" onclick="selectGrade('grade-2',this)">
-      <span class="grade-letter">ב׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">ב׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
     <button class="grade-btn" onclick="selectGrade('grade-3',this)">
-      <span class="grade-letter">ג׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">ג׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
     <button class="grade-btn" onclick="selectGrade('grade-4',this)">
-      <span class="grade-letter">ד׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">ד׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
     <button class="grade-btn" onclick="selectGrade('grade-5',this)">
-      <span class="grade-letter">ה׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">ה׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
     <button class="grade-btn" onclick="selectGrade('grade-6',this)">
-      <span class="grade-letter">ו׳</span><span class="grade-sub">כיתה</span>
+      <span class="grade-letter">ו׳</span><span class="grade-sub" data-nk="כִּתָּה">כיתה</span>
     </button>
   </div>
 </section>
@@ -848,32 +981,32 @@
 <section id="screen-onboard-reading" class="screen">
   <div class="onboard-header">
     <div class="ob-back-row">
-      <button class="ob-back-btn" onclick="showScreen('screen-onboard-grade')">חזרה →</button>
-      <p class="onboard-step">שלב 2 מתוך 4</p>
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-grade')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <p class="onboard-step" data-nk="שָׁלָב 2 מִתּוֹךְ 4">שלב 2 מתוך 4</p>
     </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:50%"></div></div>
   </div>
-  <p class="onboard-question">איך אתה/את קורא/ת?</p>
+  <p class="onboard-question" data-nk="אֵיךְ אַתָּה/אַתְּ קוֹרֵא/ת?">איך אתה/את קורא/ת?</p>
   <div class="level-cards">
     <button class="level-card" onclick="selectReadingLevel('beginner',this)">
       <span class="level-icon">🌱</span>
       <div>
-        <span class="level-label">עם עזרה</span>
-        <span class="level-desc">עדיין לומד/ת לקרוא</span>
+        <span class="level-label" data-nk="עִם עֶזְרָה">עם עזרה</span>
+        <span class="level-desc" data-nk="עֲדַיִן לוֹמֵד/ת לִקְרוֹא">עדיין לומד/ת לקרוא</span>
       </div>
     </button>
     <button class="level-card" onclick="selectReadingLevel('intermediate',this)">
       <span class="level-icon">📖</span>
       <div>
-        <span class="level-label">קורא/ת לבד</span>
-        <span class="level-desc">מסתדר/ת בלי עזרה</span>
+        <span class="level-label" data-nk="קוֹרֵא/ת לְבַד">קורא/ת לבד</span>
+        <span class="level-desc" data-nk="מִסְתַּדֵּר/ת בְּלִי עֶזְרָה">מסתדר/ת בלי עזרה</span>
       </div>
     </button>
     <button class="level-card" onclick="selectReadingLevel('advanced',this)">
       <span class="level-icon">🚀</span>
       <div>
-        <span class="level-label">שוטף/שוטפת</span>
-        <span class="level-desc">קורא/ת הרבה ומהר</span>
+        <span class="level-label" data-nk="שׁוֹטֵף/שׁוֹטֶפֶת">שוטף/שוטפת</span>
+        <span class="level-desc" data-nk="קוֹרֵא/ת הַרְבֵּה וּמַהֵר">קורא/ת הרבה ומהר</span>
       </div>
     </button>
   </div>
@@ -883,24 +1016,26 @@
 <section id="screen-onboard-niqqud" class="screen">
   <div class="onboard-header">
     <div class="ob-back-row">
-      <button class="ob-back-btn" onclick="showScreen('screen-onboard-reading')">חזרה →</button>
-      <p class="onboard-step">שלב 3 מתוך 4</p>
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-reading')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <p class="onboard-step" data-nk="שָׁלָב 3 מִתּוֹךְ 4">שלב 3 מתוך 4</p>
     </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:75%"></div></div>
   </div>
-  <p class="onboard-question">מה עדיף לך לקרוא?</p>
+  <p class="onboard-question" data-nk="מָה עָדִיף לְךָ לִקְרוֹא?">מה עדיף לך לקרוא?</p>
+  <!-- דוגמאות הניקוד עצמן (בְּרֵאשִׁית/בְּראשית/בראשית) לא מתויגות בכוונה — הן הבחירה
+       עצמה (מלא/חלקי/ללא), לא טקסט ממשק שהוגן-הפעלה/כיבוי כלל-אפליקטיבי צריך לגעת בו -->
   <div class="niqqud-cards">
     <button class="niqqud-card" onclick="selectNiqqudLevel('full',this)">
       <span class="niqqud-example">בְּרֵאשִׁית</span>
-      <span class="niqqud-label">ניקוד מלא</span>
+      <span class="niqqud-label" data-nk="נִקּוּד מָלֵא">ניקוד מלא</span>
     </button>
     <button class="niqqud-card" onclick="selectNiqqudLevel('partial',this)">
       <span class="niqqud-example">בְּראשית</span>
-      <span class="niqqud-label">ניקוד חלקי</span>
+      <span class="niqqud-label" data-nk="נִקּוּד חֶלְקִי">ניקוד חלקי</span>
     </button>
     <button class="niqqud-card" onclick="selectNiqqudLevel('none',this)">
       <span class="niqqud-example">בראשית</span>
-      <span class="niqqud-label">ללא ניקוד</span>
+      <span class="niqqud-label" data-nk="לְלֹא נִקּוּד">ללא ניקוד</span>
     </button>
   </div>
 </section>
@@ -909,41 +1044,41 @@
 <section id="screen-onboard-interests" class="screen">
   <div class="onboard-header">
     <div class="ob-back-row">
-      <button class="ob-back-btn" onclick="showScreen('screen-onboard-niqqud')">חזרה →</button>
-      <p class="onboard-step">שלב 4 מתוך 4</p>
+      <button class="ob-back-btn" onclick="showScreen('screen-onboard-niqqud')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <p class="onboard-step" data-nk="שָׁלָב 4 מִתּוֹךְ 4">שלב 4 מתוך 4</p>
     </div>
     <div class="onboard-progress"><div class="onboard-fill" style="width:100%"></div></div>
   </div>
-  <p class="onboard-question">מה אתה/את אוהב/ת לקרוא? <small>(עד 3)</small></p>
+  <p class="onboard-question"><span data-nk="מָה אַתָּה/אַתְּ אוֹהֵב/ת לִקְרוֹא?">מה אתה/את אוהב/ת לקרוא?</span> <small data-nk="(עַד 3)">(עד 3)</small></p>
   <div class="interests-grid">
     <button class="interest-card" onclick="toggleInterest('animals',this)">
-      <span class="int-emoji">🐾</span><span class="int-label">חיות</span>
+      <span class="int-emoji">🐾</span><span class="int-label" data-nk="חַיּוֹת">חיות</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('magic',this)">
-      <span class="int-emoji">🔮</span><span class="int-label">קסם</span>
+      <span class="int-emoji">🔮</span><span class="int-label" data-nk="קֶסֶם">קסם</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('royalty',this)">
-      <span class="int-emoji">👑</span><span class="int-label">נסיכות וגיבורים</span>
+      <span class="int-emoji">👑</span><span class="int-label" data-nk="נְסִיכוֹת וְגִבּוֹרִים">נסיכות וגיבורים</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('adventure',this)">
-      <span class="int-emoji">🌍</span><span class="int-label">הרפתקאות</span>
+      <span class="int-emoji">🌍</span><span class="int-label" data-nk="הַרְפַּתְקָאוֹת">הרפתקאות</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('science',this)">
-      <span class="int-emoji">🚀</span><span class="int-label">מדע וחלל</span>
+      <span class="int-emoji">🚀</span><span class="int-label" data-nk="מַדָּע וְחָלָל">מדע וחלל</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('judaism',this)">
-      <span class="int-emoji">✡️</span><span class="int-label">יהדות</span>
+      <span class="int-emoji">✡️</span><span class="int-label" data-nk="יַהֲדוּת">יהדות</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('nature',this)">
-      <span class="int-emoji">🌳</span><span class="int-label">טבע</span>
+      <span class="int-emoji">🌳</span><span class="int-label" data-nk="טֶבַע">טבע</span>
     </button>
     <button class="interest-card" onclick="toggleInterest('folk',this)">
-      <span class="int-emoji">🌊</span><span class="int-label">סיפורי עם</span>
+      <span class="int-emoji">🌊</span><span class="int-label" data-nk="סִפּוּרֵי עַם">סיפורי עם</span>
     </button>
   </div>
   <div style="padding:16px">
     <button id="btn-interests-next" class="btn-giant btn-green"
-            onclick="finishInterests()" disabled>סיום ⬅️</button>
+            onclick="finishInterests()" disabled><span data-nk="סִיּוּם">סיום</span> ⬅️</button>
   </div>
 </section>
 
@@ -952,10 +1087,10 @@
   <div class="complete-new-content">
     <div class="complete-new-star animate-bounce">🌟</div>
     <h1 class="complete-new-title">כָּל הַכָּבוֹד!</h1>
-    <p class="complete-new-sub">ברוך/ה הבא/ה לבוקי, <span id="complete-user-name"></span>!</p>
-    <p class="complete-new-hint">הפרופיל שלך מוכן 📚</p>
+    <p class="complete-new-sub"><span data-nk="בָּרוּךְ/בְּרוּכָה הַבָּא/הַבָּאָה לְבוּקִי,">ברוך/ה הבא/ה לבוקי,</span> <span id="complete-user-name"></span>!</p>
+    <p class="complete-new-hint"><span data-nk="הַפְּרוֹפִיל שֶׁלְּךָ מוּכָן">הפרופיל שלך מוכן</span> 📚</p>
     <button class="btn-giant btn-white-on-purple" style="margin-top:28px"
-            onclick="goHomeAfterOnboarding()">📖 קדימה לקרוא!</button>
+            onclick="goHomeAfterOnboarding()">📖 <span data-nk="קָדִימָה לִקְרוֹא!">קדימה לקרוא!</span></button>
   </div>
 </section>
 
@@ -964,16 +1099,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <!-- גרסה מרכזית לCache Busting — עדכן v= בכל פריסה -->
-<script src="firebase.js?v=1"></script>
+<script src="booki-character.js?v=3"></script>
+<script src="niqud.js?v=3"></script>
+<script src="firebase.js?v=2"></script>
 
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
-<script src="data-club-types.js?v=1"></script>
-<script src="seed-clubs.js?v=2"></script>
-<script src="firebase-clubs.js?v=4"></script>
-<script src="firebase-shop.js?v=5"></script>
-<script src="firebase-messages.js?v=3"></script>
-<script src="auth.js?v=1"></script>
-<script src="analytics.js?v=1"></script>
+<script src="data-club-types.js?v=2"></script>
+<script src="seed-clubs.js?v=3"></script>
+<script src="firebase-clubs.js?v=5"></script>
+<script src="firebase-shop.js?v=6"></script>
+<script src="firebase-messages.js?v=6"></script>
+<script src="auth.js?v=2"></script>
+<script src="analytics.js?v=2"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
 <script src="data-libraries.js?v=1"></script>
@@ -1000,17 +1137,18 @@
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=9"></script>
-<script src="admin-setup.js?v=1"></script>
-<script src="onboarding.js?v=3"></script>
+<script src="routing.js?v=16"></script>
+<script src="admin-setup.js?v=2"></script>
+<script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=6"></script>
-<script src="motivation.js?v=1"></script>
-<script src="booki-reading.js?v=2"></script>
-<script src="shop.js?v=7"></script>
-<script src="owner-dashboard.js?v=3"></script>
-<script src="initial-setup.js?v=1"></script>
-<script src="student-profile.js?v=1"></script>
+<script src="script.js?v=15"></script>
+<script src="motivation.js?v=3"></script>
+<script src="booki-home-magic.js?v=3"></script>
+<script src="booki-reading.js?v=5"></script>
+<script src="shop.js?v=11"></script>
+<script src="owner-dashboard.js?v=4"></script>
+<script src="initial-setup.js?v=2"></script>
+<script src="student-profile.js?v=2"></script>
 
 <!-- ══ Owner Dashboard (console only) ══════════════════════════════ -->
 <section id="screen-owner-dashboard" class="screen od-screen">
@@ -1098,19 +1236,30 @@
 
 <!-- ══ Tab Bar — 2 עוגני ניווט ════════════════════════════════════ -->
 <nav id="booki-nav" class="booki-nav" data-tab="" aria-label="ניווט ראשי">
-  <button class="booki-tab" data-for="clubs" onclick="goClubs()">
-    <span class="btab-icon">👨‍👩‍👧‍👦</span>
-    <span class="btab-label">הכיתה שלי</span>
+  <button class="booki-tab" data-for="home" onclick="goReaderHome()">
+    <span class="btab-icon">🏠</span>
+    <span class="btab-label" data-nk="בַּיִת">בית</span>
   </button>
-  <button class="booki-tab" data-for="reader" onclick="goWhoReads()">
-    <span class="btab-icon">📖</span>
-    <span class="btab-label">מי קורא עכשיו?</span>
+  <button class="booki-tab" data-for="card" onclick="showReaderCard()">
+    <span class="btab-icon">👤</span>
+    <span class="btab-label" data-nk="הַכַּרְטִיס שֶׁלִּי">הכרטיס שלי</span>
+  </button>
+  <button id="nav-tab-class" class="booki-tab" data-for="class" onclick="showClassView()" style="display:none">
+    <span class="btab-icon">🏆</span>
+    <span class="btab-label" data-nk="הַכִּתָּה שֶׁלָּנוּ">הכיתה שלנו</span>
   </button>
 </nav>
 
 <!-- כפתור דיווח באג — קבוע בכל מסך -->
 <button id="btn-bug-report" class="btn-bug-report" onclick="openBugReport()">
   🐞 <span id="bug-report-label">משהו לא עובד?</span>
+</button>
+
+<!-- כפתור הנגשת ניקוד — קבוע בכל מסך, מחליף טקסט מתויג (data-nk) בין רגיל למנוקד.
+     האייקון הוא שלושה סימני ניקוד עצמם (קמץ/פתח/צירה על א׳) ולא המילה "ניקוד" —
+     ברור-מטרה גם למי שעדיין לא קורא שוטף. -->
+<button id="btn-niqud-toggle" class="btn-niqud-toggle" onclick="toggleNiqud()" title="הפעלה/כיבוי ניקוד" aria-label="הפעלה/כיבוי ניקוד">
+  <span class="niqud-toggle-marks">אָ אַ אֵ</span>
 </button>
 
 <!-- קרדיט -->

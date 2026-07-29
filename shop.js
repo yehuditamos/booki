@@ -919,22 +919,29 @@ async function deleteRewardEditor() {
 // להופיע באירוע הבא, בלי צורך בשדה Firestore נוסף).
 
 async function checkShopCelebration(clubId) {
-  const banner = document.getElementById('shop-celebration-banner');
+  const banner = document.getElementById('shop-celebration-overlay');
   if (!banner) return;
-  if (!clubId) { banner.style.display = 'none'; return; }
+  const wants = () => { window._homeBannerWants.shop = false; if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); };
+  if (!clubId) { wants(); return; }
 
   const shopState = typeof fbLoadShopState === 'function' ? await fbLoadShopState(clubId) : null;
   const isCelebrationState = shopState?.state === 'GOAL_REACHED_PENDING_SHOP' || shopState?.state === 'voting_open';
-  if (!isCelebrationState || !shopState.activeCycleId) { banner.style.display = 'none'; return; }
+
+  if (!isCelebrationState || !shopState.activeCycleId) { wants(); return; }
 
   let seen = null;
   try { seen = localStorage.getItem('booki_shop_celebrated_' + clubId); } catch {}
-  if (seen === shopState.activeCycleId) { banner.style.display = 'none'; return; }
+  if (seen === shopState.activeCycleId) { wants(); return; }
 
   banner.dataset.clubId  = clubId;
   banner.dataset.cycleId = shopState.activeCycleId;
-  banner.style.display = '';
-  _launchShopConfetti('home-confetti-area');
+  const stageEl = document.getElementById('shop-celebration-stage');
+  if (stageEl && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('class-goal/booki-goal-reached.png', { loading: 'eager' });
+  }
+  window._homeBannerWants.shop = true;
+  const winner = typeof _reconcileHomeBanners === 'function' ? _reconcileHomeBanners() : 'shop';
+  if (winner === 'shop') _launchShopConfetti('home-confetti-area');
 }
 
 function _ackShopCelebration(banner) {
@@ -944,16 +951,76 @@ function _ackShopCelebration(banner) {
 }
 
 function dismissShopCelebration() {
-  const banner = document.getElementById('shop-celebration-banner');
+  const banner = document.getElementById('shop-celebration-overlay');
   if (!banner) return;
   _ackShopCelebration(banner);
-  banner.style.display = 'none';
+  window._homeBannerWants.shop = false;
+  if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); else banner.style.display = 'none';
 }
 
 function enterShopFromCelebration() {
-  const banner = document.getElementById('shop-celebration-banner');
+  const banner = document.getElementById('shop-celebration-overlay');
   if (banner) _ackShopCelebration(banner);
+  window._homeBannerWants.shop = false;
   showShop();
+}
+
+// ─── כרטיס חנות קבוע במסך הבית (נקודות + התקדמות ליעד) ────────────────────────
+//
+// אותה נוסחה בדיוק כמו _renderNewClubView (script.js) כדי ששני המסכים תמיד
+// יראו את אותו מספר: goalTarget/goalProgress מגיעים מה-goalCycle הפעיל +
+// economy.balance כשיש Shop; אחרת נופל חזרה ל-club.goal + totalMinutes הישן.
+// מוצג רק כשיש הקשר מועדון וגם יש בכלל מערכת יעד/חנות מוגדרת לו.
+
+async function checkHomeShopTeaser(clubId) {
+  const card = document.getElementById('home-shop-teaser');
+  if (!card) return;
+  if (!clubId) { card.style.display = 'none'; return; }
+
+  const [club, shopState] = await Promise.all([
+    typeof fbLoadClub      === 'function' ? fbLoadClub(clubId)      : Promise.resolve(null),
+    typeof fbLoadShopState === 'function' ? fbLoadShopState(clubId) : Promise.resolve(null),
+  ]);
+
+  if (!club?.goal && !shopState) { card.style.display = 'none'; return; }
+
+  let goalTarget = club?.goal?.target || 1500;
+  let goalProgress = null;
+  if (shopState?.activeCycleId) {
+    const [cycle, econ] = await Promise.all([
+      typeof fbLoadGoalCycle === 'function' ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
+      typeof fbLoadEconomy   === 'function' ? fbLoadEconomy(clubId)   : Promise.resolve(null),
+    ]);
+    if (cycle) {
+      goalTarget = cycle.target || goalTarget;
+      goalProgress = Math.max(0, econ?.balance || 0);
+    }
+  }
+  if (goalProgress === null) {
+    // אין מחזור-יעד פעיל — נופלים חזרה על totalMinutes המצטבר של המועדון (התנהגות
+    // ישנה, זהה ל-_renderNewClubView כשאין Shop).
+    const memberships = typeof fbLoadClubMemberships === 'function' ? await fbLoadClubMemberships(clubId) : [];
+    goalProgress = (memberships || [])
+      .filter(m => m.status !== 'left')
+      .reduce((s, m) => s + (m.cachedStats?.totalMinutes || 0), 0);
+  }
+
+  const blooming = goalProgress >= goalTarget;
+  const pct       = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
+  const remaining = Math.max(0, goalTarget - goalProgress);
+
+  const stageEl = document.getElementById('home-shop-teaser-stage');
+  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
+    stageEl.innerHTML = bookiStageHtml('shop-voting/booki-gift.png', { className: 'home-shop-teaser-char' });
+  }
+  const ptsEl = document.getElementById('home-shop-teaser-points');
+  if (ptsEl) ptsEl.textContent = `${goalProgress}/${goalTarget} דק' ליעד הכיתה`;
+  const fillEl = document.getElementById('home-shop-teaser-fill');
+  if (fillEl) fillEl.style.width = pct + '%';
+  const remainEl = document.getElementById('home-shop-teaser-remaining');
+  if (remainEl) remainEl.textContent = blooming ? '🎉 החנות פתוחה!' : `עוד ${remaining} דק'`;
+
+  card.style.display = '';
 }
 
 // ─── Student Shop — Browsing (Milestone 3) ────────────────────────────────────
@@ -1292,4 +1359,5 @@ Object.assign(window, {
   saveGoalTargetAction, saveShopSettingAction, _onGoalSliderInput, _selectNextGoalQuickPick, startNextGoalAction,
   _rewardImgFallback,
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
+  checkHomeShopTeaser,
 });
