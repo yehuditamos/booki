@@ -939,6 +939,30 @@ async function checkShopCelebration(clubId) {
   if (stageEl && typeof bookiStageHtml === 'function') {
     stageEl.innerHTML = bookiStageHtml('class-goal/booki-goal-reached.png', { loading: 'eager' });
   }
+
+  // Bug fix: הראו לילדים את המספר האמיתי של היעד שסיימו + כמה כבר צברו מעבר לו —
+  // בלי זה, הקפיצה ליעד הבא (שיכול להיות הרבה יותר קטן, למשל 300 אחרי 5000) נראית
+  // כאילו היעד הגדול "נעלם" בלי הסבר. נטען כאן כי זה המחזור שהושלם עכשיו — לפני
+  // שהמורה בוחרת פרס/פותחת מחזור חדש, אז המספרים האלה עוד לא יכולים "להתבלבל" עם יעד הבא.
+  const numbersEl = document.getElementById('shop-celebration-numbers');
+  if (numbersEl) {
+    numbersEl.textContent = '';
+    const [cycle, econ] = await Promise.all([
+      typeof fbLoadGoalCycle === 'function' ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
+      typeof fbLoadEconomy   === 'function' ? fbLoadEconomy(clubId)   : Promise.resolve(null),
+    ]);
+    const target  = cycle?.target || 0;
+    const reached = Math.max(0, econ?.balance || 0);
+    const surplus = Math.max(0, reached - target);
+    if (target > 0) {
+      numbersEl.textContent = surplus > 0
+        ? _nkPick(`הגעתם ליעד של ${target} נק' — ואתם כבר בפלוס ${surplus}! 🎉`,
+                   `הִגַּעְתֶּם לְיַעַד שֶׁל ${target} נְקֻדּוֹת — וְאַתֶּם כְּבָר בְּפְלוּס ${surplus}! 🎉`)
+        : _nkPick(`הגעתם בדיוק ליעד של ${target} נק'! 🎯`,
+                   `הִגַּעְתֶּם בְּדִיּוּק לְיַעַד שֶׁל ${target} נְקֻדּוֹת! 🎯`);
+    }
+  }
+
   window._homeBannerWants.shop = true;
   const winner = typeof _reconcileHomeBanners === 'function' ? _reconcileHomeBanners() : 'shop';
   if (winner === 'shop') _launchShopConfetti('home-confetti-area');

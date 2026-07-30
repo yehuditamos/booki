@@ -2727,6 +2727,7 @@ body:not(.nav-visible) .btn-niqud-toggle { bottom: calc(14px + env(safe-area-ins
 .shop-celebration-stage .booki-character-stage > img { width: min(46vw, 180px); }
 .shop-celebration-modal h3 { position: relative; z-index: 1; font-size: 1.25rem; font-weight: 900; color: #6b4a00; margin-bottom: 6px; }
 .shop-celebration-modal p  { position: relative; z-index: 1; font-size: .92rem; color: #7a5c00; margin-bottom: 16px; line-height: 1.5; }
+.shop-celebration-numbers { font-weight: 800; font-size: 1rem; }
 
 /* הודעות (מפושט) — באנר חד-פעמי בעמוד הבית, בלי תיבה/מסך/thread */
 .booki-message-banner {
