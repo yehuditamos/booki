@@ -315,11 +315,14 @@ async function fbEnableShopForClub(clubId, initialTarget) {
       state: 'browsing', activeCycleId: cycleId, activeVoteId: null, activePurchaseId: null, updatedAt: _now(),
     });
 
-    // Sprint 9 — Option A ("opens automatically") הוא ברירת המחדל רק להפעלות חדשות מכאן
-    // ואילך; כיתות שכבר הפעילו את החנות לפני הספרינט הזה אין להן שדה זה כלל, וקוראות
-    // אותו כ-'manual' (ההתנהגות היחידה שהייתה קיימת) — ראו goal_reached ו-fbConfirmPurchase.
+    // ברירת מחדל להפעלות חדשות מכאן ואילך: afterPurchase:'manual' — בלי זה, היעד הבא
+    // (שיכול להיות הרבה יותר קטן מהקודם) נחשף לילדים באותו רגע שהמורה מאשרת רכישה,
+    // בלי שום חגיגה/הסבר למה המספר "ירד". במצב 'manual' המורה בעצמה בוחרת מתי לחשוף
+    // את היעד הבא, אחרי מסך "הפרס אצלכם!". כיתות שכבר הפעילו את החנות לפני השינוי הזה
+    // כבר יש להן ערך שמור משלהן (מפורש 'close', או שדה חסר שקורא כ-'close' בברירת
+    // המחדל בשאר הקוד) — השינוי הזה לא נוגע בהתנהגות שלהן.
     if (typeof fbSaveClub === 'function') {
-      await fbSaveClub(clubId, { shopSettings: { openMode: 'auto', afterPurchase: 'close' } });
+      await fbSaveClub(clubId, { shopSettings: { openMode: 'auto', afterPurchase: 'manual' } });
     }
     return true;
   } catch (e) {
