@@ -1755,11 +1755,22 @@ label { font-weight: 700; font-size: 1rem; }
 .class-content { display: flex; flex-direction: column; gap: 16px; padding: 0 16px 20px; }
 .class-hero { background: linear-gradient(135deg, #d4fc79, #96e6a1); border-radius: 22px; padding: 24px 20px 18px; text-align: center; }
 .class-hero-row { display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.class-tree-visual { position: relative; width: 80px; height: 80px; }
 .class-big-tree { font-size: 80px; line-height: 1; }
+/* עלים/פירות/פרחים מונחים ישירות על צמרת ה-🌳 (קואורדינטות ב-_TREE_*_SPOTS), לא
+   בשורה מתחתיו — ר' _treeDecorHtml ב-script.js. קירוב ויזואלי עם אימוג'י קיים,
+   לא נכס איור. */
+.tree-decor-layer { position: absolute; inset: 0; pointer-events: none; }
+.tree-deco       { position: absolute; transform: translate(-50%, -50%); line-height: 1; }
+.tree-deco-leaf     { font-size: 15px; }
+.tree-deco-fruit    { font-size: 17px; }
+.tree-deco-blossom  { font-size: 16px; }
 .class-hero-booki-stage { margin-bottom: -6px; }
 .class-hero-booki-stage .booki-character-stage { min-height: auto; }
 .class-hero-booki-stage .booki-character-stage::before { display: none; }
 .class-hero-booki-char { width: min(24vw, 100px) !important; height: auto !important; }
+/* legacy club view בלבד (_renderClassContent) — שורת אימוג'י פשוטה מתחת לעץ, לא
+   הפיזור על הצמרת שלמעלה. שמור לתאימות אחורה, לא בשימוש ב-_renderNewClubView. */
 .tree-leaves    { font-size: 1.2rem; margin-top: 4px; word-break: break-all; min-height: 28px; }
 .tree-fruits    { font-size: 1.2rem; min-height: 28px; }
 .tree-bloom     { font-size: 1.6rem; margin-top: 6px; }

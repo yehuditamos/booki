@@ -683,6 +683,19 @@ function _classHeroBookiHtml(blooming) {
   return bookiStageHtml(img, { className: 'class-hero-booki-char', loading: 'eager' });
 }
 
+// נקודות עוגן (אחוזי left/top) לפיזור עלים/פירות/פרחים על צמרת העץ עצמו — אין כאן
+// נכס איור אמיתי, רק אימוג'י ה-🌳 הקיים; זה קירוב ויזואלי (לא מדויק פר-פלטפורמה),
+// לא הדמיה בוטנית. ר' _treeDecorHtml.
+const _TREE_LEAF_SPOTS   = [[50,10],[35,15],[65,15],[25,22],[75,22],[45,8],[55,8],[20,30],[80,30],[40,25],[60,25],[30,35],[70,35],[50,32],[15,18],[85,18],[38,40],[62,40],[48,20],[52,45]];
+const _TREE_FRUIT_SPOTS  = [[40,28],[60,28],[30,38],[70,38],[50,42],[45,18],[55,18],[25,45],[75,45],[50,15]];
+const _TREE_BLOSSOM_SPOTS = [[35,20],[65,20],[50,12],[25,35],[75,35],[45,40],[55,40],[50,30]];
+
+function _treeDecorHtml(spots, count, emoji, cssClass) {
+  return spots.slice(0, count)
+    .map(([left, top]) => `<span class="tree-deco ${cssClass}" style="left:${left}%;top:${top}%">${emoji}</span>`)
+    .join('');
+}
+
 function showClassView() {
   window._classReturnScreen = 'screen-main';
   if (typeof setNavTab === 'function') setNavTab('class');
@@ -762,20 +775,19 @@ async function _renderNewClubView(clubId) {
     return;
   }
 
-  const totalMins     = active.reduce((s, m) => s + m.totalMinutes,  0); // lifetime — תמיד לגדול, לעולם לא מתאפס (עץ)
   const totalSessions = active.reduce((s, m) => s + m.totalSessions, 0);
-  const leaves        = Math.floor(totalMins / 100);
-  const fruits        = Math.floor(totalMins / 500);
-  // goalProgress: cycleProgress (מתאפס עם כל יעד חדש) כש-Shop מופעל; אחרת totalMins הישן.
-  const goalProgress  = cycleProgress !== null ? cycleProgress : totalMins;
+  // Bug fix (product ask): מספר אחד בלבד לעץ, מתואם תמיד עם מה שיש לממש בחנות — לא
+  // שני מספרים נפרדים (סה"כ-דקות-אי-פעם מול יתרת-נקודות) שנראים כמו טעות. goalProgress
+  // כבר נופל חזרה ל-totalMins-כמו-פעם כשאין Shop פעיל (ר' למטה), אז זה לא משנה כלום
+  // לכיתות בלי חנות.
+  const goalProgress  = cycleProgress !== null ? cycleProgress : active.reduce((s, m) => s + m.totalMinutes, 0);
+  const leaves         = Math.floor(goalProgress / 100);
+  const fruits         = Math.floor(goalProgress / 500);
   const blooming      = goalProgress >= goalTarget;
   const pct           = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
   const remaining     = Math.max(0, goalTarget - goalProgress);
-  // Bug fix: כש-Shop פעיל, goalProgress הוא יתרת נקודות (econ.balance) — לא סכום דקות קריאה.
-  // היתרה יכולה להיות שונה מ-totalMins (סה"כ הדקות שמוצג בעץ, שם למטה) בגלל רכישות
-  // בחנות (מורידות מהיתרה) ו/או "זריעה" היסטורית של הארנק בעת הפעלת החנות. הצגת שני
-  // המספרים באותה יחידה ("דקות") גורמת לילדים/למורות לחשוב שיש כאן טעות — אז מתייגים
-  // לפי המקור האמיתי של המספר במקום לשנות אותו.
+  // כש-Shop פעיל, goalProgress הוא יתרת נקודות (econ.balance), לא ספירת דקות גולמית —
+  // מתייגים לפי המקור האמיתי כדי שהיחידה המוצגת תמיד תהיה נכונה (לא "דקות" סתם).
   const isPointsGoal  = cycleProgress !== null;
   const goalUnitFull  = isPointsGoal ? 'נקודות' : 'דקות';
   const goalUnitShort = isPointsGoal ? 'נק׳'    : 'דק׳';
@@ -787,14 +799,13 @@ async function _renderNewClubView(clubId) {
   const posIcons      = ['🥇', '🥈', '🥉'];
   const rowCls        = ['leader-first', 'leader-second', 'leader-third'];
 
-  // Task 1/3: teacher-controlled per-club setting — default 'leaderboard' preserves
-  // today's exact behavior for every existing club with no settings.progressDisplay yet.
+  // Bug fix (product ask): "יחד אנחנו קוראים" הוסר — היה עוד רובריקה עם עוד מספר,
+  // מיותר עכשיו שהעץ עצמו כבר מציג מספר אחד מתואם. כיתות במצב progressOnly (המורה
+  // כיבתה במפורש את הלוח המוביל התחרותי) לא מקבלות שום תחליף באותו מקום — זה עדיין
+  // ההעדפה שלהן, רק בלי הרובריקה שהוסרה.
   const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
   const progressBlock = progressDisplay === 'progressOnly'
-    ? `<div class="class-motivation-panel">
-         <h3>💚 יחד אנחנו קוראים</h3>
-         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ readMinutes: totalMins, goalTarget, goalRemaining: remaining, goalPct: pct, isPoints: isPointsGoal }) : ''}</p>
-       </div>`
+    ? ''
     : `<div class="leaderboard">
       <h3>🏆 10 הקוראים המובילים</h3>
       ${active.slice(0, 10).map((m, i) => `
@@ -823,20 +834,25 @@ async function _renderNewClubView(clubId) {
     </div>`;
   }
 
+  const leafHtml     = _treeDecorHtml(_TREE_LEAF_SPOTS,    Math.min(leaves, 20), '🍃', 'tree-deco-leaf');
+  const fruitHtml    = _treeDecorHtml(_TREE_FRUIT_SPOTS,   Math.min(fruits, 10), '🍎', 'tree-deco-fruit');
+  const blossomHtml  = blooming ? _treeDecorHtml(_TREE_BLOSSOM_SPOTS, _TREE_BLOSSOM_SPOTS.length, '🌸', 'tree-deco-blossom') : '';
+
   contentEl.innerHTML = `
     <div class="class-hero">
       <div class="class-hero-row">
-        <div class="class-big-tree">🌳</div>
+        <div class="class-tree-visual">
+          <div class="class-big-tree">🌳</div>
+          <div class="tree-decor-layer">${leafHtml}${fruitHtml}${blossomHtml}</div>
+        </div>
         <div class="class-hero-booki-stage">${_classHeroBookiHtml(blooming)}</div>
       </div>
-      <div class="tree-leaves">${'🍃'.repeat(Math.min(leaves, 20))}</div>
-      <div class="tree-fruits">${'🍎'.repeat(Math.min(fruits, 10))}</div>
-      ${blooming ? '<div class="tree-bloom">🌸🌸🌸 העץ פרח! 🌸🌸🌸</div>' : ''}
-      <span class="total-num">${totalMins}</span>
-      <span class="total-lbl">דקות קריאה כיתתיות!</span>
+      ${blooming ? '<div class="tree-bloom">🌸 העץ פרח! 🌸</div>' : ''}
+      <span class="total-num">${goalProgress}</span>
+      <span class="total-lbl">${goalUnitFull} קריאה כיתתיות!</span>
       <div class="class-tree-legend">
-        <span>🍃 כל 100 דק׳ = עלה</span>
-        <span>🍎 כל 500 דק׳ = פרי</span>
+        <span>🍃 כל 100 ${goalUnitShort} = עלה</span>
+        <span>🍎 כל 500 ${goalUnitShort} = פרי</span>
       </div>
     </div>
     <div class="class-stats-row">
