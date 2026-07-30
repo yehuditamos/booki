@@ -793,7 +793,7 @@ async function _renderNewClubView(clubId) {
   const progressBlock = progressDisplay === 'progressOnly'
     ? `<div class="class-motivation-panel">
          <h3>💚 יחד אנחנו קוראים</h3>
-         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins: goalProgress, goalTarget, isPoints: isPointsGoal }) : ''}</p>
+         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ readMinutes: totalMins, goalTarget, goalRemaining: remaining, goalPct: pct, isPoints: isPointsGoal }) : ''}</p>
        </div>`
     : `<div class="leaderboard">
       <h3>🏆 10 הקוראים המובילים</h3>

@@ -46,25 +46,25 @@ function computeStreakDays(history) {
 
 // ─── הודעות מוטיבציה כיתתיות (Task 3C) — התקדמות משותפת בלבד, ללא שמות/דירוג ──
 
-// isPoints: true כש-totalMins בפועל הוא יתרת נקודות מהחנות (econ.balance), לא סכום
-// דקות קריאה ממש — כדי שההודעה לא "תבטיח" מספר דקות שלא תואם את העץ למטה.
+// readMinutes הוא תמיד סכום הדקות האמיתי (אותו מספר שמופיע מתחת לעץ) — לעולם לא
+// יתרת הנקודות מהחנות. כשיש יעד מבוסס-נקודות (isPoints) ההתקדמות כלפיו מדוברת
+// באחוזים בלבד (goalPct), לא במספר מוחלט — כדי שלא יופיע מתחת לעץ מספר "מתחרה"
+// שלא תואם את הדקות שהעץ עצמו מציג (זה מה שגרם לתחושת "חוסר אמינות").
 const _CLASS_MOTIVATION_POOL = [
-  { cond: ({ totalMins }) => totalMins > 0,
-    text: ({ totalMins, isPoints }) => isPoints
-      ? `כבר צברתם ${totalMins} נקודות ליעד הכיתה! 🌳`
-      : `יחד קראתם כבר ${totalMins} דקות! 🌳` },
-  { cond: ({ totalMins, goalTarget }) => goalTarget > totalMins,
-    text: ({ totalMins, goalTarget, isPoints }) => isPoints
-      ? `עוד ${goalTarget - totalMins} נקודות ומגיעים ליעד הכיתה! 🎯`
-      : `עוד ${goalTarget - totalMins} דקות ומגיעים ליעד הכיתה! 🎯` },
-  { cond: ({ totalMins, goalTarget }) => goalTarget > 0 && totalMins >= goalTarget,
+  { cond: ({ readMinutes }) => readMinutes > 0,
+    text: ({ readMinutes }) => `יחד קראתם כבר ${readMinutes} דקות! 🌳` },
+  { cond: ({ goalPct }) => goalPct < 100,
+    text: ({ goalTarget, goalRemaining, isPoints, goalPct }) => isPoints
+      ? `עוד קצת ואנחנו ביעד הכיתה — כבר ${goalPct}% בדרך! 🎯`
+      : `עוד ${goalRemaining} דקות ומגיעים ליעד הכיתה! 🎯` },
+  { cond: ({ goalPct, goalTarget }) => goalTarget > 0 && goalPct >= 100,
     text: () => `כל הכבוד! הכיתה הגיעה ליעד המשותף! 🎉` },
   { cond: () => true,
     text: () => `כל דקת קריאה של כל חבר וחברה מקרבת את כל הכיתה קדימה! 🤝` },
 ];
 
-function pickClassMotivationMessage({ totalMins = 0, goalTarget = 0, isPoints = false } = {}) {
-  const ctx = { totalMins, goalTarget, isPoints };
+function pickClassMotivationMessage({ readMinutes = 0, goalTarget = 0, goalRemaining = 0, goalPct = 0, isPoints = false } = {}) {
+  const ctx = { readMinutes, goalTarget, goalRemaining, goalPct, isPoints };
   const eligible = _CLASS_MOTIVATION_POOL.filter(m => m.cond(ctx));
   const pool = eligible.length ? eligible : _CLASS_MOTIVATION_POOL.slice(-1);
   const pick = pool[_dayIndex() % pool.length];
