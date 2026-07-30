@@ -46,19 +46,25 @@ function computeStreakDays(history) {
 
 // ─── הודעות מוטיבציה כיתתיות (Task 3C) — התקדמות משותפת בלבד, ללא שמות/דירוג ──
 
+// isPoints: true כש-totalMins בפועל הוא יתרת נקודות מהחנות (econ.balance), לא סכום
+// דקות קריאה ממש — כדי שההודעה לא "תבטיח" מספר דקות שלא תואם את העץ למטה.
 const _CLASS_MOTIVATION_POOL = [
   { cond: ({ totalMins }) => totalMins > 0,
-    text: ({ totalMins }) => `יחד קראתם כבר ${totalMins} דקות! 🌳` },
+    text: ({ totalMins, isPoints }) => isPoints
+      ? `כבר צברתם ${totalMins} נקודות ליעד הכיתה! 🌳`
+      : `יחד קראתם כבר ${totalMins} דקות! 🌳` },
   { cond: ({ totalMins, goalTarget }) => goalTarget > totalMins,
-    text: ({ totalMins, goalTarget }) => `עוד ${goalTarget - totalMins} דקות ומגיעים ליעד הכיתה! 🎯` },
+    text: ({ totalMins, goalTarget, isPoints }) => isPoints
+      ? `עוד ${goalTarget - totalMins} נקודות ומגיעים ליעד הכיתה! 🎯`
+      : `עוד ${goalTarget - totalMins} דקות ומגיעים ליעד הכיתה! 🎯` },
   { cond: ({ totalMins, goalTarget }) => goalTarget > 0 && totalMins >= goalTarget,
     text: () => `כל הכבוד! הכיתה הגיעה ליעד המשותף! 🎉` },
   { cond: () => true,
     text: () => `כל דקת קריאה של כל חבר וחברה מקרבת את כל הכיתה קדימה! 🤝` },
 ];
 
-function pickClassMotivationMessage({ totalMins = 0, goalTarget = 0 } = {}) {
-  const ctx = { totalMins, goalTarget };
+function pickClassMotivationMessage({ totalMins = 0, goalTarget = 0, isPoints = false } = {}) {
+  const ctx = { totalMins, goalTarget, isPoints };
   const eligible = _CLASS_MOTIVATION_POOL.filter(m => m.cond(ctx));
   const pool = eligible.length ? eligible : _CLASS_MOTIVATION_POOL.slice(-1);
   const pick = pool[_dayIndex() % pool.length];

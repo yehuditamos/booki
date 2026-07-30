@@ -986,6 +986,7 @@ async function checkHomeShopTeaser(clubId) {
 
   let goalTarget = club?.goal?.target || 1500;
   let goalProgress = null;
+  let isPointsGoal = false;
   if (shopState?.activeCycleId) {
     const [cycle, econ] = await Promise.all([
       typeof fbLoadGoalCycle === 'function' ? fbLoadGoalCycle(clubId, shopState.activeCycleId) : Promise.resolve(null),
@@ -994,6 +995,7 @@ async function checkHomeShopTeaser(clubId) {
     if (cycle) {
       goalTarget = cycle.target || goalTarget;
       goalProgress = Math.max(0, econ?.balance || 0);
+      isPointsGoal = true; // econ.balance = יתרת נקודות, לא סכום דקות (ר' הערה ב-_renderNewClubView)
     }
   }
   if (goalProgress === null) {
@@ -1008,17 +1010,18 @@ async function checkHomeShopTeaser(clubId) {
   const blooming = goalProgress >= goalTarget;
   const pct       = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
   const remaining = Math.max(0, goalTarget - goalProgress);
+  const unit      = isPointsGoal ? "נק'" : "דק'";
 
   const stageEl = document.getElementById('home-shop-teaser-stage');
   if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
     stageEl.innerHTML = bookiStageHtml('shop-voting/booki-gift.png', { className: 'home-shop-teaser-char' });
   }
   const ptsEl = document.getElementById('home-shop-teaser-points');
-  if (ptsEl) ptsEl.textContent = `${goalProgress}/${goalTarget} דק' ליעד הכיתה`;
+  if (ptsEl) ptsEl.textContent = `${goalProgress}/${goalTarget} ${unit} ליעד הכיתה`;
   const fillEl = document.getElementById('home-shop-teaser-fill');
   if (fillEl) fillEl.style.width = pct + '%';
   const remainEl = document.getElementById('home-shop-teaser-remaining');
-  if (remainEl) remainEl.textContent = blooming ? '🎉 החנות פתוחה!' : `עוד ${remaining} דק'`;
+  if (remainEl) remainEl.textContent = blooming ? '🎉 החנות פתוחה!' : `עוד ${remaining} ${unit}`;
 
   card.style.display = '';
 }

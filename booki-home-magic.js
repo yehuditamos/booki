@@ -50,8 +50,15 @@ function _renderHomeProgressPanel() {
   if (!p.hasData || !p.rank) { panel.style.display = 'none'; return; }
   panel.style.display = '';
 
+  // בהיר: "השבוע" מתאפס כל שבוע, בניגוד ל"עוד X לדרגה" למטה שהוא מצטבר-לתמיד —
+  // שני מספרים שונים לגמרי, אז גם המילה מתחלפת כשאין עדיין קריאה השבוע (0 מרגיש
+  // כמו כישלון לילד/ה; הזמנה לקרוא מרגישה כמו התחלה).
   const weekEl = document.getElementById('home-progress-week');
-  if (weekEl) weekEl.textContent = _nkPick(`📚 השבוע: ${p.weeklyMinutes} דקות`, `📚 הַשָּׁבוּעַ: ${p.weeklyMinutes} דַּקּוֹת`);
+  if (weekEl) {
+    weekEl.textContent = p.weeklyMinutes > 0
+      ? _nkPick(`📚 השבוע קראת: ${p.weeklyMinutes} דקות`, `📚 הַשָּׁבוּעַ קָרָאתָ: ${p.weeklyMinutes} דַּקּוֹת`)
+      : _nkPick(`📚 עוד לא קראת השבוע — בואו נתחיל!`, `📚 עוֹד לֹא קָרָאתָ הַשָּׁבוּעַ — בּוֹאוּ נַתְחִיל!`);
+  }
 
   const fillEl = document.getElementById('home-progress-fill');
   if (fillEl) fillEl.style.width = p.pct + '%';
@@ -63,7 +70,9 @@ function _renderHomeProgressPanel() {
   if (remainEl) {
     if (p.next && p.remaining > 0) {
       const nextName = _nkPick(p.next.name, p.next.nameNk || p.next.name);
-      remainEl.textContent = _nkPick(`עוד ${p.remaining} ד' ל${p.next.name}`, `עוֹד ${p.remaining} ד' לְ${nextName}`);
+      // "בסה"כ" מבהיר שזו ספירה מצטברת-לתמיד (כל הקריאה אי-פעם), לא קשורה למספר
+      // ה"השבוע" ממש מעל — בלי המילה הזו שני המספרים נראים כאילו סותרים זה את זה.
+      remainEl.textContent = _nkPick(`עוד ${p.remaining} ד' בסה"כ ל${p.next.name}`, `עוֹד ${p.remaining} ד' בְּסַךְ הַכֹּל לְ${nextName}`);
       remainEl.style.display = '';
     } else {
       remainEl.style.display = 'none';

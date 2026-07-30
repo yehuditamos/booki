@@ -771,6 +771,19 @@ async function _renderNewClubView(clubId) {
   const blooming      = goalProgress >= goalTarget;
   const pct           = Math.min(100, Math.round((goalProgress / goalTarget) * 100));
   const remaining     = Math.max(0, goalTarget - goalProgress);
+  // Bug fix: כש-Shop פעיל, goalProgress הוא יתרת נקודות (econ.balance) — לא סכום דקות קריאה.
+  // היתרה יכולה להיות שונה מ-totalMins (סה"כ הדקות שמוצג בעץ, שם למטה) בגלל רכישות
+  // בחנות (מורידות מהיתרה) ו/או "זריעה" היסטורית של הארנק בעת הפעלת החנות. הצגת שני
+  // המספרים באותה יחידה ("דקות") גורמת לילדים/למורות לחשוב שיש כאן טעות — אז מתייגים
+  // לפי המקור האמיתי של המספר במקום לשנות אותו.
+  const isPointsGoal  = cycleProgress !== null;
+  const goalUnitFull  = isPointsGoal ? 'נקודות' : 'דקות';
+  const goalUnitShort = isPointsGoal ? 'נק׳'    : 'דק׳';
+  // הפער בין "הגענו ליעד" לבין שהמורה בפועל פותחת הצבעה/מאשרת רכישה: המצב הישן
+  // (activeCycleId) נשאר פעיל כל אותו זמן, אז pct/remaining נשארים קפואים ב-100%/0
+  // גם אם הכיתה ממשיכה לקרוא. extraSinceGoal מראה שהקריאה הנוספת כן נספרת ותעבור
+  // ליעד הבא (ר' _startNextGoalCycleTx ב-firebase-shop.js) — במקום שקט מוחלט.
+  const extraSinceGoal = (isPointsGoal && blooming) ? Math.max(0, goalProgress - goalTarget) : 0;
   const posIcons      = ['🥇', '🥈', '🥉'];
   const rowCls        = ['leader-first', 'leader-second', 'leader-third'];
 
@@ -780,7 +793,7 @@ async function _renderNewClubView(clubId) {
   const progressBlock = progressDisplay === 'progressOnly'
     ? `<div class="class-motivation-panel">
          <h3>💚 יחד אנחנו קוראים</h3>
-         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins: goalProgress, goalTarget }) : ''}</p>
+         <p class="class-motivation-msg">${typeof pickClassMotivationMessage === 'function' ? pickClassMotivationMessage({ totalMins: goalProgress, goalTarget, isPoints: isPointsGoal }) : ''}</p>
        </div>`
     : `<div class="leaderboard">
       <h3>🏆 10 הקוראים המובילים</h3>
@@ -822,8 +835,12 @@ async function _renderNewClubView(clubId) {
       <div class="class-stat"><span>👥</span><strong>${active.length}</strong><span>חברים</span></div>
     </div>
     <div class="goal-section">
-      <p>🎯 יעד הכיתה: <strong>${goalTarget}</strong> דקות · <strong>${pct}%</strong> הושלמו
-        ${remaining > 0 ? `· עוד <strong>${remaining}</strong> דק׳` : ' · 🎉 הגענו!'}</p>
+      <p>🎯 יעד הכיתה: <strong>${goalTarget}</strong> ${goalUnitFull} · <strong>${pct}%</strong> הושלמו
+        ${remaining > 0
+          ? `· עוד <strong>${remaining}</strong> ${goalUnitShort}`
+          : (extraSinceGoal > 0
+              ? ` · 🎉 הגענו! ואתם ממשיכים לקרוא — <strong>${extraSinceGoal}</strong> ${goalUnitShort} נוספות כבר מוכנות ליעד הבא! 🎁`
+              : ' · 🎉 הגענו!')}</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
