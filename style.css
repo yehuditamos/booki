@@ -1780,6 +1780,11 @@ label { font-weight: 700; font-size: 1rem; }
 .class-motivation-panel { background: linear-gradient(135deg, #fff9e6, #fff3cc); border-radius: var(--radius); padding: 18px 16px; text-align: center; box-shadow: var(--shadow-sm); }
 .class-motivation-panel h3 { font-size: 1rem; font-weight: 800; margin-bottom: 8px; color: #7a5c00; }
 .class-motivation-msg { font-size: 1rem; font-weight: 600; color: #6b4a00; }
+
+.class-shop-nudge { background: linear-gradient(135deg, #ffe1ec, #ffd4e5); border-radius: var(--radius); padding: 18px 16px; text-align: center; box-shadow: var(--shadow-sm); margin: 14px 0; }
+.class-shop-nudge p { font-size: 1rem; font-weight: 700; color: #9c1155; margin: 0 0 12px; }
+.class-shop-nudge p:last-child { margin-bottom: 0; }
+.class-shop-nudge button { margin: 0; }
 .leader-row { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 12px; margin-bottom: 6px; background: #f9f9f9; }
 .leader-first  { background: linear-gradient(135deg, #FFF9C4, #FFE082); }
 .leader-second { background: linear-gradient(135deg, #F5F5F5, #CFD8DC); }

@@ -806,11 +806,22 @@ async function _renderNewClubView(clubId) {
         </div>`).join('')}
     </div>`;
 
-  // כניסה לחנות רק מכאן (או מבאנר החגיגה במסך הבית) — לא טאב קבוע בניווט, ולא
-  // אריח קבוע בגוף מסך הבית; מוצג רק כשהחנות באמת פעילה עבור המחזור הזה.
-  const shopEntryBlock = (shopState?.state === 'GOAL_REACHED_PENDING_SHOP' || shopState?.state === 'voting_open')
-    ? `<button class="btn-giant btn-booki-read class-shop-entry" onclick="showShop()">🛍️ להיכנס לחנות הכיתה</button>`
-    : '';
+  // כרטיס קריאה-לפעולה ליד העץ, לפי מצב החנות המדויק — לא רק כפתור גנרי:
+  //  - GOAL_REACHED_PENDING_SHOP: הגיעו ליעד אבל אין עדיין הצבעה פתוחה (המורה טרם
+  //    פתחה אותה) — חוגגים ומזכירים שהקריאה הנוספת כן נספרת, בלי לחשוף את היעד הבא.
+  //  - voting_open: יש הצבעה פעילה על פרס — קריאה-לפעולה מפורשת עם מספר הנקודות בפועל.
+  let shopNudgeBlock = '';
+  if (shopState?.state === 'GOAL_REACHED_PENDING_SHOP') {
+    const extraLine = extraSinceGoal > 0 ? ` — כבר ${extraSinceGoal} נק' מוכנות ליעד הבא` : '';
+    shopNudgeBlock = `<div class="class-shop-nudge">
+      <p>🎉 הגענו! ואתם ממשיכים לקרוא${extraLine} 🎁</p>
+    </div>`;
+  } else if (shopState?.state === 'voting_open') {
+    shopNudgeBlock = `<div class="class-shop-nudge">
+      <p>🛍️ יש לכם <strong>${goalProgress}</strong> נק' לממש בחנות!</p>
+      <button class="btn-giant btn-booki-read class-shop-entry" onclick="showShop()">כנסו עכשיו להצביע! 🗳️</button>
+    </div>`;
+  }
 
   contentEl.innerHTML = `
     <div class="class-hero">
@@ -836,16 +847,12 @@ async function _renderNewClubView(clubId) {
     </div>
     <div class="goal-section">
       <p>🎯 יעד הכיתה: <strong>${goalTarget}</strong> ${goalUnitFull} · <strong>${pct}%</strong> הושלמו
-        ${remaining > 0
-          ? `· עוד <strong>${remaining}</strong> ${goalUnitShort}`
-          : (extraSinceGoal > 0
-              ? ` · 🎉 הגענו! ואתם ממשיכים לקרוא — <strong>${extraSinceGoal}</strong> ${goalUnitShort} נוספות כבר מוכנות ליעד הבא! 🎁`
-              : ' · 🎉 הגענו!')}</p>
+        ${remaining > 0 ? `· עוד <strong>${remaining}</strong> ${goalUnitShort}` : ' · 🎉 הגענו!'}</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
     </div>
-    ${shopEntryBlock}
+    ${shopNudgeBlock}
     ${progressBlock}`;
 }
 
