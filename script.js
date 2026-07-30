@@ -961,16 +961,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ─── מעבר מ-localStorage ל-Firebase (פעם אחת) ───────────────
-  if (typeof migrateFromLocalStorage === 'function') {
-    const migrated = await migrateFromLocalStorage();
-    if (migrated > 0) {
-      console.log(`[booki] ✅ הועברו ${migrated} תלמידים מ-localStorage ל-Firebase`);
+  // שתי הפעולות האלה הן ניקוי/תחזוקה ברקע (best-effort) — כשלון ברשת/הרשאות
+  // כאן לא אמור לחסום את כל האתחול. בלי try/catch, שגיאה כאן הייתה עוצרת
+  // את כל ה-DOMContentLoaded handler ומונעת מ-routeOnLoad() לרוץ בכלל,
+  // ומשאירה את המסך תקוע על splash — בלי קשר לקישור/למועדון שנכנסים אליו.
+  try {
+    if (typeof migrateFromLocalStorage === 'function') {
+      const migrated = await migrateFromLocalStorage();
+      if (migrated > 0) {
+        console.log(`[booki] ✅ הועברו ${migrated} תלמידים מ-localStorage ל-Firebase`);
+      }
     }
+  } catch (e) {
+    console.error('[booki] migrateFromLocalStorage נכשל (לא חוסם את האתחול):', e);
   }
 
   // ─── תיקון שמות לא עקביים ב-Firebase (אוטומטי) ──────────────
-  if (typeof fixAllStudentNames === 'function') {
-    await fixAllStudentNames(STUDENT_NAMES);
+  try {
+    if (typeof fixAllStudentNames === 'function') {
+      await fixAllStudentNames(STUDENT_NAMES);
+    }
+  } catch (e) {
+    console.error('[booki] fixAllStudentNames נכשל (לא חוסם את האתחול):', e);
   }
 
   // ניתוב ראשוני: בדוק אם מורה מחוברת לפני ניתוב רגיל
