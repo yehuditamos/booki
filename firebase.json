@@ -18,6 +18,7 @@
       "check_omri.js",
       "debug_omer_device.js",
       "diagnose_nina.js",
+      "diagnose_yonatan.js",
       "dryrun_omri.js",
       "fix_alexander.js",
       "fix_omer_lavhar.js",
