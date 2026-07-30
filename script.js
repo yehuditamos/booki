@@ -306,7 +306,12 @@ function renderReaderPage() {
   const page  = currentStory.pages[currentPageIndex];
   const total = currentStory.pages.length;
 
-  document.getElementById('reader-text').textContent        = page.text;
+  // Bug fix (product ask): כפתור הניקוד עד עכשיו לא נגע בטקסט סיפורים בכלל (רק בממשק
+  // הקבוע) — עכשיו הוא שולט גם כאן: מסיר ניקוד כשכבוי (בטוח לעשות תמיד), ומשאיר
+  // כמו שכתוב במקור כשדלוק. ספריות שלא כתובות עם ניקוד מלכתחילה נשארות ללא שינוי.
+  const showNiqud = typeof isNiqudOn !== 'function' || isNiqudOn();
+  document.getElementById('reader-text').textContent =
+    showNiqud || typeof stripNiqud !== 'function' ? page.text : stripNiqud(page.text);
   document.getElementById('reader-page-counter').textContent =
     `עמוד ${currentPageIndex + 1} מתוך ${total}`;
 
