@@ -981,7 +981,7 @@ function openSoloCard() {
 
 function _shareText() {
   const url = window.location.origin + window.location.pathname.replace(/\/+$/, '');
-  return 'היי!\nגילית אפליקציה מגניבה לעידוד קריאה אצל ילדים — בוקי 📚\n\nכיצד מצטרפים?\n👩‍🏫 מורה — פתחי מועדון קריאה חינמי\n📚 ילד — פתח כרטיס קריאה אישי, או בקשי ממורה קישור למועדון\n\n' + url;
+  return 'היי!\nגילית אפליקציה מגניבה לעידוד קריאה אצל ילדים — בוקי 📚\n\nכיצד מצטרפים?\n👩‍🏫 מורה — פתחו מועדון קריאה חינמי\n📚 ילד/ה — פתחו כרטיס קריאה אישי, או בקשו ממורה קישור למועדון\n\n' + url;
 }
 
 function shareApp() {
@@ -998,10 +998,10 @@ function shareApp() {
   overlay.innerHTML =
     '<div class="share-modal">' +
       '<button class="share-modal-close" onclick="document.getElementById(\'share-app-overlay\').remove()">✕</button>' +
-      '<div class="share-modal-title">📤 שתפי בוקי</div>' +
-      '<p class="share-modal-text">שתפי עם חברות ומשפחה!</p>' +
-      '<a class="btn-share-wa" href="' + waUrl + '" target="_blank" rel="noopener">💬 שלחי בוואטסאפ</a>' +
-      '<button class="btn-share-copy" onclick="_copyShareText()">📋 העתקי את הטקסט</button>' +
+      '<div class="share-modal-title">📤 שתפו את בוקי</div>' +
+      '<p class="share-modal-text">שתפו עם חברים וחברות ומשפחה!</p>' +
+      '<a class="btn-share-wa" href="' + waUrl + '" target="_blank" rel="noopener">💬 שלחו בוואטסאפ</a>' +
+      '<button class="btn-share-copy" onclick="_copyShareText()">📋 העתיקו את הטקסט</button>' +
       '<div id="share-copy-ok" class="share-copy-ok" style="display:none">הועתק! ✓</div>' +
     '</div>';
   document.body.appendChild(overlay);
