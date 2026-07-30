@@ -123,18 +123,31 @@ function saveStudentLocal(data) {
 // ─── שמירה וטעינה מאוחדות (Firebase + localStorage) ────────────────
 
 async function loadStudentFull(id) {
-  // נסה Firebase קודם
-  const fbData = await fbLoadStudent(id);
-  if (fbData) {
-    const canonical = STUDENT_NAMES[id] || fbData.name;
-    if (fbData.name !== canonical) {
-      fbData.name = canonical;
-      fbSaveStudent(fbData);   // תקן שם שגוי ב-Firebase
+  if (Number.isInteger(id)) {
+    // Legacy — מועדון ישן מבוסס STUDENT_NAMES, מסמך אחד לכל תלמיד תחת /classes/.
+    const fbData = await fbLoadStudent(id);
+    if (fbData) {
+      const canonical = STUDENT_NAMES[id] || fbData.name;
+      if (fbData.name !== canonical) {
+        fbData.name = canonical;
+        fbSaveStudent(fbData);   // תקן שם שגוי ב-Firebase
+      }
+      saveStudentLocal(fbData);   // שמור גיבוי מקומי
+      return fbData;
     }
-    saveStudentLocal(fbData);   // שמור גיבוי מקומי
-    return fbData;
+    return loadStudentLocal(id);
   }
-  // fallback ל-localStorage
+  // Bug fix: כרטיס קריאה אישי (בלי מועדון) — עד עכשיו הסכומים (totalMinutes/points/
+  // history) נשמרו רק ב-localStorage, בלי שום גיבוי ענן. ניקוי מטמון/דפדפן אחר/מכשיר
+  // אחר איפס אותם ל-0 בלי אזהרה. חברי מועדון לא נפגעו — האמת שלהם היא cachedStats
+  // ב-membership (fbUpdateMembershipStats), נתיב נפרד לגמרי מכאן.
+  if (!window.currentClubId && typeof fbLoadUserProfile === 'function') {
+    const profile = await fbLoadUserProfile(id);
+    if (profile && profile.totalMinutes !== undefined) {
+      saveStudentLocal(profile);
+      return profile;
+    }
+  }
   return loadStudentLocal(id);
 }
 
@@ -142,6 +155,14 @@ async function saveStudentFull(data) {
   saveStudentLocal(data);                    // מיידי — גיבוי מקומי
   if (Number.isInteger(data.id)) {           // fbSaveStudent הוא Legacy בלבד
     await fbSaveStudent(data);               // ענן — /classes/ collection
+    return;
+  }
+  // Bug fix: גיבוי ענן לכרטיס קריאה אישי — משתמשים באותו מסמך פרופיל שכבר קיים
+  // (fbSaveUserProfile, /users/{uid}/profile/main) עם merge:true, כך שזה לא דורס
+  // שדות זהות (שם/אימוג'י/גיל וכו') שכתובים שם ע"י מסך הפרופיל. חברי מועדון ממשיכים
+  // להתעדכן דרך fbUpdateMembershipStats בלבד — לא נוגעים כאן.
+  if (!window.currentClubId && typeof fbSaveUserProfile === 'function') {
+    await fbSaveUserProfile(data.id, data);
   }
 }
 
