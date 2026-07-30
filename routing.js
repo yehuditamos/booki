@@ -959,14 +959,30 @@ function goBackToJoinEntry() {
 
 // ─── Solo Card (כרטיס קריאה אישי ללא מועדון) ─────────────────────────────────
 
-function openSoloCard() {
-  let soloId = localStorage.getItem('booki_solo_uid');
-  if (!soloId) {
-    soloId = 'solo_' + Date.now();
-    localStorage.setItem('booki_solo_uid', soloId);
-  }
+// Bug fix: soloId היה עד עכשיו מזהה מקומי-בלבד ('solo_' + timestamp) שלעולם לא
+// שווה ל-request.auth.uid האמיתי — כל כתיבה/קריאה ל-Firestore שדורשת isMe(userId)
+// (readingSessions, profile) נכשלה בשקט על כל כרטיס אישי שנוצר ככה (ר' firestore.rules
+// isMe). התיקון: מזהים לפי auth.uid האמיתי מ-ensureStudentAuth(), בדיוק כמו שהצטרפות
+// עצמית למועדון כבר עושה נכון (ר' selectProfile — "self-joined: מזהה ה-membership שווה
+// ל-auth.uid"). למשתמשים קיימים עם soloId ישן — מעבירים את הנתונים המקומיים למפתח
+// החדש פעם אחת כדי שלא ילכו לאיבוד.
+async function openSoloCard() {
   _activeClubId        = null;
   window.currentClubId = null;
+
+  const oldSoloId = localStorage.getItem('booki_solo_uid');
+  const authUid   = (typeof ensureStudentAuth === 'function') ? await ensureStudentAuth() : null;
+  const soloId    = authUid || oldSoloId || ('solo_' + Date.now());
+
+  if (oldSoloId && oldSoloId !== soloId && typeof loadStudentLocal === 'function' && typeof saveStudentLocal === 'function') {
+    const oldData = loadStudentLocal(oldSoloId);
+    const newData = loadStudentLocal(soloId);
+    if (oldData && (oldData.totalMinutes || 0) > 0 && !(newData && newData.totalMinutes > 0)) {
+      saveStudentLocal({ ...oldData, id: soloId });
+    }
+  }
+  localStorage.setItem('booki_solo_uid', soloId);
+
   const existing = typeof loadStudentLocal === 'function' ? loadStudentLocal(soloId) : {};
   if (existing && existing.personalizationComplete) {
     _enterPersonalHome(soloId, existing);

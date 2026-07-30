@@ -161,8 +161,11 @@ async function saveStudentFull(data) {
   // (fbSaveUserProfile, /users/{uid}/profile/main) עם merge:true, כך שזה לא דורס
   // שדות זהות (שם/אימוג'י/גיל וכו') שכתובים שם ע"י מסך הפרופיל. חברי מועדון ממשיכים
   // להתעדכן דרך fbUpdateMembershipStats בלבד — לא נוגעים כאן.
+  // try/catch מפורש: fbSaveUserProfile זורקת בכשלון (למשל permission-denied/offline) —
+  // אסור שזה יפיל את כל זרימת סיום הקריאה (showComplete וכו') אצל הקורא/ת בפועל.
   if (!window.currentClubId && typeof fbSaveUserProfile === 'function') {
-    await fbSaveUserProfile(data.id, data);
+    try { await fbSaveUserProfile(data.id, data); }
+    catch (e) { console.warn('[booki] saveStudentFull: fbSaveUserProfile failed:', e.message); }
   }
 }
 
@@ -370,11 +373,13 @@ async function finishAppReading() {
   });
   currentStudentData = s;
 
-  await saveStudentFull(s);
-  // Auth חייבת להיות מוקמת לפני כל כתיבה ל-Firestore
+  // Bug fix: Auth חייבת להיות מוקמת *לפני* saveStudentFull — אחרת fbSaveUserProfile/
+  // fbSaveReadingSession נכתבים תחת auth.uid שלא נוצר עדיין (או שונה מ-currentStudentId),
+  // ו-isMe() ב-firestore.rules דוחה את הכתיבה בשקט.
   if (!Number.isInteger(currentStudentId) && typeof ensureStudentAuth === 'function') {
     await ensureStudentAuth();
   }
+  await saveStudentFull(s);
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes, points,
@@ -460,11 +465,11 @@ async function submitBookReading() {
   });
   currentStudentData = s;
 
-  await saveStudentFull(s);
-  // Auth חייבת להיות מוקמת לפני כל כתיבה ל-Firestore
+  // Bug fix: ר' finishAppReading — auth חייבת להיות מוקמת לפני saveStudentFull, לא אחריה.
   if (!Number.isInteger(currentStudentId) && typeof ensureStudentAuth === 'function') {
     await ensureStudentAuth();
   }
+  await saveStudentFull(s);
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'book', bookTitle: bookData.title, bookAuthor: bookData.author || null,

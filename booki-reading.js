@@ -225,10 +225,11 @@ async function _finishBookiReading(minutes, extra = {}) {
   });
   currentStudentData = s;
 
-  await saveStudentFull(s);
+  // Bug fix: ר' finishAppReading ב-script.js — auth חייבת להיות מוקמת לפני saveStudentFull.
   if (!Number.isInteger(currentStudentId) && typeof ensureStudentAuth === 'function') {
     await ensureStudentAuth();
   }
+  await saveStudentFull(s);
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'booki', minutes, points, reflection: extra.reflection ?? null,
