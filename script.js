@@ -258,32 +258,61 @@ function logout() {
 let _libraryFilter = 'recommended';
 let _libraryQuery = '';
 let _libraryVisibleCount = 6;
+const BOOKI_LIBRARY_SHELVES = [
+  { id:'starter', emoji:'🌱', title:'מתחילים לקרוא', subtitle:'אותיות, מילים וסיפורים ראשונים', libraries:['beginner','reading-stages'] },
+  { id:'familiar', emoji:'🐢', title:'סיפורים מוכרים', subtitle:'הסיפורים שתמיד כיף לפגוש', libraries:['familiar','folk-tales'] },
+  { id:'booki', emoji:'🦉', title:'בוקי והמקוריים', subtitle:'סיפורים חדשים מהעולם של בוקי', libraries:['booki','original'] },
+  { id:'adventure', emoji:'🧭', title:'הרפתקאות וטבע', subtitle:'חיות, מסעות ועולמות רחוקים', libraries:['adventure','animals'] },
+  { id:'science', emoji:'🔭', title:'מדע וסקרנות', subtitle:'מגלים איך העולם עובד', libraries:['science'] },
+  { id:'heritage', emoji:'📜', title:'תנ״ך וחכמים', subtitle:'סיפורים עם לב, דרך וערכים', libraries:['tanakh','chazal'] },
+  { id:'holidays', emoji:'🍯', title:'חגים ועונות', subtitle:'סיפורים לזמנים המיוחדים בשנה', libraries:['holidays'] },
+  { id:'advanced', emoji:'📚', title:'לקוראים מתקדמים', subtitle:'סיפורים ארוכים והרפתקאות גדולות', libraries:['bookworms','long'] },
+];
 
-function showLibrary(filter = 'recommended') {
-  const listEl = document.getElementById('story-list');
-  if (listEl) listEl.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">טוען סיפורים...</p>';
+function showLibrary() {
   showScreen('screen-library');
-  if (typeof renderForYouSection === 'function') renderForYouSection();
-  setTimeout(() => filterLibrary(filter), 0);
+  const forYou = document.getElementById('for-you-section'); if (forYou) forYou.style.display = 'none';
+  showLibraryCategories();
+}
+
+function showLibraryCategories() {
+  _libraryFilter = null; _libraryQuery = ''; _libraryVisibleCount = 6;
+  const input = document.getElementById('library-search-input'); if (input) input.value = '';
+  document.getElementById('library-screen-title').textContent = 'ספריית הסיפורים';
+  document.getElementById('library-category-view').style.display = '';
+  document.getElementById('library-story-view').style.display = 'none';
+  const stories = typeof getAllStories === 'function' ? getAllStories() : [];
+  document.getElementById('library-category-grid').innerHTML = BOOKI_LIBRARY_SHELVES.map(shelf => {
+    const count = stories.filter(s => shelf.libraries.includes(s.libraryId)).length;
+    return `<button class="library-category-card library-category-${shelf.id}" onclick="openLibraryShelf('${shelf.id}')"><span class="library-category-emoji">${shelf.emoji}</span><span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${count} סיפורים ←</b></span></button>`;
+  }).join('');
+}
+
+function openLibraryShelf(id) {
+  const shelf = BOOKI_LIBRARY_SHELVES.find(x => x.id === id); if (!shelf) return;
+  _libraryFilter = id; _libraryQuery = ''; _libraryVisibleCount = 6;
+  const input = document.getElementById('library-search-input'); if (input) input.value = '';
+  document.getElementById('library-screen-title').textContent = shelf.emoji + ' ' + shelf.title;
+  document.getElementById('library-category-view').style.display = 'none';
+  document.getElementById('library-story-view').style.display = '';
+  filterLibrary(id);
+}
+
+function libraryGoBack() {
+  const categoryView = document.getElementById('library-category-view');
+  if (categoryView && categoryView.style.display === 'none') showLibraryCategories();
+  else showScreen('screen-main');
 }
 
 function filterLibrary(filter, resetCount = true) {
   try {
     _libraryFilter = filter;
     if (resetCount) _libraryVisibleCount = 6;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    const tabMap = {
-      recommended:    'tab-recommended',
-      all:            'tab-all',
-      'צעדים ראשונים': 'tab-beginner',
-      short:          'tab-short',
-    };
-    const tabEl = document.getElementById(tabMap[filter]);
-    if (tabEl) tabEl.classList.add('active');
-
     const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
     let stories = allStories;
-    if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
+    const shelf = BOOKI_LIBRARY_SHELVES.find(x => x.id === filter);
+    if (shelf) stories = stories.filter(s => shelf.libraries.includes(s.libraryId));
+    else if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
     else if (filter === 'short') stories = stories.filter(s => (s.pages || []).length <= 7);
     else if (filter === 'recommended') {
       const interests = window._studentPersonalization?.interests || [];
@@ -331,7 +360,13 @@ function filterLibrary(filter, resetCount = true) {
 function searchLibrary(value) {
   _libraryQuery = String(value || '');
   _libraryVisibleCount = 6;
-  filterLibrary(_libraryFilter);
+  if (_libraryQuery.trim()) {
+    document.getElementById('library-category-view').style.display = 'none';
+    document.getElementById('library-story-view').style.display = '';
+    document.getElementById('library-screen-title').textContent = '🔎 תוצאות חיפוש';
+    filterLibrary(_libraryFilter || 'all');
+  } else if (!_libraryFilter) showLibraryCategories();
+  else filterLibrary(_libraryFilter);
 }
 
 function showMoreLibraryStories() {

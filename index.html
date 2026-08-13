@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=41" />
+  <link rel="stylesheet" href="style.css?v=42" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -340,17 +340,17 @@ window.addEventListener('pageshow', function (e) {
 <section id="screen-library" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
-      <h2 data-nk="סִפְרִיַּת הַסִּפּוּרִים">ספריית הסיפורים</h2>
-    </div>
-    <div class="library-tabs library-tabs-simple">
-      <button class="tab-btn active" id="tab-recommended" onclick="filterLibrary('recommended')">⭐ בשבילי</button>
-      <button class="tab-btn" id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 מתחילים</button>
-      <button class="tab-btn" id="tab-short" onclick="filterLibrary('short')">⚡ קצר ולעניין</button>
-      <button class="tab-btn" id="tab-all" onclick="filterLibrary('all')">📚 כל הסיפורים</button>
+      <button id="library-back-button" class="btn-back" onclick="libraryGoBack()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <h2 id="library-screen-title" data-nk="סִפְרִיַּת הַסִּפּוּרִים">ספריית הסיפורים</h2>
     </div>
     <label class="library-search"><span>🔎</span><input id="library-search-input" type="search" placeholder="איזה סיפור בא לך?" oninput="searchLibrary(this.value)"></label>
   </div>
+  <div id="library-category-view" class="library-category-view">
+    <div class="library-welcome"><strong>איזה סיפור בא לך היום?</strong><span>בוחרים ספרייה ורואים רק את הסיפורים שבה.</span></div>
+    <div id="library-category-grid" class="library-category-grid"></div>
+  </div>
+  <div id="library-story-view" style="display:none">
+    <button class="library-all-categories" onclick="showLibraryCategories()">כל הספריות →</button>
   <div id="for-you-section" class="for-you-section" style="display:none">
     <div class="for-you-header">⭐ <span data-nk="בִּמְיֻחָד בִּשְׁבִילְךָ">במיוחד בשבילך</span></div>
     <div id="for-you-list" class="story-list for-you-list"></div>
@@ -358,6 +358,7 @@ window.addEventListener('pageshow', function (e) {
   </div>
   <div id="story-list" class="story-list"></div>
   <button id="library-show-more" class="library-show-more" style="display:none" onclick="showMoreLibraryStories()">הצגת עוד סיפורים</button>
+  </div>
 </section>
 
 <!-- ══ קוראים אותיות — מתחילים ════════════════════════════════════ -->
@@ -1226,7 +1227,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=29"></script>
+<script src="script.js?v=30"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=5"></script>
 <script src="booki-reading.js?v=9"></script>
