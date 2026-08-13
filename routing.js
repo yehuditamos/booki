@@ -1528,6 +1528,7 @@ async function _showTeacherClub(clubId) {
   const emojiEl = document.getElementById('tc-club-emoji');
   if (nameEl)  nameEl.textContent  = '...';
   if (emojiEl) emojiEl.textContent = '';
+  await _repairMichaInflatedClassProgress(clubId);
   const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
   window._currentTeacherClubData = club;
   if (nameEl)  nameEl.textContent  = club?.name  || clubId;
@@ -1538,6 +1539,34 @@ async function _showTeacherClub(clubId) {
   const copyBtn = document.getElementById('tc-copy-button');
   if (shareBtn) shareBtn.textContent = club?.joinLink ? 'שיתוף הקישור' : 'יצירת קישור שיתוף';
   if (copyBtn) copyBtn.style.display = club?.joinLink ? '' : 'none';
+}
+
+// תיקון נתוני ייצור חד־פעמי: בכרטיס של מיכה נרשמו 3,558 דקות במקום 20.
+// הכרטיס כבר תוקן, אך הארנק הכיתתי נשאר מנופח. התיקון רץ רק בכניסת המורה,
+// רק במועדון ובכרטיס המדויקים, ורק פעם אחת בעזרת marker אטומי.
+async function _repairMichaInflatedClassProgress(clubId) {
+  const targetClub = 'מיתרים-קרית-כיתה-א-1782828189299';
+  if (clubId !== targetClub || !window.db || typeof firebase === 'undefined') return;
+  const clubRef = window.db.collection('clubs').doc(targetClub);
+  const memberRef = clubRef.collection('memberships').doc('student_mr3m4mtjwhca');
+  const walletRef = clubRef.collection('economy').doc('wallet');
+  try {
+    await window.db.runTransaction(async tx => {
+      const [clubSnap, memberSnap, walletSnap] = await Promise.all([tx.get(clubRef), tx.get(memberRef), tx.get(walletRef)]);
+      const alreadyDone = clubSnap.data()?.repairs?.michaInflatedMinutesV1;
+      const actualMinutes = memberSnap.data()?.cachedStats?.totalMinutes;
+      const wallet = walletSnap.data() || {};
+      if (alreadyDone || actualMinutes !== 20 || !walletSnap.exists || (wallet.lifetimeEarned || 0) < 3538) return;
+      tx.update(walletRef, {
+        lifetimeEarned: firebase.firestore.FieldValue.increment(-3538),
+        balance: firebase.firestore.FieldValue.increment(-3538),
+        updatedAt: new Date().toISOString(),
+      });
+      tx.update(clubRef, { 'repairs.michaInflatedMinutesV1': { correctedMinutes: 3538, correctedAt: new Date().toISOString() } });
+    });
+  } catch (error) {
+    console.warn('[repair] class progress repair waits for an authorized teacher session', error?.code || error);
+  }
 }
 
 async function _ensureTeacherClubJoinLink() {
@@ -1564,13 +1593,31 @@ function _teacherClubShareText() {
   return `מזמינה אתכם להצטרף למועדון הקריאה "${club.name || ''}" בבוקי.\n\nלכניסה: ${club.joinLink}${club.joinCode ? `\nקוד המועדון: ${club.joinCode}` : ''}`;
 }
 
+function _teacherClubHomeText() {
+  const club = window._currentTeacherClubData;
+  if (!club?.joinLink) return null;
+  return [
+    '🏠 זה הבית של בוקי עבור מועדון הקריאה "' + (club.name || '') + '".',
+    '',
+    'מכאן הילדים נכנסים בכל פעם כדי לקרוא:',
+    club.joinLink,
+    club.joinCode ? 'קוד המועדון: ' + club.joinCode : '',
+    '',
+    '📌 חשוב לשמור את הקישור ולא לאבד אותו:',
+    '• מומלץ להוסיף אותו למסך הבית בטלפון כמו אפליקציה.',
+    '• מומלץ לנעוץ את ההודעה הזאת בקבוצת הכיתה.',
+    '',
+    'בוקי היא כרגע אפליקציית ווב, והקישור הזה הוא דלת הכניסה הקבועה של הילדים.'
+  ].filter((line, index, lines) => line || lines[index - 1] !== '').join('\n');
+}
+
 async function copyCurrentTeacherClubLink() {
   const club = await _ensureTeacherClubJoinLink();
   const feedback = document.getElementById('tc-share-feedback');
   if (!club?.joinLink) { if (feedback) feedback.textContent = 'עדיין אין קישור למועדון הזה.'; return; }
   try {
-    await navigator.clipboard.writeText(club.joinLink);
-    if (feedback) feedback.textContent = 'הקישור הועתק. עכשיו אפשר להדביק אותו בהודעה.';
+    await navigator.clipboard.writeText(_teacherClubHomeText());
+    if (feedback) feedback.textContent = 'ההודעה והקישור הועתקו. עכשיו מדביקים בקבוצת הכיתה ונועצים את ההודעה 📌';
   } catch {
     if (feedback) feedback.textContent = 'לא הצלחנו להעתיק. נסי להשתמש בכפתור השיתוף.';
   }
@@ -1578,7 +1625,7 @@ async function copyCurrentTeacherClubLink() {
 
 async function shareCurrentTeacherClub() {
   await _ensureTeacherClubJoinLink();
-  const text = _teacherClubShareText();
+  const text = _teacherClubHomeText();
   const feedback = document.getElementById('tc-share-feedback');
   if (!text) { if (feedback) feedback.textContent = 'עדיין אין קישור למועדון הזה.'; return; }
   if (navigator.share) {
