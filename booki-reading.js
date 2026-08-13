@@ -47,22 +47,63 @@ function _loadBookiSession() {
       localStorage.removeItem(_bookiSessionKey());
       return null;
     }
-    return { ...session, startedAt };
+    const activeMs = Math.max(0, Number(session.activeMs) || 0);
+    // סשנים מהגרסה הישנה אינם מקבלים את זמן הקיר שעבר מאז. הם ממשיכים מאפס
+    // רק כשהמשתמש חוזר פיזית למסך הקריאה.
+    const activeSince = Number.isFinite(Number(session.activeSince)) ? Number(session.activeSince) : null;
+    return { ...session, startedAt, activeMs, activeSince };
   } catch {
     try { localStorage.removeItem(_bookiSessionKey()); } catch {}
     return null;
   }
 }
 
-function _getBookiElapsedMinutes(startedAt, now = Date.now()) {
-  const start = Number(startedAt);
+function _getBookiActiveMs(session, now = Date.now()) {
   const end = Number(now);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return null;
-  const elapsedMs = end - start;
-  if (elapsedMs < -_BOOKI_CLOCK_SKEW_MS) return null;
-  const minutes = Math.max(1, Math.floor(Math.max(0, elapsedMs) / 60000));
+  if (!session || !Number.isFinite(end)) return null;
+  const saved = Math.max(0, Number(session.activeMs) || 0);
+  const since = Number(session.activeSince);
+  if (!Number.isFinite(since) || since <= 0) return saved;
+  const delta = end - since;
+  if (delta < -_BOOKI_CLOCK_SKEW_MS) return null;
+  return saved + Math.max(0, delta);
+}
+
+function _getBookiElapsedMinutes(session, now = Date.now()) {
+  const elapsedMs = _getBookiActiveMs(session, now);
+  if (elapsedMs === null) return null;
+  const minutes = Math.max(1, Math.floor(elapsedMs / 60000));
   return minutes <= _BOOKI_MAX_SESSION_MINUTES ? minutes : null;
 }
+
+function _saveBookiSession(session) {
+  try { localStorage.setItem(_bookiSessionKey(), JSON.stringify(session)); } catch {}
+  return session;
+}
+
+function _isBookiReadingVisible() {
+  return document.visibilityState === 'visible'
+    && document.getElementById('screen-booki-reading')?.classList.contains('active');
+}
+
+function _pauseBookiActiveTime() {
+  const session = _loadBookiSession();
+  if (!session?.startedAt || !session.activeSince) return session;
+  const activeMs = _getBookiActiveMs(session);
+  return _saveBookiSession({ ...session, activeMs: activeMs === null ? session.activeMs : activeMs, activeSince: null });
+}
+
+function _resumeBookiActiveTime() {
+  const session = _loadBookiSession();
+  if (!session?.startedAt || session.activeSince || !_isBookiReadingVisible()) return session;
+  return _saveBookiSession({ ...session, activeSince: Date.now() });
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') _resumeBookiActiveTime();
+  else _pauseBookiActiveTime();
+});
+window.addEventListener('pagehide', _pauseBookiActiveTime);
 
 function _setBookiBubble(html) {
   const bubble = document.getElementById('booki-say-bubble-text');
@@ -131,9 +172,9 @@ function _minutesLabel(n) {
   return n === 1 ? '1 דקה' : n + ' דקות';
 }
 
-function _renderBookiElapsed(startedAt) {
+function _renderBookiElapsed() {
   const update = () => {
-    const mins = _getBookiElapsedMinutes(startedAt);
+    const mins = _getBookiElapsedMinutes(_loadBookiSession());
     const el = document.getElementById('booki-timer-sublabel');
     if (el) el.textContent = mins === null ? 'הטיימר פג — התחילו מחדש' : _minutesLabel(mins);
   };
@@ -149,13 +190,15 @@ function startBookiReading() {
   if (session?.startedAt) {
     // סשן כבר רץ (למשל חזרה למסך בלי לעבור דרך ביטול) — ממשיכים ישר, בלי "התחל" מחדש.
     _setBookiTimerState('running');
-    _renderBookiElapsed(session.startedAt);
+    showScreen('screen-booki-reading');
+    _resumeBookiActiveTime();
+    _renderBookiElapsed();
     _setBookiBubble(_BOOKI_RUNNING_MSG);
   } else {
     _setBookiTimerState('idle');
     _setBookiBubble(_BOOKI_PREP_MSG);
+    showScreen('screen-booki-reading');
   }
-  showScreen('screen-booki-reading');
 }
 
 /** נלחץ על הכפתור-העגול עצמו במצב idle — כאן, ורק כאן, הטיימר באמת מתחיל. */
@@ -165,7 +208,7 @@ function beginBookiReadingTimer() {
 
   const startedAt = Date.now();
   const sessionId = 'booki_' + startedAt.toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-  try { localStorage.setItem(_bookiSessionKey(), JSON.stringify({ startedAt, sessionId })); } catch {}
+  _saveBookiSession({ startedAt, sessionId, activeMs: 0, activeSince: Date.now() });
   _setBookiTimerState('starting');
   _setBookiBubble(_BOOKI_RUNNING_MSG);
 
@@ -173,7 +216,7 @@ function beginBookiReadingTimer() {
   _bookiTransitionTimer = setTimeout(() => {
     _bookiTransitionTimer = null;
     _setBookiTimerState('running');
-    _renderBookiElapsed(startedAt);
+    _renderBookiElapsed();
   }, 1200);
 }
 
@@ -182,9 +225,10 @@ function resumeBookiReading() {
   const session = _loadBookiSession();
   if (!session?.startedAt) return;
   _setBookiTimerState('running');
-  _renderBookiElapsed(session.startedAt);
   _setBookiBubble(_BOOKI_RUNNING_MSG);
   showScreen('screen-booki-reading');
+  _resumeBookiActiveTime();
+  _renderBookiElapsed();
 }
 
 function discardBookiReading() {
@@ -205,7 +249,8 @@ function finishBookiReadingSession() {
     alert('כדי לשמור דקות, צריך להתחיל קודם את הטיימר.');
     return;
   }
-  _bookiPendingMinutes = _getBookiElapsedMinutes(session.startedAt);
+  const pausedSession = _pauseBookiActiveTime() || session;
+  _bookiPendingMinutes = _getBookiElapsedMinutes(pausedSession);
   if (_bookiPendingMinutes === null) {
     _clearBookiReadingLocal();
     _setBookiTimerState('idle');

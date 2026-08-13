@@ -88,6 +88,9 @@ window.initCurrentStudent = function(id, data) {
 // ─── ניווט מסכים ────────────────────────────────────────────────────
 
 function showScreen(id) {
+  if (id !== 'screen-booki-reading' && typeof _pauseBookiActiveTime === 'function') {
+    _pauseBookiActiveTime();
+  }
   // מסיר את "מגן ההבזק הראשוני" של כניסה מקישור-כיתה (ר' style.css, boot-route-club):
   // הוא נועד רק למנוע פריים אחד עם המסך הלא-נכון לפני שה-JS השתלט על הניתוב —
   // ברגע ש-showScreen נקרא בכלל, ה-JS כבר בשליטה, ואם לא מסירים אותו כאן הוא

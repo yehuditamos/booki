@@ -13,6 +13,8 @@ const context = vm.createContext({
   Number,
   Math,
   Set,
+  window: { addEventListener: () => {} },
+  document: { visibilityState: 'visible', addEventListener: () => {}, getElementById: () => null },
   currentStudentId: 'test-user',
   defaultStudent: id => ({ id, totalMinutes: 0, appMinutes: 0, bookMinutes: 0, points: 0, storiesRead: 0, history: [] }),
   localStorage: { getItem: () => null, removeItem: () => {} },
@@ -50,8 +52,10 @@ vm.runInContext('_endReadingCompletion("same")', context);
 assert.equal(vm.runInContext('_beginReadingCompletion("same")', context), true);
 
 const now = Date.now();
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes(${now - 7 * 60000}, ${now})`, context), 7);
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes(${now - 3558 * 60000}, ${now})`, context), null);
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes("bad", ${now})`, context), null);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 7 * 60000, activeSince:null}, ${now})`, context), 7);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 2 * 60000, activeSince:${now - 5 * 60000}}, ${now})`, context), 7);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 3558 * 60000, activeSince:null}, ${now})`, context), null);
+// זמן קיר שחלף כשהסשן מושהה אינו נספר כלל.
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 60 * 60000}, activeMs: 3 * 60000, activeSince:null}, ${now})`, context), 3);
 
 console.log('reading safety tests: PASS');
