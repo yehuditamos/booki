@@ -847,6 +847,21 @@ function goReaderHome() {
   if (typeof _initHomeMagic === 'function') _initHomeMagic();
 }
 
+async function showClassLibrary() {
+  if (!_activeClubId && !window.currentClubId) return;
+  setNavTab('class');
+  showScreen('screen-class-library');
+  if (typeof renderClassStoryShelf === 'function') {
+    await renderClassStoryShelf(_activeClubId || window.currentClubId);
+  }
+}
+
+function showTeacherStoryLibrary() {
+  if (!_activeClubId && !window.currentClubId) return;
+  setNavVisible(false);
+  showScreen('screen-teacher-stories');
+}
+
 /** בורר "איך רוצים לקרוא היום?" — נפתח מהכפתור הראשי היחיד במסך הבית.
  *  שלוש האפשרויות מפעילות בדיוק את פעולות הקריאה הקיימות (ללא שינוי לוגיקה). */
 let _chooserReturnFocusEl = null;
