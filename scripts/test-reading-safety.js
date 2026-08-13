@@ -52,10 +52,10 @@ vm.runInContext('_endReadingCompletion("same")', context);
 assert.equal(vm.runInContext('_beginReadingCompletion("same")', context), true);
 
 const now = Date.now();
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 7 * 60000, activeSince:null}, ${now})`, context), 7);
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 2 * 60000, activeSince:${now - 5 * 60000}}, ${now})`, context), 7);
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes({activeMs: 3558 * 60000, activeSince:null}, ${now})`, context), null);
-// זמן קיר שחלף כשהסשן מושהה אינו נספר כלל.
-assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 60 * 60000}, activeMs: 3 * 60000, activeSince:null}, ${now})`, context), 3);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 7 * 60000}}, ${now})`, context), 7);
+// נעילה/רקע משתמשים בזמן הקיר, אבל התקרה הקשיחה לעולם לא מאפשרת אלפי דקות.
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 120 * 60000}}, ${now})`, context), 90);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 3558 * 60000}}, ${now})`, context), 90);
+assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:"bad"}, ${now})`, context), null);
 
 console.log('reading safety tests: PASS');

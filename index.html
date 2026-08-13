@@ -465,7 +465,7 @@ window.addEventListener('pageshow', function (e) {
 
   <!-- אובייקט אחד: גם כפתור ההתחלה וגם תצוגת הטיימר — לא שני כפתורים נפרדים.
        idle: "התחל" (לחיץ) -> starting: ניצוצות קצרים -> running: מספר הדקות (לא לחיץ) -->
-  <button id="booki-timer-btn" class="booki-timer-circle booki-timer-idle" onclick="beginBookiReadingTimer()">
+  <button id="booki-timer-btn" class="booki-timer-circle booki-timer-idle" onclick="toggleBookiReadingTimer()">
     <span class="booki-timer-sparkles">
       <span class="timer-sparkle ts-1">✨</span>
       <span class="timer-sparkle ts-2">⭐</span>
@@ -478,10 +478,7 @@ window.addEventListener('pageshow', function (e) {
     <span id="booki-timer-label" class="booki-timer-label">התחל</span>
     <span id="booki-timer-sublabel" class="booki-timer-sublabel"></span>
   </button>
-
-  <div class="booki-finish-wrap">
-    <button class="btn-giant btn-green celebrate-btn" onclick="finishBookiReadingSession()">✓ <span data-nk="סִיַּמְתִּי לִקְרוֹא">סיימתי לקרוא</span></button>
-  </div>
+  <p class="booki-timer-help">אפשר לנעול את הטלפון או לעבור לאפליקציה אחרת. כשתסיימו, חזרו לבוקי ולחצו על אותו כפתור. בוקי ישמור עד 90 דקות ברצף.</p>
 </section>
 
 <!-- ══ קריאה עם בוקי — רפלקציה קצרה ═══════════════════════════════ -->
@@ -1206,10 +1203,10 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=27"></script>
+<script src="script.js?v=28"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=5"></script>
-<script src="booki-reading.js?v=8"></script>
+<script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>
 <script src="initial-setup.js?v=2"></script>
