@@ -62,6 +62,16 @@ body {
 html.boot-route-club .screen.active { display: none !important; }
 html.boot-route-club #screen-club-welcome { display: block !important; }
 
+#screen-teacher-boot { padding:0;align-items:center;justify-content:center;min-height:100dvh;background:linear-gradient(180deg,#f4fbf6,#e8f7ed); }
+.teacher-boot-card { display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;color:#285f3d; }
+.teacher-boot-icon { font-size:3.3rem; }
+.teacher-boot-card strong { font-size:1.2rem;font-weight:900; }
+.teacher-boot-card span { font-size:.9rem;color:#5e7767; }
+.teacher-boot-dots { display:flex;gap:6px;margin-top:8px; }
+.teacher-boot-dots i { width:8px;height:8px;border-radius:50%;background:#20a858;animation:teacherBootPulse 1s infinite ease-in-out; }
+.teacher-boot-dots i:nth-child(2){animation-delay:.15s}.teacher-boot-dots i:nth-child(3){animation-delay:.3s}
+@keyframes teacherBootPulse { 0%,80%,100%{opacity:.25;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1929,6 +1939,7 @@ label { font-weight: 700; font-size: 1rem; }
 .tc-share-feedback{grid-column:1/-1}.tc-save-guide{grid-column:1/-1;text-align:right;border-top:1px solid rgba(104,76,0,.18);padding-top:10px}.tc-save-guide summary{cursor:pointer;font-weight:900;color:#684c00}.tc-save-guide div{padding-top:7px}.tc-save-guide p{margin:7px 0;font-size:.82rem;line-height:1.55;color:#574d2c}.tc-save-guide .tc-web-note{background:#fff;border-radius:12px;padding:10px;color:#315ea8}
 .tc-share-feedback { grid-column:1/-1;min-height:1.1em;color:#285f3d;font-size:.78rem;font-weight:800; }
 .teacher-dashboard-guide { display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:14px 16px;border-radius:16px;background:#eef8f1;color:#285f3d; }.teacher-dashboard-guide span{font-size:.82rem;line-height:1.5;}
+.teacher-management-only{display:flex;flex-direction:column;gap:3px;margin-bottom:12px;padding:12px 14px;border:1px solid #c8d7ef;border-radius:14px;background:#f2f6fc;color:#315783}.teacher-management-only span{font-size:.8rem;line-height:1.5}
 .btn-td-primary{width:100%;border:0;border-radius:18px;padding:16px;background:linear-gradient(135deg,#20b85c,#128d45);color:#fff;font:900 1rem inherit;box-shadow:0 7px 18px rgba(31,173,88,.24);cursor:pointer}.td-section-title{font-size:1rem;margin:22px 2px 10px;color:var(--text)}
 
 /* ─── Teacher Dashboard ──────────────────────────────────────────── */

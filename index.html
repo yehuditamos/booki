@@ -9,9 +9,20 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>יער הקריאה של בוקי</title>
+  <script>
+  // נקבע לפני טעינת CSS/HTML כדי שהדפדפן לא יספיק לצייר את מסך הילדים.
+  if (new URLSearchParams(location.search).get('teacher') === '1') {
+    document.documentElement.classList.add('boot-route-teacher');
+  }
+  </script>
+  <style>
+    html.boot-route-teacher body { margin:0; background:#f4fbf6; }
+    html.boot-route-teacher .screen { display:none !important; }
+    html.boot-route-teacher #screen-teacher-boot { display:flex !important; }
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=35" />
+  <link rel="stylesheet" href="style.css?v=36" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -27,6 +38,16 @@
   }
 })();
 </script>
+
+<!-- המסך היחיד שנצבע בזמן שקישור המורה טוען את Firebase ושאר הקוד. -->
+<section id="screen-teacher-boot" class="screen" aria-live="polite">
+  <div class="teacher-boot-card">
+    <div class="teacher-boot-icon">👩‍🏫</div>
+    <strong>פותחים את אזור המורה</strong>
+    <span>עוד רגע הכול מוכן…</span>
+    <div class="teacher-boot-dots"><i></i><i></i><i></i></div>
+  </div>
+</section>
 
 <!-- הגנת bfcache: אם הדף משוחזר מ-back-forward cache (למשל חזרה מ-Safari/WhatsApp
      בלי טעינה מחדש אמיתית מהרשת) — ה-JS לא רץ מחדש כלל, כך שתיקוני הניתוב לא
@@ -674,6 +695,7 @@ window.addEventListener('pageshow', function (e) {
     <p id="td-teacher-name" class="td-subtitle"></p>
   </div>
   <div class="td-body">
+    <div class="teacher-management-only"><strong>🔒 אזור ניהול למורה בלבד</strong><span>כאן מנהלים את המועדונים. לקריאה נכנסים דרך „הבית של בוקי” של המועדון.</span></div>
     <div class="teacher-dashboard-guide"><strong>מה עושים עכשיו?</strong><span>1. בוחרים מועדון קיים או מקימים חדש.</span><span>2. מעתיקים את הבית של בוקי ושולחים לכיתה.</span><span>3. חוזרים לכאן כדי לעקוב ולעודד.</span></div>
     <button class="btn-td-primary" onclick="showCreateClub()">＋ הקמת מועדון חדש</button>
     <h3 class="td-section-title">המועדונים שלי</h3>
@@ -690,6 +712,7 @@ window.addEventListener('pageshow', function (e) {
     </div>
   </div>
   <div class="tc-body">
+    <div class="teacher-management-only"><strong>🔒 זהו קישור ניהול בלבד</strong><span>רוצים להיכנס לקריאה? פותחים את „הבית של בוקי” שמופיע כאן למטה.</span></div>
     <div class="tc-hero">
       <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
     </div>
@@ -1165,7 +1188,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="class-stories.js?v=1"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
-<script src="auth.js?v=6"></script>
+<script src="auth.js?v=7"></script>
 <script src="analytics.js?v=2"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
@@ -1197,7 +1220,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=25"></script>
+<script src="script.js?v=26"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=5"></script>
 <script src="booki-reading.js?v=7"></script>

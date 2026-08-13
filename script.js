@@ -92,7 +92,7 @@ function showScreen(id) {
   // הוא נועד רק למנוע פריים אחד עם המסך הלא-נכון לפני שה-JS השתלט על הניתוב —
   // ברגע ש-showScreen נקרא בכלל, ה-JS כבר בשליטה, ואם לא מסירים אותו כאן הוא
   // ממשיך לכפות display:none על כל מסך עתידי (כולל screen-main) לנצח.
-  document.documentElement.classList.remove('boot-route-club');
+  document.documentElement.classList.remove('boot-route-club', 'boot-route-teacher');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
