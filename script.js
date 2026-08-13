@@ -45,6 +45,37 @@ let currentPageIndex     = 0;
 let bookData             = {};
 let classViewUnsubscribe = null;   // unsubscribe של listener כיתה
 
+// הגנות משותפות לכל מסלולי סיום הקריאה. נתוני Firestore/localStorage ישנים
+// עלולים להכיל מחרוזות או null; שימוש ישיר ב-+= על מחרוזת יוצר מספרים מנופחים.
+// בנוסף, לחיצה כפולה בזמן שהשמירה האסינכרונית רצה עלולה לזכות פעמיים.
+const _readingCompletionLocks = new Set();
+
+function _safeReadingNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function _normalizeStudentReadingStats(student) {
+  const s = student || defaultStudent(currentStudentId || 0);
+  s.totalMinutes = _safeReadingNumber(s.totalMinutes);
+  s.appMinutes   = _safeReadingNumber(s.appMinutes);
+  s.bookMinutes  = _safeReadingNumber(s.bookMinutes);
+  s.points       = _safeReadingNumber(s.points);
+  s.storiesRead  = _safeReadingNumber(s.storiesRead);
+  if (!Array.isArray(s.history)) s.history = [];
+  return s;
+}
+
+function _beginReadingCompletion(key) {
+  if (_readingCompletionLocks.has(key)) return false;
+  _readingCompletionLocks.add(key);
+  return true;
+}
+
+function _endReadingCompletion(key) {
+  _readingCompletionLocks.delete(key);
+}
+
 /**
  * Bridge — מאפשר ל-routing.js לאתחל משתמש חדש (לא-Legacy).
  * Legacy משתמש ב-selectStudent(index) ישירות.
@@ -356,13 +387,20 @@ async function finishAppReading() {
     return;
   }
 
+  const completionKey = 'app:' + (currentStory?.id || 'unknown');
+  if (!_beginReadingCompletion(completionKey)) return;
+
+  try {
+  if (!currentStory || !Array.isArray(currentStory.pages) || currentStory.pages.length === 0) {
+    throw new Error('הסיפור הנוכחי חסר או אינו תקין');
+  }
+
   const minutes = Math.max(1, Math.round(
-    currentStory.pages.reduce((sum, p) => sum + (p.readingMinutes || 0.5), 0)
+    currentStory.pages.reduce((sum, p) => sum + _safeReadingNumber(p?.readingMinutes, 0.5), 0)
   ));
   const points = minutes * 1;
 
-  const s = currentStudentData || loadStudentLocal(currentStudentId);
-  if (!Array.isArray(s.history)) s.history = [];
+  const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
   const prevMinutes = s.totalMinutes;
   s.totalMinutes += minutes;
   s.appMinutes   += minutes;
@@ -406,6 +444,12 @@ async function finishAppReading() {
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
   showComplete(minutes, points, { levelUp, streakDays });
+  } catch (e) {
+    console.error('[booki] finishAppReading failed:', e);
+    alert('לא הצלחנו לשמור את הקריאה. נסו שוב בעוד רגע.');
+  } finally {
+    _endReadingCompletion(completionKey);
+  }
 }
 
 // ─── קריאה מספר אמיתי ───────────────────────────────────────────────
@@ -446,15 +490,21 @@ async function submitBookReading() {
     return;
   }
 
+  const completionKey = 'book-form';
+  if (!_beginReadingCompletion(completionKey)) return;
+
+  try {
+
   const char  = document.getElementById('q-character').value.trim();
   const story = document.getElementById('q-story').value.trim();
   const liked = document.getElementById('q-liked').value.trim();
   if (!char || !story || !liked) { alert('יש למלא את כל השדות'); return; }
 
-  const minutes = bookData.minutes || 5;
+  const minutes = _safeReadingNumber(bookData.minutes, 5);
+  if (minutes < 1 || minutes > 240) throw new Error('מספר דקות לא תקין: ' + minutes);
   const points  = minutes * 1;
 
-  const s = currentStudentData || loadStudentLocal(currentStudentId);
+  const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
   const prevMinutes = s.totalMinutes;
   s.totalMinutes += minutes;
   s.bookMinutes  += minutes;
@@ -497,6 +547,12 @@ async function submitBookReading() {
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
   showComplete(minutes, points, { levelUp, streakDays });
+  } catch (e) {
+    console.error('[booki] submitBookReading failed:', e);
+    alert('לא הצלחנו לשמור את הקריאה. נסו שוב בעוד רגע.');
+  } finally {
+    _endReadingCompletion(completionKey);
+  }
 }
 
 // ─── מסך סיום ───────────────────────────────────────────────────────

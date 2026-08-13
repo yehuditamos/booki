@@ -4,7 +4,7 @@
  * Exports (via window):
  *   signUpTeacher, signInTeacher, signOutTeacher,
  *   getCurrentTeacher, onTeacherAuthChange,
- *   showTeacherAuth, submitTeacherAuth, teacherSignOut
+ *   showTeacherAuth, submitTeacherAuth, resetTeacherPassword, teacherSignOut
  */
 
 (function () {
@@ -37,6 +37,37 @@
   async function signOutTeacher() {
     const a = _auth();
     if (a) await a.signOut();
+  }
+
+  async function resetTeacherPassword() {
+    const a = _auth();
+    if (!a) throw new Error('Firebase Auth לא מוכן');
+    const email = (document.getElementById('ta-email')?.value || '').trim();
+    const errEl = document.getElementById('ta-error');
+    const statusEl = document.getElementById('ta-status');
+    if (errEl) errEl.textContent = '';
+    if (statusEl) statusEl.textContent = '';
+
+    if (!email) {
+      if (errEl) errEl.textContent = 'כתבי קודם את כתובת האימייל שלך';
+      document.getElementById('ta-email')?.focus();
+      return;
+    }
+
+    try {
+      await a.sendPasswordResetEmail(email);
+      if (statusEl) statusEl.textContent = 'שלחנו קישור לאיפוס הסיסמה למייל 📩';
+    } catch (e) {
+      const messages = {
+        'auth/invalid-email': 'כתובת האימייל אינה תקינה',
+        'auth/too-many-requests': 'נשלחו יותר מדי בקשות. נסי שוב מאוחר יותר',
+      };
+      if (e.code === 'auth/user-not-found') {
+        if (statusEl) statusEl.textContent = 'אם קיים חשבון עם המייל הזה, יישלח אליו קישור 📩';
+      } else if (errEl) {
+        errEl.textContent = messages[e.code] || 'לא הצלחנו לשלוח כרגע. נסי שוב בעוד רגע';
+      }
+    }
   }
 
   function getCurrentTeacher() {
@@ -127,16 +158,26 @@
     form.innerHTML = `
       <div class="auth-tabs">
         <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login')">כניסה</button>
-        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">הרשמה</button>
+        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">הקמת חשבון</button>
       </div>
+      ${isReg ? `<div class="auth-first-time-heading">✨ פעם ראשונה בבוקי? מכאן מקימים חשבון מורה</div>` : ''}
       ${isReg ? `<input id="ta-name" type="text" class="input-field" placeholder="שם מלא" autocomplete="name" />` : ''}
       <input id="ta-email"    type="email"    class="input-field" placeholder="כתובת אימייל" autocomplete="email" />
       <input id="ta-password" type="password" class="input-field" placeholder="סיסמה (לפחות 6 תווים)" autocomplete="${isReg ? 'new-password' : 'current-password'}" />
       ${!isReg ? `<label class="auth-remember"><input id="ta-remember" type="checkbox" checked /> זכור אותי</label>` : ''}
       <p id="ta-error" class="auth-error"></p>
+      <p id="ta-status" class="auth-status" role="status"></p>
       <button class="btn-giant btn-green" onclick="submitTeacherAuth()">
-        ${isReg ? '📝 הרשמה' : '🔑 כניסה'}
+        ${isReg ? '✨ הקמת החשבון שלי' : '🔑 כניסה'}
       </button>
+      ${!isReg ? `
+        <button type="button" class="auth-forgot-link" onclick="resetTeacherPassword()">שכחתי סיסמה</button>
+        <button type="button" class="auth-first-account" onclick="showTeacherAuth('register')">
+          <span class="auth-new-badge">פעם ראשונה?</span>
+          <strong>הקמת חשבון מורה חדש</strong>
+          <span>חינם ולוקח פחות מדקה ←</span>
+        </button>
+      ` : ''}
     `;
   }
 
@@ -207,6 +248,7 @@
     onTeacherAuthChange,
     showTeacherAuth,
     submitTeacherAuth,
+    resetTeacherPassword,
     teacherSignOut,
     ensureStudentAuth,
   });

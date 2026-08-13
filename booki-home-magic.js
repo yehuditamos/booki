@@ -132,7 +132,7 @@ function _homeSpeechPool() {
 function _renderHomeSpeech() {
   const el = document.getElementById('home-encouragement');
   if (!el) return;
-  el.textContent = _homeSpeechPool()[0];
+  el.textContent = 'מוכנים לקרוא יחד?';
 }
 
 // ─── "חדש על המדף" — קיצור אחד, מדף-ספרים ויזואלי, לשתי הספריות שנוספו

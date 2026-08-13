@@ -11,7 +11,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=30" />
+  <link rel="stylesheet" href="style.css?v=32" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -176,9 +176,15 @@ window.addEventListener('pageshow', function (e) {
     <div id="home-console-stage" class="home-console-stage"></div>
 
     <div class="home-speech-bubble">
-      <p class="home-encouragement" id="home-encouragement"></p>
+      <p class="home-encouragement" id="home-encouragement" data-nk="מוּכָנִים לִקְרֹא יַחַד?">מוכנים לקרוא יחד?</p>
       <span class="home-speech-tail" aria-hidden="true"></span>
     </div>
+
+    <button id="home-start-reading" class="home-start-reading" onclick="openReadingChooser()">
+      <span class="home-start-play" aria-hidden="true">▶</span>
+      <span data-nk="מַתְחִילִים לִקְרֹא">מתחילים לקרוא</span>
+    </button>
+    <p class="home-start-hint">לחצו כאן ובחרו איך תרצו לקרוא היום</p>
 
     <!-- "חדש על המדף" — קיצור אחד, מדף ספרים ויזואלי; מוצג רק אם יש סיפורים חדשים -->
     <button id="home-shelf-card" class="home-shelf-card" style="display:none" onclick="_openHomeShelf()">
@@ -284,6 +290,24 @@ window.addEventListener('pageshow', function (e) {
     <button class="chooser-cancel" onclick="closeReadingChooser()"><span data-nk="בִּיטּוּל">ביטול</span></button>
   </div>
 </div>
+
+<!-- ספריית הכיתה — התשתית לבית הסיפורים המשותפים. -->
+<section id="screen-class-library" class="screen booki-world booki-world--class">
+  <div class="screen-header sticky-header"><div class="header-row">
+    <button class="btn-back" onclick="goReaderHome()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+    <h2>ספריית הכיתה</h2>
+  </div></div>
+  <div class="class-library-body">
+    <div class="class-library-hero">
+      <img src="assets/booki/core/states/booki-reading.png" alt="בוקי קורא" width="180" height="180">
+      <h3>הספרים שאנחנו יוצרים יחד</h3>
+      <p>כאן יישמרו הסיפורים שנכתבו בכתב היד של ילדי הכיתה.</p>
+    </div>
+    <div id="class-story-shelf" class="class-story-shelf" aria-live="polite"></div>
+    <div id="class-story-empty" class="class-story-empty"><span aria-hidden="true">📚</span><strong>המדף מחכה לסיפור הראשון שלנו</strong><p>כשהמורה תפתח סיפור כיתתי, הוא יופיע כאן.</p></div>
+    <button class="class-progress-link" onclick="showClassView()">ליעד ולהתקדמות הכיתה ←</button>
+  </div>
+</section>
 
 <!-- ══ ספריית סיפורים ══════════════════════════════════════════════ -->
 <section id="screen-library" class="screen">
@@ -687,6 +711,24 @@ window.addEventListener('pageshow', function (e) {
         <span class="tc-card-sub">ניהול פרסים להצבעת התלמידים</span>
       </div>
     </button>
+    <button class="tc-class-card tc-class-card--sm" onclick="showTeacherStoryLibrary()">
+      <span class="tc-card-icon">📚</span>
+      <div class="tc-card-text"><span class="tc-card-title">סיפורי הכיתה</span><span class="tc-card-sub">כתיבה ביד, צילום והפקת ספרים</span></div>
+      <span class="feature-coming-badge">בקרוב</span>
+    </button>
+  </div>
+</section>
+
+<section id="screen-teacher-stories" class="screen">
+  <div class="screen-header sticky-header"><div class="header-row">
+    <button class="btn-back" onclick="showScreen('screen-teacher-club')"><span data-nk="חֲזָרָה">חזרה</span> →</button><h2>סיפורי הכיתה</h2>
+  </div></div>
+  <div class="teacher-stories-groundwork">
+    <img src="assets/booki/teacher/booki-teacher-helper.png" alt="בוקי עוזר למורה" width="190" height="190">
+    <h3>הבית של הספרים הכיתתיים מוכן</h3>
+    <p>כאן המורה תפתח סיפור, תראה מי משך חלק, תאשר צילומי כתב יד ותפיק ספר להדפסה.</p>
+    <div class="story-status-preview"><span>טיוטה</span><span>אוספים חלקים</span><span>בדיקת המורה</span><span>פורסם</span></div>
+    <button class="btn-giant btn-green" disabled>יצירת סיפור חדש — בקרוב</button>
   </div>
 </section>
 
@@ -1108,9 +1150,10 @@ window.addEventListener('pageshow', function (e) {
 <script src="data-club-types.js?v=2"></script>
 <script src="seed-clubs.js?v=3"></script>
 <script src="firebase-clubs.js?v=5"></script>
+<script src="class-stories.js?v=1"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
-<script src="auth.js?v=2"></script>
+<script src="auth.js?v=3"></script>
 <script src="analytics.js?v=2"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
@@ -1138,14 +1181,14 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=18"></script>
+<script src="routing.js?v=19"></script>
 <script src="admin-setup.js?v=2"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=23"></script>
+<script src="script.js?v=25"></script>
 <script src="motivation.js?v=7"></script>
-<script src="booki-home-magic.js?v=4"></script>
-<script src="booki-reading.js?v=6"></script>
+<script src="booki-home-magic.js?v=5"></script>
+<script src="booki-reading.js?v=7"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>
 <script src="initial-setup.js?v=2"></script>
@@ -1245,9 +1288,9 @@ window.addEventListener('pageshow', function (e) {
     <span class="btab-icon">👤</span>
     <span class="btab-label" data-nk="הַכַּרְטִיס שֶׁלִּי">הכרטיס שלי</span>
   </button>
-  <button id="nav-tab-class" class="booki-tab" data-for="class" onclick="showClassView()" style="display:none">
-    <span class="btab-icon">🏆</span>
-    <span class="btab-label" data-nk="הַכִּתָּה שֶׁלָּנוּ">הכיתה שלנו</span>
+  <button id="nav-tab-class" class="booki-tab" data-for="class" onclick="showClassLibrary()" style="display:none">
+    <span class="btab-icon">📚</span>
+    <span class="btab-label" data-nk="סִפְרִיַּת הַכִּתָּה">ספריית הכיתה</span>
   </button>
 </nav>
 
