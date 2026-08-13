@@ -76,6 +76,46 @@ function _endReadingCompletion(key) {
   _readingCompletionLocks.delete(key);
 }
 
+// סיפורים בתוך האפליקציה מזכים לפי זמן הקריאה האמיתי — לא לפי אומדן אורך הטקסט.
+// נספר רק זמן שבו מסך הסיפור פעיל והעמוד גלוי; נעילת טלפון/מעבר אפליקציה עוצרים.
+const _APP_STORY_MAX_MINUTES = 90;
+let _appStoryTimer = null;
+
+function _isAppStoryActivelyVisible() {
+  const screen = document.getElementById('screen-reader');
+  return document.visibilityState === 'visible' && !!screen?.classList.contains('active');
+}
+function _syncAppStoryTimer(now = Date.now()) {
+  if (!_appStoryTimer?.activeSince) return;
+  _appStoryTimer.activeMs += Math.max(0, now - _appStoryTimer.activeSince);
+  _appStoryTimer.activeSince = null;
+}
+function _setAppStoryTimerRunning(shouldRun, now = Date.now()) {
+  _syncAppStoryTimer(now);
+  if (shouldRun && _appStoryTimer) _appStoryTimer.activeSince = now;
+}
+function _startAppStoryTimer(storyId, now = Date.now()) {
+  _appStoryTimer = { storyId:String(storyId), activeMs:0, activeSince:null };
+  _setAppStoryTimerRunning(_isAppStoryActivelyVisible(), now);
+}
+function _stopAppStoryTimer(now = Date.now()) {
+  _syncAppStoryTimer(now);
+  const timer = _appStoryTimer; _appStoryTimer = null;
+  return timer;
+}
+function _getAppStoryElapsedMinutes(timer, now = Date.now()) {
+  if (!timer) return 1;
+  const activeMs = _safeReadingNumber(timer.activeMs) + (timer.activeSince ? Math.max(0, now - timer.activeSince) : 0);
+  return Math.min(_APP_STORY_MAX_MINUTES, Math.max(1, Math.round(activeMs / 60000)));
+}
+function _handleAppReaderScreenChange(screenId) {
+  if (!_appStoryTimer) return;
+  _setAppStoryTimerRunning(screenId === 'screen-reader' && document.visibilityState === 'visible');
+}
+document.addEventListener('visibilitychange', () => {
+  if (_appStoryTimer) _setAppStoryTimerRunning(_isAppStoryActivelyVisible());
+});
+
 /**
  * Bridge — מאפשר ל-routing.js לאתחל משתמש חדש (לא-Legacy).
  * Legacy משתמש ב-selectStudent(index) ישירות.
@@ -96,6 +136,7 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
+  _handleAppReaderScreenChange(id);
   window.scrollTo(0, 0);
   if (typeof applyNiqud === 'function') applyNiqud();
   // נקה Firebase listener כשעוזבים את מסך הכיתה
@@ -420,6 +461,7 @@ function startStory(storyId) {
   }
   document.getElementById('reader-story-title').textContent = currentStory.title;
   showScreen('screen-reader');
+  _startAppStoryTimer(currentStory.id);
   renderReaderPage();
 }
 
@@ -466,6 +508,7 @@ function prevPage() {
 
 function exitReader() {
   if (confirm('לצאת מהסיפור? ההתקדמות לא תישמר.')) {
+    _stopAppStoryTimer();
     filterLibrary('all');
     showScreen('screen-library');
   }
@@ -485,9 +528,7 @@ async function finishAppReading() {
     throw new Error('הסיפור הנוכחי חסר או אינו תקין');
   }
 
-  const minutes = Math.max(1, Math.round(
-    currentStory.pages.reduce((sum, p) => sum + _safeReadingNumber(p?.readingMinutes, 0.5), 0)
-  ));
+  const minutes = _getAppStoryElapsedMinutes(_appStoryTimer);
   const points = minutes * 1;
 
   const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
@@ -533,6 +574,7 @@ async function finishAppReading() {
   }
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
+  _stopAppStoryTimer();
   showComplete(minutes, points, { levelUp, streakDays });
   } catch (e) {
     console.error('[booki] finishAppReading failed:', e);
