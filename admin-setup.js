@@ -55,7 +55,8 @@ function submitClubName() {
   const sel = document.querySelector('.emoji-opt.selected');
   if (sel) _newClub.emoji = sel.dataset.emoji;
   _newClub.members = [];
-  goToReview();
+  renderMemberList();
+  showScreen('screen-create-members');
 }
 
 function setAddMode(mode) {
@@ -192,13 +193,20 @@ async function createClub() {
     active: true,
   };
 
-  if (typeof fbCreateClub === 'function') await fbCreateClub(club);
+  const clubCreated = typeof fbCreateClub === 'function' ? await fbCreateClub(club) : false;
+  if (!clubCreated) {
+    if (btn) { btn.disabled = false; btn.textContent = 'נסי שוב'; }
+    const err = document.getElementById('create-club-error');
+    if (err) { err.textContent = 'לא הצלחנו ליצור את המועדון. בדקי את החיבור לאינטרנט ונסי שוב.'; err.style.display = ''; }
+    return;
+  }
   if (typeof analyticsClubCreated === 'function') analyticsClubCreated(_newClubId, _newClub.type);
 
   // קוד הצטרפות אחיד לכל המועדון (ללא הגבלת שימושים)
   _clubCode = _genCode();
+  let invitationCreated = false;
   if (typeof fbCreateInvitation === 'function') {
-    await fbCreateInvitation({
+    invitationCreated = await fbCreateInvitation({
       code:         _clubCode,
       clubId:       _newClubId,
       createdBy:    _teacherUid   || 'admin',
@@ -209,6 +217,11 @@ async function createClub() {
       maxUses:      null,
       expiresAt:    null,
     });
+  }
+  // שומר את הקוד והקישור גם במסמך המועדון, כדי שהמורה תמיד תוכל לשתף מחדש
+  // מהדשבורד ולא תהיה תלויה במסך ההצלחה החד-פעמי.
+  if (typeof fbSaveClub === 'function') {
+    await fbSaveClub(_newClubId, { joinCode: _clubCode, joinLink: _buildJoinLink() });
   }
 
   // שמור את המועדון במכשיר (המנהל/ת כבר נמצא/ת פה)
@@ -224,13 +237,12 @@ async function createClub() {
   // Create a student card for each name entered during setup
   _createdCardsCount = 0;
   if (_newClub.members.length > 0 && typeof fbTeacherAddStudent === 'function') {
-    for (const memberName of _newClub.members) {
-      const result = await fbTeacherAddStudent(_newClubId, { name: memberName });
-      if (result && result.ok) _createdCardsCount++;
-    }
+    if (btn) btn.textContent = `פותח כרטיסים ל-${_newClub.members.length} תלמידים...`;
+    const results = await Promise.all(_newClub.members.map(name => fbTeacherAddStudent(_newClubId, { name })));
+    _createdCardsCount = results.filter(result => result?.ok).length;
   }
 
-  _renderSuccessScreen();
+  _renderSuccessScreen({ invitationCreated });
   showScreen('screen-create-success');
 }
 
@@ -263,7 +275,7 @@ function copyJoinLink() {
   }
 }
 
-function _renderSuccessScreen() {
+function _renderSuccessScreen({ invitationCreated = true } = {}) {
   const nameEl  = document.getElementById('success-club-name');
   const emojiEl = document.getElementById('success-club-emoji');
   const codeEl  = document.getElementById('success-club-code');
@@ -272,13 +284,13 @@ function _renderSuccessScreen() {
   if (emojiEl) emojiEl.textContent = _newClub.emoji;
   if (codeEl)  codeEl.textContent  = _clubCode;
   if (guideEl) {
-    guideEl.innerHTML =
-      '<div class="success-next-step success-next-notice">' +
-      '<span class="success-next-icon">📋</span>' +
-      '<div><strong>להשלמת הקמת המועדון — פתחי כרטיס לכל תלמיד</strong>' +
-      '<p>כדי שתלמידים יוכלו להתחבר, עליך לפתוח כרטיס לכל אחד מהם:<br>' +
-      'דשבורד ← שם המועדון ← <em>הוסף תלמיד</em></p></div>' +
-      '</div>';
+    const requested = _newClub.members.length;
+    const cardsLine = requested
+      ? (_createdCardsCount === requested
+          ? `נפתחו בהצלחה ${_createdCardsCount} כרטיסי תלמידים.`
+          : `נפתחו ${_createdCardsCount} מתוך ${requested} כרטיסים. אפשר להוסיף את החסרים מתוך "תלמידי המועדון".`)
+      : 'בחרת להוסיף תלמידים אחר כך. הכפתור "תלמידי המועדון" מחכה לך בדשבורד.';
+    guideEl.innerHTML = `<div class="success-next-step success-next-notice"><span class="success-next-icon">✅</span><div><strong>המועדון מוכן. מה עושים עכשיו?</strong><p>${cardsLine}<br>${invitationCreated ? 'עכשיו העתיקי את הקישור ושלחי אותו להורים או לילדים.' : 'לא הצלחנו ליצור קוד הצטרפות. אפשר לנסות לשתף שוב מתוך מסך המועדון.'}</p></div></div>`;
   }
 }
 

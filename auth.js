@@ -163,7 +163,8 @@
       ${isReg ? `<div class="auth-first-time-heading">✨ פעם ראשונה בבוקי? מכאן מקימים חשבון מורה</div>` : ''}
       ${isReg ? `<input id="ta-name" type="text" class="input-field" placeholder="שם מלא" autocomplete="name" />` : ''}
       <input id="ta-email"    type="email"    class="input-field" placeholder="כתובת אימייל" autocomplete="email" />
-      <input id="ta-password" type="password" class="input-field" placeholder="סיסמה (לפחות 6 תווים)" autocomplete="${isReg ? 'new-password' : 'current-password'}" />
+      <input id="ta-password" type="password" class="input-field" placeholder="סיסמה (לפחות 6 תווים)" autocomplete="${isReg ? 'new-password' : 'current-password'}" onkeydown="if(event.key==='Enter') submitTeacherAuth()" />
+      <label class="auth-show-password"><input type="checkbox" onchange="toggleTeacherPassword(this.checked)" /> הצגת הסיסמה</label>
       ${!isReg ? `<label class="auth-remember"><input id="ta-remember" type="checkbox" checked /> זכור אותי</label>` : ''}
       <p id="ta-error" class="auth-error"></p>
       <p id="ta-status" class="auth-status" role="status"></p>
@@ -234,6 +235,11 @@
     }
   }
 
+  function toggleTeacherPassword(show) {
+    const input = document.getElementById('ta-password');
+    if (input) input.type = show ? 'text' : 'password';
+  }
+
   async function teacherSignOut() {
     await signOutTeacher();
     if (typeof showScreen === 'function') showScreen('screen-splash');
@@ -249,6 +255,7 @@
     showTeacherAuth,
     submitTeacherAuth,
     resetTeacherPassword,
+    toggleTeacherPassword,
     teacherSignOut,
     ensureStudentAuth,
   });

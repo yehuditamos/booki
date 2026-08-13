@@ -1491,8 +1491,63 @@ async function _showTeacherClub(clubId) {
   if (nameEl)  nameEl.textContent  = '...';
   if (emojiEl) emojiEl.textContent = '';
   const club = typeof fbLoadClub === 'function' ? await fbLoadClub(clubId) : null;
+  window._currentTeacherClubData = club;
   if (nameEl)  nameEl.textContent  = club?.name  || clubId;
   if (emojiEl) emojiEl.textContent = club?.emoji || '📚';
+  const sharePanel = document.getElementById('tc-share-panel');
+  if (sharePanel) sharePanel.style.display = 'grid';
+  const shareBtn = document.getElementById('tc-share-button');
+  const copyBtn = document.getElementById('tc-copy-button');
+  if (shareBtn) shareBtn.textContent = club?.joinLink ? 'שיתוף הקישור' : 'יצירת קישור שיתוף';
+  if (copyBtn) copyBtn.style.display = club?.joinLink ? '' : 'none';
+}
+
+async function _ensureTeacherClubJoinLink() {
+  const club = window._currentTeacherClubData;
+  const clubId = club?.id || _activeClubId || window.currentClubId;
+  if (!club || !clubId) return null;
+  if (club.joinLink) return club;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const link = window.location.href.split('?')[0] + '?club=' + encodeURIComponent(clubId);
+  const teacher = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
+  const ok = typeof fbCreateInvitation === 'function' ? await fbCreateInvitation({ code, clubId, createdBy:teacher?.uid || '', targetName:null, targetUserId:null, channel:'share', link, maxUses:null, expiresAt:null }) : false;
+  if (!ok) return null;
+  if (typeof fbSaveClub === 'function') await fbSaveClub(clubId, { joinCode:code, joinLink:link });
+  window._currentTeacherClubData = { ...club, joinCode:code, joinLink:link };
+  const copyBtn = document.getElementById('tc-copy-button'); if (copyBtn) copyBtn.style.display = '';
+  const shareBtn = document.getElementById('tc-share-button'); if (shareBtn) shareBtn.textContent = 'שיתוף הקישור';
+  return window._currentTeacherClubData;
+}
+
+function _teacherClubShareText() {
+  const club = window._currentTeacherClubData;
+  if (!club?.joinLink) return null;
+  return `מזמינה אתכם להצטרף למועדון הקריאה "${club.name || ''}" בבוקי.\n\nלכניסה: ${club.joinLink}${club.joinCode ? `\nקוד המועדון: ${club.joinCode}` : ''}`;
+}
+
+async function copyCurrentTeacherClubLink() {
+  const club = await _ensureTeacherClubJoinLink();
+  const feedback = document.getElementById('tc-share-feedback');
+  if (!club?.joinLink) { if (feedback) feedback.textContent = 'עדיין אין קישור למועדון הזה.'; return; }
+  try {
+    await navigator.clipboard.writeText(club.joinLink);
+    if (feedback) feedback.textContent = 'הקישור הועתק. עכשיו אפשר להדביק אותו בהודעה.';
+  } catch {
+    if (feedback) feedback.textContent = 'לא הצלחנו להעתיק. נסי להשתמש בכפתור השיתוף.';
+  }
+}
+
+async function shareCurrentTeacherClub() {
+  await _ensureTeacherClubJoinLink();
+  const text = _teacherClubShareText();
+  const feedback = document.getElementById('tc-share-feedback');
+  if (!text) { if (feedback) feedback.textContent = 'עדיין אין קישור למועדון הזה.'; return; }
+  if (navigator.share) {
+    try { await navigator.share({ text }); if (feedback) feedback.textContent = 'השיתוף נפתח.'; } catch {}
+  } else {
+    await copyCurrentTeacherClubLink();
+  }
 }
 
 function enterReadingSession() {

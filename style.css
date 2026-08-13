@@ -1859,6 +1859,7 @@ label { font-weight: 700; font-size: 1rem; }
 .auth-error { color: var(--red); font-size: .85rem; min-height: 1.2em; text-align: center; }
 .auth-error.encourage-success { color: var(--booki-green); font-weight: 800; }
 .auth-remember { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+.auth-show-password { display:flex;align-items:center;gap:8px;font-size:.86rem;color:var(--muted);cursor:pointer;margin-top:-7px; }
 .auth-status { color: var(--booki-green); font-size: .88rem; font-weight: 800; min-height: 1.2em; text-align: center; }
 .auth-forgot-link { align-self: center; border: 0; background: none; color: #315ea8; font-size: .92rem; font-weight: 700; font-family: inherit; text-decoration: underline; cursor: pointer; padding: 4px 10px; }
 .auth-first-time-heading { padding: 12px 14px; border-radius: 14px; text-align: center; background: linear-gradient(135deg, #fff8d9, #fff0a8); border: 2px solid #f1c40f; color: #684c00; font-weight: 900; line-height: 1.45; }
@@ -1896,6 +1897,13 @@ label { font-weight: 700; font-size: 1rem; }
 .feature-coming-badge { margin-inline-start:auto;background:#fff0a8;color:#684c00;border-radius:999px;padding:4px 9px;font-size:.72rem;font-weight:900; }
 .story-status-preview { display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin:20px 0; }
 .story-status-preview span { padding:10px;border-radius:12px;background:#f5f1e8;font-size:.82rem;font-weight:800; }
+.teacher-step-help { margin:0 0 14px;padding:12px 14px;border-radius:12px;background:#eef8f1;color:#285f3d;font-size:.88rem;font-weight:700;line-height:1.5; }
+.tc-share-panel { grid-template-columns:1fr auto;gap:8px;align-items:center;background:#fff8d9;border:2px solid #f1c40f;border-radius:18px;padding:14px;margin-bottom:14px; }
+.tc-share-panel > div { display:flex;flex-direction:column;gap:3px;text-align:right; }.tc-share-panel > div span{font-size:.78rem;color:#6f6131;}
+.tc-share-panel button { border:0;border-radius:12px;background:#1fad58;color:#fff;padding:10px 12px;font-family:inherit;font-weight:900;cursor:pointer; }
+.tc-share-panel .tc-copy-link { grid-column:2;background:#fff;color:#315ea8;border:1px solid #9db4d9; }
+.tc-share-feedback { grid-column:1/-1;min-height:1.1em;color:#285f3d;font-size:.78rem;font-weight:800; }
+.teacher-dashboard-guide { display:flex;flex-direction:column;gap:4px;margin-bottom:14px;padding:14px 16px;border-radius:16px;background:#eef8f1;color:#285f3d; }.teacher-dashboard-guide span{font-size:.82rem;line-height:1.5;}
 
 /* ─── Teacher Dashboard ──────────────────────────────────────────── */
 .td-subtitle   { font-size: .9rem; color: var(--muted); text-align: center; margin: 0; padding: 4px 0 8px; }
