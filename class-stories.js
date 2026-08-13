@@ -1,51 +1,25 @@
-/**
- * תשתית "הסיפור שבידיים שלנו".
- * בשלב זה הקריאה בלבד פעילה; יצירה/צילום/פרסום ייפתחו לאחר חיבור Storage
- * וכללי הרשאה ייעודיים. המבנה נקבע מראש כדי שמסכי הילד והמורה יחלקו מקור אמת.
- */
-const CLASS_STORY_STATUS = Object.freeze({
-  DRAFT: 'draft',
-  COLLECTING: 'collecting',
-  TEACHER_REVIEW: 'teacher_review',
-  READY: 'ready',
-  PUBLISHED: 'published',
-  ARCHIVED: 'archived',
-});
+/* הסיפור שבידיים שלנו — יצירה כיתתית בכתב יד */
+const CLASS_STORY_PART_SIZES={one:'מילה אחת',two:'שתי מילים',three:'שלוש מילים',sentence:'משפט'};
+let _currentClassStory=null;
+const csClub=()=>window.currentClubId;
+const csCol=()=>{const id=String(csClub()||'').replace(/[^\w-]/g,'_');return (window.db||firebase.firestore()).collection('classes').doc('classStories_'+id).collection('students')};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function csAll(){const s=await csCol().get();return s.docs.map(d=>({id:d.id,...d.data()}))}
+async function csBundle(id){const a=await csAll();return{story:a.find(x=>x.kind==='story'&&x.id===id),parts:a.filter(x=>x.kind==='part'&&x.storyId===id).sort((x,y)=>(x.order||0)-(y.order||0))}}
+function csStudent(){const r=typeof getActiveReader==='function'&&getActiveReader();return{id:r?.userId||String(typeof currentStudentId!=='undefined'?currentStudentId:'unknown'),name:r?.name||(typeof currentStudentData!=='undefined'&&currentStudentData?.name)||'ילד/ה'}}
 
-const CLASS_STORY_PART_SIZES = Object.freeze(['one_word', 'two_words', 'three_words', 'sentence']);
-
-function _classStoriesDb() { return window.db || null; }
-
-async function loadPublishedClassStories(clubId) {
-  const db = _classStoriesDb();
-  if (!db || !clubId) return [];
-  try {
-    const snap = await db.collection('clubs').doc(clubId).collection('classStories')
-      .where('status', '==', CLASS_STORY_STATUS.PUBLISHED).get();
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      .sort((a, b) => String(b.publishedAt || '').localeCompare(String(a.publishedAt || '')));
-  } catch (e) {
-    console.warn('[class-stories] load failed:', e.message);
-    return [];
-  }
-}
-
-async function renderClassStoryShelf(clubId) {
-  const shelf = document.getElementById('class-story-shelf');
-  const empty = document.getElementById('class-story-empty');
-  if (!shelf || !empty) return;
-  const stories = await loadPublishedClassStories(clubId);
-  shelf.innerHTML = stories.map(story => `
-    <article class="class-story-book">
-      <div class="class-story-cover">${story.coverEmoji || '📖'}</div>
-      <strong>${_escapeClassStoryText(story.title || 'הסיפור שלנו')}</strong>
-      <span>${_escapeClassStoryText(story.clubName || '')}</span>
-    </article>`).join('');
-  empty.style.display = stories.length ? 'none' : 'flex';
-}
-
-function _escapeClassStoryText(value) {
-  return String(value).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
-}
-
-Object.assign(window, { CLASS_STORY_STATUS, CLASS_STORY_PART_SIZES, loadPublishedClassStories, renderClassStoryShelf });
+async function createClassStory(){const t=document.getElementById('class-story-title'),o=document.getElementById('class-story-opening'),m=document.getElementById('class-story-create-msg');if(!t.value.trim()){m.textContent='צריך לתת לסיפור שם.';return}const r=csCol().doc();await r.set({kind:'story',title:t.value.trim(),opening:o.value.trim(),status:'collecting',createdAt:Date.now(),clubName:window._currentTeacherClubData?.name||''});t.value=o.value='';m.textContent='הסיפור נפתח לילדים!';renderTeacherClassStories()}
+async function renderTeacherClassStories(){const el=document.getElementById('teacher-class-stories-list');if(!el)return;el.innerHTML='<p>טוען…</p>';try{const a=await csAll(),ss=a.filter(x=>x.kind==='story').sort((x,y)=>y.createdAt-x.createdAt);el.innerHTML=ss.map(s=>`<button class="teacher-story-card" onclick="openTeacherClassStory('${s.id}')"><span>${s.status==='published'?'📗':'✍️'}</span><div><strong>${esc(s.title)}</strong><small>${s.status==='published'?'פורסם':`אוספים חלקים · ${a.filter(x=>x.kind==='part'&&x.storyId===s.id).length} נשלחו`}</small></div><b>כניסה ←</b></button>`).join('')||'<div class="class-story-empty"><span>✍️</span><strong>עדיין אין סיפור</strong><p>פותחים למעלה את הסיפור הראשון.</p></div>'}catch(e){el.innerHTML='<p class="auth-error">לא הצלחנו לטעון. נסו שוב.</p>';console.error(e)}}
+async function renderClassStoryShelf(){const active=document.getElementById('active-class-stories'),shelf=document.getElementById('class-story-shelf'),empty=document.getElementById('class-story-empty');try{const a=await csAll(),ss=a.filter(x=>x.kind==='story');active.innerHTML=ss.filter(x=>x.status==='collecting').map(s=>`<button class="active-story-card" onclick="openStudentClassStory('${s.id}')"><span>✍️</span><div><strong>הכיתה כותבת עכשיו</strong><b>${esc(s.title)}</b><small>בחירת חלק וצילום כתב היד ←</small></div></button>`).join('');const pub=ss.filter(x=>x.status==='published');shelf.innerHTML=pub.map(s=>`<button class="class-story-book" onclick="openPublishedClassStory('${s.id}','child')"><div class="class-story-cover">📖</div><strong>${esc(s.title)}</strong><span>${esc(s.clubName||'הסיפור שלנו')}</span></button>`).join('');empty.style.display=pub.length?'none':'flex'}catch(e){console.error(e)}}
+async function openStudentClassStory(id){const b=await csBundle(id);if(!b.story)return;_currentClassStory=b.story;document.getElementById('student-story-title').textContent=b.story.title;document.getElementById('student-story-opening').textContent=b.story.opening||'ביחד ניצור סיפור אחד של כל הכיתה.';const me=csStudent(),mine=b.parts.find(p=>p.studentId===me.id&&p.status!=='rejected'),a=document.getElementById('student-story-action');a.innerHTML=mine?`<div class="story-submitted"><span>${mine.status==='approved'?'✅':'⏳'}</span><strong>${mine.status==='approved'?'החלק שלך נכנס לסיפור!':'התמונה אצל המורה לבדיקה'}</strong><p>תודה שכתבת איתנו.</p></div>`:`<h3>איזה חלק בא לך לכתוב?</h3><p>את/ה בוחר/ת. אין תשובה לא נכונה.</p><div class="part-size-grid">${Object.entries(CLASS_STORY_PART_SIZES).map(([k,v])=>`<button onclick="chooseClassStoryPart('${k}')"><span>✏️</span><strong>${v}</strong></button>`).join('')}</div>`;showScreen('screen-student-class-story')}
+function chooseClassStoryPart(size){document.getElementById('student-story-action').innerHTML=`<h3>${CLASS_STORY_PART_SIZES[size]} — זה החלק שלך</h3><div class="handwriting-guide"><strong>כותבים על דף לבן</strong><span>בגדול, ברור ובטוש כהה. אחר כך מצלמים רק את הדף.</span></div><label class="story-camera-btn">📷 צילום כתב היד<input type="file" accept="image/*" capture="environment" onchange="previewClassStoryPhoto(this,'${size}')"></label><div id="class-story-photo-preview"></div>`}
+async function compressPhoto(f){const u=await new Promise((r,j)=>{const x=new FileReader;x.onload=()=>r(x.result);x.onerror=j;x.readAsDataURL(f)}),im=await new Promise((r,j)=>{const x=new Image;x.onload=()=>r(x);x.onerror=j;x.src=u}),q=Math.min(1,720/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*q;c.height=im.height*q;c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.62)}
+async function previewClassStoryPhoto(input,size){if(!input.files?.[0])return;const b=document.getElementById('class-story-photo-preview');b.innerHTML='<p>מכינים את התמונה…</p>';try{const d=await compressPhoto(input.files[0]);b.dataset.image=d;b.innerHTML=`<img src="${d}" alt="צילום כתב היד"><button class="btn-giant btn-green" onclick="submitClassStoryPart('${size}')">זה ברור — שליחה למורה</button>`}catch(e){b.innerHTML='<p class="auth-error">לא הצלחנו לפתוח את התמונה. נסו שוב.</p>'}}
+async function submitClassStoryPart(size){const b=document.getElementById('class-story-photo-preview'),me=csStudent();if(!b?.dataset.image)return;b.innerHTML='<p>שולחים למורה…</p>';await csCol().doc().set({kind:'part',storyId:_currentClassStory.id,studentId:me.id,studentName:me.name,size,image:b.dataset.image,status:'pending',order:Date.now(),createdAt:Date.now()});openStudentClassStory(_currentClassStory.id)}
+async function openTeacherClassStory(id){const b=await csBundle(id);if(!b.story)return;_currentClassStory=b.story;document.getElementById('teacher-story-review-title').textContent=b.story.title;document.getElementById('teacher-story-review-opening').textContent=b.story.opening||'';document.getElementById('teacher-story-parts').innerHTML=b.parts.map(p=>`<article class="review-part ${p.status}"><img src="${p.image}" alt="כתב היד של ${esc(p.studentName)}"><div><strong>${esc(p.studentName)}</strong><small>${CLASS_STORY_PART_SIZES[p.size]} · ${p.status==='approved'?'מאושר':p.status==='rejected'?'הוחזר':'מחכה לבדיקה'}</small></div><div class="review-actions"><button onclick="setClassStoryPartStatus('${p.id}','approved')">✓ אישור</button><button onclick="setClassStoryPartStatus('${p.id}','rejected')">↩ צילום חוזר</button><button onclick="moveClassStoryPart('${p.id}',-1)">↑</button><button onclick="moveClassStoryPart('${p.id}',1)">↓</button></div></article>`).join('')||'<div class="class-story-empty"><span>📭</span><strong>עוד לא הגיעו חלקים</strong></div>';document.getElementById('publish-class-story').disabled=!b.parts.some(p=>p.status==='approved');showScreen('screen-teacher-story-review')}
+async function setClassStoryPartStatus(id,status){await csCol().doc(id).update({status});openTeacherClassStory(_currentClassStory.id)}
+async function moveClassStoryPart(id,d){const b=await csBundle(_currentClassStory.id),i=b.parts.findIndex(x=>x.id===id),j=i+d;if(i<0||j<0||j>=b.parts.length)return;await Promise.all([csCol().doc(b.parts[i].id).update({order:b.parts[j].order}),csCol().doc(b.parts[j].id).update({order:b.parts[i].order})]);openTeacherClassStory(_currentClassStory.id)}
+async function publishClassStory(){await csCol().doc(_currentClassStory.id).update({status:'published',publishedAt:Date.now()});openPublishedClassStory(_currentClassStory.id,'teacher')}
+async function openPublishedClassStory(id,from='child'){const b=await csBundle(id);_currentClassStory=b.story;document.getElementById('published-story-title').textContent=b.story.title;document.getElementById('published-story-title-print').textContent=b.story.title;document.getElementById('published-story-opening').textContent=b.story.opening||'';document.getElementById('published-story-pages').innerHTML=b.parts.filter(x=>x.status==='approved').map((p,i)=>`<figure><img src="${p.image}" alt="עמוד ${i+1}"><figcaption>${esc(p.studentName)}</figcaption></figure>`).join('');document.getElementById('published-story-back').onclick=from==='teacher'?showTeacherStoryLibrary:showClassLibrary;document.getElementById('published-story-print').style.display=from==='teacher'?'':'none';showScreen('screen-published-class-story')}
+function printClassStory(){window.print()}
+Object.assign(window,{createClassStory,renderTeacherClassStories,renderClassStoryShelf,openStudentClassStory,chooseClassStoryPart,previewClassStoryPhoto,submitClassStoryPart,openTeacherClassStory,setClassStoryPartStatus,moveClassStoryPart,publishClassStory,openPublishedClassStory,printClassStory});

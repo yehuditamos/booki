@@ -898,6 +898,7 @@ function showTeacherStoryLibrary() {
   if (!_activeClubId && !window.currentClubId) return;
   setNavVisible(false);
   showScreen('screen-teacher-stories');
+  if (typeof renderTeacherClassStories === 'function') renderTeacherClassStories();
 }
 
 /** בורר "איך רוצים לקרוא היום?" — נפתח מהכפתור הראשי היחיד במסך הבית.
