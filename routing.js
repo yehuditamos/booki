@@ -1534,11 +1534,19 @@ async function _showTeacherClub(clubId) {
   if (nameEl)  nameEl.textContent  = club?.name  || clubId;
   if (emojiEl) emojiEl.textContent = club?.emoji || '📚';
   const sharePanel = document.getElementById('tc-share-panel');
-  if (sharePanel) sharePanel.style.display = 'grid';
+  if (sharePanel) sharePanel.style.display = 'none';
   const shareBtn = document.getElementById('tc-share-button');
   const copyBtn = document.getElementById('tc-copy-button');
   if (shareBtn) shareBtn.textContent = club?.joinLink ? 'שיתוף הקישור' : 'יצירת קישור שיתוף';
   if (copyBtn) copyBtn.style.display = club?.joinLink ? '' : 'none';
+}
+
+async function openTeacherClubShare() {
+  const panel = document.getElementById('tc-share-panel');
+  if (!panel) return;
+  panel.style.display = 'grid';
+  await _ensureTeacherClubJoinLink();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // תיקון נתוני ייצור חד־פעמי: בכרטיס של מיכה נרשמו 3,558 דקות במקום 20.
@@ -2103,6 +2111,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
+  openTeacherClubShare,
   copyBookiSaveInstructions,
   filterWhoReadsNames,
   showClubStudents, goBackToClubStudents,

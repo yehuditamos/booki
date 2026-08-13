@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=38" />
+  <link rel="stylesheet" href="style.css?v=39" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -716,6 +716,14 @@ window.addEventListener('pageshow', function (e) {
     <div class="tc-hero">
       <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
     </div>
+    <section class="tc-assistant-card">
+      <span class="tc-assistant-badge">בוקי עוזר לך</span>
+      <h3>מה תרצי לעשות עכשיו?</h3>
+      <button class="tc-action-choice" onclick="openTeacherClubShare()"><span class="tc-choice-icon">🏠</span><span><strong>לצרף ילדים</strong><small>להעתיק את הבית של בוקי לכיתה</small></span></button>
+      <button class="tc-action-choice" onclick="showTeacherClassScreen()"><span class="tc-choice-icon">📊</span><span><strong>לראות מי קרא</strong><small>התקדמות, דקות ויעד הכיתה</small></span></button>
+      <button class="tc-action-choice" onclick="showTeacherClassScreen()"><span class="tc-choice-icon">💙</span><span><strong>לשלוח עידוד</strong><small>לבחור ילד ולשלוח לו הודעה</small></span></button>
+      <button class="tc-action-choice" onclick="showShopManagement()"><span class="tc-choice-icon">🎁</span><span><strong>לנהל יעד וחנות</strong><small>יעד הקריאה והפרס הבא</small></span></button>
+    </section>
     <div id="tc-share-panel" class="tc-share-panel" style="display:none">
       <div class="tc-share-heading"><strong>🏠 הבית של בוקי לכיתה</strong><span>זה הקישור הקבוע שממנו הילדים נכנסים לקרוא. חשוב לשמור עליו.</span></div>
       <button id="tc-share-button" onclick="shareCurrentTeacherClub()">שיתוף לכיתה</button>
@@ -726,32 +734,7 @@ window.addEventListener('pageshow', function (e) {
         <button type="button" class="tc-copy-guide" onclick="copyBookiSaveInstructions()">📋 העתקת הוראות להורים</button>
       </div>
     </div>
-    <button class="tc-class-card" onclick="showTeacherClassScreen()">
-      <span class="tc-card-icon">📊</span>
-      <div class="tc-card-text">
-        <span class="tc-card-title">דשבורד המועדון</span>
-        <span class="tc-card-sub">דשבורד ניהול ובקרה</span>
-      </div>
-    </button>
-    <button class="tc-class-card tc-class-card--sm" onclick="showClubStudents()">
-      <span class="tc-card-icon">👨‍🎓</span>
-      <div class="tc-card-text">
-        <span class="tc-card-title">תלמידי המועדון</span>
-        <span class="tc-card-sub">כרטיסי כל חברי המועדון</span>
-      </div>
-    </button>
-    <button class="tc-class-card tc-class-card--sm" onclick="showShopManagement()">
-      <span class="tc-card-icon">🎁</span>
-      <div class="tc-card-text">
-        <span class="tc-card-title">חנות הכיתה</span>
-        <span class="tc-card-sub">ניהול פרסים להצבעת התלמידים</span>
-      </div>
-    </button>
-    <button class="tc-class-card tc-class-card--sm" onclick="showTeacherStoryLibrary()">
-      <span class="tc-card-icon">📚</span>
-      <div class="tc-card-text"><span class="tc-card-title">סיפורי הכיתה</span><span class="tc-card-sub">כתיבה ביד, צילום והפקת ספרים</span></div>
-      <span class="feature-coming-badge">בקרוב</span>
-    </button>
+    <details class="tc-more-management"><summary>אפשרויות נוספות</summary><button onclick="showClubStudents()">👨‍🎓 ניהול תלמידי המועדון</button><button onclick="showTeacherStoryLibrary()">📚 סיפורי הכיתה <small>בקרוב</small></button></details>
   </div>
 </section>
 
@@ -1219,7 +1202,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=23"></script>
+<script src="routing.js?v=24"></script>
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
