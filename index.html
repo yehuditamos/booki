@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=40" />
+  <link rel="stylesheet" href="style.css?v=41" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -329,6 +329,7 @@ window.addEventListener('pageshow', function (e) {
       <h3>הספרים שאנחנו יוצרים יחד</h3>
       <p>כאן יישמרו הסיפורים שנכתבו בכתב היד של ילדי הכיתה.</p>
     </div>
+    <div id="active-class-stories" class="active-class-stories"></div>
     <div id="class-story-shelf" class="class-story-shelf" aria-live="polite"></div>
     <div id="class-story-empty" class="class-story-empty"><span aria-hidden="true">📚</span><strong>המדף מחכה לסיפור הראשון שלנו</strong><p>כשהמורה תפתח סיפור כיתתי, הוא יופיע כאן.</p></div>
     <button class="class-progress-link" onclick="showClassView()">ליעד ולהתקדמות הכיתה ←</button>
@@ -747,7 +748,7 @@ window.addEventListener('pageshow', function (e) {
         <button type="button" class="tc-copy-guide" onclick="copyBookiSaveInstructions()">📋 העתקת הוראות להורים</button>
       </div>
     </div>
-    <details class="tc-more-management"><summary>אפשרויות נוספות</summary><button onclick="showClubStudents()">👨‍🎓 ניהול תלמידי המועדון</button><button onclick="showTeacherStoryLibrary()">📚 סיפורי הכיתה <small>בקרוב</small></button></details>
+    <details class="tc-more-management"><summary>אפשרויות נוספות</summary><button onclick="showClubStudents()">👨‍🎓 ניהול תלמידי המועדון</button><button onclick="showTeacherStoryLibrary()">📚 יצירה וסיפורי הכיתה</button></details>
   </div>
 </section>
 
@@ -755,14 +756,20 @@ window.addEventListener('pageshow', function (e) {
   <div class="screen-header sticky-header"><div class="header-row">
     <button class="btn-back" onclick="showScreen('screen-teacher-club')"><span data-nk="חֲזָרָה">חזרה</span> →</button><h2>סיפורי הכיתה</h2>
   </div></div>
-  <div class="teacher-stories-groundwork">
+  <div class="teacher-stories-groundwork teacher-stories-live">
     <img src="assets/booki/teacher/booki-teacher-helper.png" alt="בוקי עוזר למורה" width="190" height="190">
-    <h3>הבית של הספרים הכיתתיים מוכן</h3>
-    <p>כאן המורה תפתח סיפור, תראה מי משך חלק, תאשר צילומי כתב יד ותפיק ספר להדפסה.</p>
-    <div class="story-status-preview"><span>טיוטה</span><span>אוספים חלקים</span><span>בדיקת המורה</span><span>פורסם</span></div>
-    <button class="btn-giant btn-green" disabled>יצירת סיפור חדש — בקרוב</button>
+    <h3>יוצרים סיפור חדש עם הכיתה</h3>
+    <p>את פותחת סיפור, הילדים בוחרים כמה לכתוב ומצלמים את כתב היד. את מאשרת, מסדרת ומדפיסה.</p>
+    <div class="story-create-form"><label>שם הסיפור<input id="class-story-title" maxlength="70" placeholder="למשל: ההרפתקה ביער"></label><label>משפט פתיחה או הסבר לילדים<textarea id="class-story-opening" maxlength="240" placeholder="היום נכתוב יחד סיפור על..."></textarea></label><button class="btn-giant btn-green" onclick="createClassStory()">פתיחת הסיפור לילדים</button><p id="class-story-create-msg" role="status"></p></div>
+    <h3 class="teacher-story-list-title">הסיפורים שלנו</h3><div id="teacher-class-stories-list"></div>
   </div>
 </section>
+
+<section id="screen-student-class-story" class="screen story-workshop-screen"><div class="screen-header sticky-header"><div class="header-row"><button class="btn-back" onclick="showClassLibrary()">חזרה לספרייה →</button><h2 id="student-story-title"></h2></div></div><div class="story-workshop-body"><p id="student-story-opening" class="story-opening"></p><div id="student-story-action"></div></div></section>
+
+<section id="screen-teacher-story-review" class="screen"><div class="screen-header sticky-header"><div class="header-row"><button class="btn-back" onclick="showTeacherStoryLibrary()">חזרה לסיפורים →</button><h2 id="teacher-story-review-title"></h2></div><p id="teacher-story-review-opening" class="header-sub"></p></div><div class="teacher-review-body"><div class="teacher-review-help"><strong>כאן בונים את הספר</strong><span>מאשרים צילומים ברורים, מחזירים צילום לא ברור ומסדרים בעזרת החצים.</span></div><div id="teacher-story-parts"></div><button id="publish-class-story" class="btn-giant btn-green" onclick="publishClassStory()">סיום ופרסום בספריית הכיתה</button></div></section>
+
+<section id="screen-published-class-story" class="screen published-story-screen"><div class="screen-header sticky-header no-print"><div class="header-row"><button id="published-story-back" class="btn-back">חזרה →</button><h2 id="published-story-title"></h2><button id="published-story-print" class="btn-header-icon" onclick="printClassStory()">🖨️</button></div></div><main class="published-story-book"><header><h1 id="published-story-title-print"></h1><p id="published-story-opening"></p></header><div id="published-story-pages"></div></main></section>
 
 <!-- ══ ניהול חנות הכיתה — מורה ═══════════════════════════════════════ -->
 <section id="screen-shop-teacher" class="screen">
@@ -1184,7 +1191,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="data-club-types.js?v=2"></script>
 <script src="seed-clubs.js?v=3"></script>
 <script src="firebase-clubs.js?v=5"></script>
-<script src="class-stories.js?v=1"></script>
+<script src="class-stories.js?v=2"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
 <script src="auth.js?v=7"></script>
