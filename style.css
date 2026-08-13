@@ -795,6 +795,7 @@ label { font-weight: 700; font-size: 1rem; }
 .booki-timer-icon  { font-size: 2.1rem; }
 .booki-timer-label { font-size: 1.1rem; font-weight: 900; color: #fff; text-align: center; line-height: 1.25; }
 .booki-timer-sublabel { font-size: 1.35rem; font-weight: 900; color: var(--text); }
+.booki-timer-help{max-width:340px;margin:18px auto 0;padding:12px 15px;border-radius:15px;background:#eef8f1;color:#285f3d;text-align:center;font-size:.86rem;line-height:1.55;font-weight:700}
 .booki-timer-running .booki-timer-label { color: var(--booki-green); font-size: 1rem; }
 .booki-timer-running .booki-timer-icon  { color: var(--booki-green); }
 .booki-timer-starting .booki-timer-icon { opacity: 0; }
