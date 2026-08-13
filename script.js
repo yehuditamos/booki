@@ -255,7 +255,11 @@ function logout() {
 
 // ─── ספריית סיפורים ─────────────────────────────────────────────────
 
-function showLibrary(filter = 'all') {
+let _libraryFilter = 'recommended';
+let _libraryQuery = '';
+let _libraryVisibleCount = 6;
+
+function showLibrary(filter = 'recommended') {
   const listEl = document.getElementById('story-list');
   if (listEl) listEl.innerHTML = '<p style="text-align:center;padding:40px;color:var(--muted)">טוען סיפורים...</p>';
   showScreen('screen-library');
@@ -263,28 +267,31 @@ function showLibrary(filter = 'all') {
   setTimeout(() => filterLibrary(filter), 0);
 }
 
-function filterLibrary(filter) {
+function filterLibrary(filter, resetCount = true) {
   try {
+    _libraryFilter = filter;
+    if (resetCount) _libraryVisibleCount = 6;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const tabMap = {
+      recommended:    'tab-recommended',
       all:            'tab-all',
       'צעדים ראשונים': 'tab-beginner',
-      'תולעי ספרים':  'tab-bookworms',
-      'מוכרים':       'tab-familiar',
-      'מקוריים':      'tab-original',
-      'ארוכים':       'tab-long',
-      'תנ״ך לילדים':  'tab-tanakh',
-      'ערכים וחברות': 'tab-values',
-      'טבע וסקרנות':  'tab-nature',
-      'משפחה וחגים':  'tab-family',
+      short:          'tab-short',
     };
     const tabEl = document.getElementById(tabMap[filter]);
     if (tabEl) tabEl.classList.add('active');
 
     const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
-    const stories = (filter === 'all')
-      ? allStories
-      : allStories.filter(s => (s.category || '') === filter);
+    let stories = allStories;
+    if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
+    else if (filter === 'short') stories = stories.filter(s => (s.pages || []).length <= 7);
+    else if (filter === 'recommended') {
+      const interests = window._studentPersonalization?.interests || [];
+      const matched = interests.length ? stories.filter(s => (s.tags || []).some(t => interests.includes(t))) : [];
+      stories = matched.length >= 3 ? matched : stories.filter(s => s.category === 'צעדים ראשונים' || (s.pages || []).length <= 7);
+    }
+    const q = _libraryQuery.trim().toLocaleLowerCase('he');
+    if (q) stories = stories.filter(s => [s.title, s.category, ...(s.tags || [])].join(' ').toLocaleLowerCase('he').includes(q));
 
     const s       = currentStudentData || defaultStudent(currentStudentId || 0);
     const histArr = Array.isArray(s.history) ? s.history : [];
@@ -295,7 +302,8 @@ function filterLibrary(filter) {
     const listEl = document.getElementById('story-list');
     if (!listEl) return;
 
-    listEl.innerHTML = stories.map(story => {
+    const visibleStories = stories.slice(0, _libraryVisibleCount);
+    listEl.innerHTML = visibleStories.map(story => {
       const done      = readIds.has(story.id) || (story.legacyId !== undefined && readIds.has(story.legacyId));
       const pages     = Array.isArray(story.pages) ? story.pages : [];
       const totalMins = pages.reduce((acc, p) => acc + (p && p.readingMinutes ? p.readingMinutes : 0.5), 0);
@@ -310,12 +318,59 @@ function filterLibrary(filter) {
           </div>
           ${done ? '<span class="read-badge">✓ נקרא</span>' : '<span class="new-badge">קרא →</span>'}
         </button>`;
-    }).join('');
+    }).join('') || '<div class="library-empty"><span>🔎</span><strong>לא מצאתי סיפור כזה</strong><p>אפשר לנסות מילה אחרת.</p></div>';
+    const moreBtn = document.getElementById('library-show-more');
+    if (moreBtn) moreBtn.style.display = stories.length > _libraryVisibleCount ? '' : 'none';
 
   } catch (err) {
     const listEl = document.getElementById('story-list');
     if (listEl) listEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">לא ניתן לטעון את הספרייה כעת.</p>';
   }
+}
+
+function searchLibrary(value) {
+  _libraryQuery = String(value || '');
+  _libraryVisibleCount = 6;
+  filterLibrary(_libraryFilter);
+}
+
+function showMoreLibraryStories() {
+  _libraryVisibleCount += 6;
+  filterLibrary(_libraryFilter, false);
+}
+
+// ─── קוראים אותיות ──────────────────────────────────────────────────
+const BOOKI_LETTERS = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','כ','ל','מ','נ','ס','ע','פ','צ','ק','ר','ש','ת'];
+const BOOKI_LETTER_NAMES = ['אָלֶף','בֵּית','גִּימֶל','דָּלֶת','הֵא','וָו','זַיִן','חֵית','טֵית','יוֹד','כַּף','לָמֶד','מֵם','נוּן','סָמֶךְ','עַיִן','פֵּא','צַדִּי','קוֹף','רֵישׁ','שִׁין','תָּו'];
+const LETTER_SOUNDS = { א:'אָ',ב:'בָּ',ג:'גָּ',ד:'דָּ',ה:'הָ',ו:'וָ',ז:'זָ',ח:'חָ',ט:'טָ',י:'יָ',כ:'כָּ',ל:'לָ',מ:'מָ',נ:'נָ',ס:'סָ',ע:'עָ',פ:'פָּ',צ:'צָ',ק:'קָ',ר:'רָ',ש:'שָׁ',ת:'תָּ' };
+let _practiceLetterIndex = 0;
+
+function showLettersReading() {
+  const grid = document.getElementById('letters-grid');
+  if (grid) grid.innerHTML = BOOKI_LETTERS.map((letter, i) => `<button onclick="openLetterPractice(${i})">${letter}</button>`).join('');
+  closeLetterPractice();
+  showScreen('screen-letters-reading');
+}
+
+function openLetterPractice(index) {
+  _practiceLetterIndex = index;
+  const letter = BOOKI_LETTERS[index];
+  document.getElementById('letter-focus').textContent = letter;
+  const partners = ['א','ב','מ','ל'].filter(x => x !== letter).slice(0, 3);
+  document.getElementById('letter-combinations').innerHTML = [LETTER_SOUNDS[letter], ...partners.map(p => letter + LETTER_SOUNDS[p]), ...partners.map(p => p + LETTER_SOUNDS[letter])].map(x => `<button onclick="speakHebrew('${x}')">${x}</button>`).join('');
+  document.getElementById('letter-practice').style.display = 'flex';
+  document.getElementById('letter-practice').scrollIntoView({ behavior:'smooth', block:'start' });
+  speakCurrentLetter();
+}
+
+function closeLetterPractice() { const el = document.getElementById('letter-practice'); if (el) el.style.display = 'none'; }
+function nextPracticeLetter() { openLetterPractice((_practiceLetterIndex + 1) % BOOKI_LETTERS.length); }
+function speakCurrentLetter() { speakHebrew('האות ' + BOOKI_LETTER_NAMES[_practiceLetterIndex]); }
+function speakHebrew(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'he-IL'; utterance.rate = .72;
+  window.speechSynthesis.speak(utterance);
 }
 
 // ─── קורא הסיפורים ──────────────────────────────────────────────────
