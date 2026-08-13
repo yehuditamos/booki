@@ -51,6 +51,14 @@ assert.equal(vm.runInContext('_beginReadingCompletion("same")', context), false)
 vm.runInContext('_endReadingCompletion("same")', context);
 assert.equal(vm.runInContext('_beginReadingCompletion("same")', context), true);
 
+// סיפור באפליקציה: זמן אמיתי פעיל, מינימום דקה ותקרה קשיחה.
+assert.equal(vm.runInContext('_getAppStoryElapsedMinutes({activeMs:10 * 60000,activeSince:null})', context), 10);
+assert.equal(vm.runInContext('_getAppStoryElapsedMinutes({activeMs:20 * 1000,activeSince:null})', context), 1);
+assert.equal(vm.runInContext('_getAppStoryElapsedMinutes({activeMs:3558 * 60000,activeSince:null})', context), 90);
+vm.runInContext('_appStoryTimer={storyId:"x",activeMs:60000,activeSince:1000}; _setAppStoryTimerRunning(false,121000)', context);
+assert.equal(vm.runInContext('_appStoryTimer.activeMs', context), 180000);
+assert.equal(vm.runInContext('_appStoryTimer.activeSince', context), null);
+
 const now = Date.now();
 assert.equal(vm.runInContext(`_getBookiElapsedMinutes({startedAt:${now - 7 * 60000}}, ${now})`, context), 7);
 // נעילה/רקע משתמשים בזמן הקיר, אבל התקרה הקשיחה לעולם לא מאפשרת אלפי דקות.
