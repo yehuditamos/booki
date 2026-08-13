@@ -11,7 +11,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=34" />
+  <link rel="stylesheet" href="style.css?v=35" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -656,6 +656,7 @@ window.addEventListener('pageshow', function (e) {
   </div>
   <div class="auth-container">
     <div class="auth-icon">👩‍🏫</div>
+    <div class="teacher-auth-intro"><strong>ברוכה הבאה לאזור המורה</strong><span>כאן מקימים מועדון, מוסיפים תלמידים ועוקבים אחרי הקריאה.</span></div>
     <div id="teacher-auth-form" class="auth-form"></div>
   </div>
 </section>
@@ -673,8 +674,9 @@ window.addEventListener('pageshow', function (e) {
     <p id="td-teacher-name" class="td-subtitle"></p>
   </div>
   <div class="td-body">
-    <div class="teacher-dashboard-guide"><strong>מה עושים כאן?</strong><span>בוחרים מועדון קיים, או מקימים מועדון חדש לכיתה.</span></div>
-    <button class="btn-td-secondary" onclick="showCreateClub()">+ הקמת מועדון חדש</button>
+    <div class="teacher-dashboard-guide"><strong>מה עושים עכשיו?</strong><span>1. בוחרים מועדון קיים או מקימים חדש.</span><span>2. מעתיקים את הבית של בוקי ושולחים לכיתה.</span><span>3. חוזרים לכאן כדי לעקוב ולעודד.</span></div>
+    <button class="btn-td-primary" onclick="showCreateClub()">＋ הקמת מועדון חדש</button>
+    <h3 class="td-section-title">המועדונים שלי</h3>
     <div id="td-clubs-list" class="td-clubs-list"></div>
   </div>
 </section>
@@ -692,10 +694,11 @@ window.addEventListener('pageshow', function (e) {
       <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
     </div>
     <div id="tc-share-panel" class="tc-share-panel" style="display:none">
-      <div><strong>מצרפים את התלמידים</strong><span>שולחים להם קישור אחד, וזהו.</span></div>
-      <button id="tc-share-button" onclick="shareCurrentTeacherClub()">שיתוף הקישור</button>
-      <button id="tc-copy-button" class="tc-copy-link" onclick="copyCurrentTeacherClubLink()">העתקת הקישור</button>
+      <div class="tc-share-heading"><strong>🏠 הבית של בוקי לכיתה</strong><span>זה הקישור הקבוע שממנו הילדים נכנסים לקרוא. חשוב לשמור עליו.</span></div>
+      <button id="tc-share-button" onclick="shareCurrentTeacherClub()">שיתוף לכיתה</button>
+      <button id="tc-copy-button" class="tc-copy-link" onclick="copyCurrentTeacherClubLink()">העתקת הודעה וקישור</button>
       <span id="tc-share-feedback" class="tc-share-feedback" role="status"></span>
+      <details class="tc-save-guide"><summary>איך שומרים את בוקי כמו אפליקציה?</summary><div><p><strong>באייפון:</strong> פותחים ב־Safari ← שיתוף ⬆️ ← „הוסף למסך הבית”.</p><p><strong>באנדרואיד:</strong> פותחים ב־Chrome ← ⋮ ← „הוספה למסך הבית” או „התקנת אפליקציה”.</p><p><strong>בקבוצת WhatsApp:</strong> שולחים את ההודעה, לוחצים עליה לחיצה ארוכה ובוחרים „הצמדה”. כך הקישור לא ייעלם בין ההודעות.</p><p class="tc-web-note">בוקי היא כרגע אפליקציית ווב. עד הכניסה לחנויות האפליקציות, הקישור הזה הוא דלת הכניסה הקבועה של הכיתה.</p></div></details>
     </div>
     <button class="tc-class-card" onclick="showTeacherClassScreen()">
       <span class="tc-card-icon">📊</span>
@@ -1162,7 +1165,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="class-stories.js?v=1"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
-<script src="auth.js?v=5"></script>
+<script src="auth.js?v=6"></script>
 <script src="analytics.js?v=2"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
@@ -1190,7 +1193,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=21"></script>
+<script src="routing.js?v=22"></script>
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
