@@ -1859,6 +1859,14 @@ label { font-weight: 700; font-size: 1rem; }
 .auth-error { color: var(--red); font-size: .85rem; min-height: 1.2em; text-align: center; }
 .auth-error.encourage-success { color: var(--booki-green); font-weight: 800; }
 .auth-remember { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+.auth-status { color: var(--booki-green); font-size: .88rem; font-weight: 800; min-height: 1.2em; text-align: center; }
+.auth-forgot-link { align-self: center; border: 0; background: none; color: #315ea8; font-size: .92rem; font-weight: 700; font-family: inherit; text-decoration: underline; cursor: pointer; padding: 4px 10px; }
+.auth-first-time-heading { padding: 12px 14px; border-radius: 14px; text-align: center; background: linear-gradient(135deg, #fff8d9, #fff0a8); border: 2px solid #f1c40f; color: #684c00; font-weight: 900; line-height: 1.45; }
+.auth-first-account { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 100%; margin-top: 8px; padding: 18px 16px 15px; border: 3px solid #f1c40f; border-radius: 18px; background: linear-gradient(135deg, #fffdf1, #fff3b8); color: #4e3b00; cursor: pointer; font-family: inherit; box-shadow: 0 7px 20px rgba(241,196,15,.22); }
+.auth-first-account strong { font-size: 1.08rem; }
+.auth-first-account > span:last-child { font-size: .85rem; font-weight: 700; color: #7b650b; }
+.auth-first-account:active { transform: scale(.985); }
+.auth-new-badge { position: absolute; top: -12px; right: 14px; padding: 3px 10px; border-radius: 999px; background: #f1c40f; color: #513d00; font-size: .76rem; font-weight: 900; }
 
 /* ─── Teacher Dashboard ──────────────────────────────────────────── */
 .td-subtitle   { font-size: .9rem; color: var(--muted); text-align: center; margin: 0; padding: 4px 0 8px; }
