@@ -133,13 +133,24 @@ async function routeOnLoad() {
   if (typeof track === 'function') track('app_open');
   setNavVisible(false);
 
+  const routeParams = new URLSearchParams(window.location.search);
+
+  // קישור מורה הוא נתיב נפרד לחלוטין. הוא קודם לזיכרון התלמיד האחרון
+  // במכשיר, כדי שקישור בדיקה/ניהול לעולם לא יפתח בטעות כרטיס של ילד.
+  if (routeParams.get('teacher') === '1') {
+    goToTeacherArea(false);
+    return;
+  }
+
   // קישור הצטרפות תמיד בעדיפות ראשונה (הורה לחץ על קישור)
-  const clubParam = new URLSearchParams(window.location.search).get('club');
+  const clubParam = routeParams.get('club');
   if (clubParam && typeof showJoinClubDirect === 'function') {
+    // קישור מועדון תמיד מתחיל בבחירת ילד — לעולם לא בילד האחרון שנשמר.
+    clearActiveReader();
     showJoinClubDirect(clubParam);
     return;
   }
-  const joinCode = new URLSearchParams(window.location.search).get('join');
+  const joinCode = routeParams.get('join');
   if (joinCode && typeof showJoinClubWithCode === 'function') {
     showJoinClubWithCode(joinCode);
     return;
@@ -507,8 +518,9 @@ async function showWhoReads(clubId) {
   if (subEl) subEl.textContent = '';
   if (grid)  grid.innerHTML    = '<div style="text-align:center;padding:2rem;font-size:2rem">⏳</div>';
   _updateClubCount();
-  setNavVisible(true);
-  setNavTab('reader');
+  // לפני בחירת ילד אין זהות פעילה, ולכן אין להציג ניווט אישי
+  // ("הכרטיס שלי" / "בית") שעלול להפנות לילד שנבחר קודם במכשיר.
+  setNavVisible(false);
   showScreen('screen-who-reads');
 
   if (!effectiveClubId) {
@@ -557,9 +569,14 @@ function _showHiddenClubMessage() {
 
 /** Firebase members — מועדונים חדשים */
 function _renderFirebaseMemberGrid(grid, memberships, clubId) {
-  // עדכון הפוטר: לא "כנס עם קוד" אלא "לא מצאת שם?"
+  // במסך כניסה ממועדון יש פעולה אחת בלבד: בחירת השם.
   const footer = document.querySelector('#screen-who-reads .who-reads-footer');
-  if (footer) footer.innerHTML = `<p class="who-reads-not-found">לא מצאת את השם שלך? 📩 בקש/י מהמורה להוסיף אותך למועדון.</p>`;
+  if (footer) footer.innerHTML = `
+    <label class="who-reads-search-label" for="who-reads-search">🔎 חיפוש השם שלי</label>
+    <input id="who-reads-search" class="who-reads-search" type="search"
+      placeholder="כתבו כאן את השם" autocomplete="off" inputmode="search"
+      oninput="filterWhoReadsNames(this.value)">
+    <p id="who-reads-no-match" class="who-reads-not-found" hidden>השם לא נמצא. בקשו מהמורה להוסיף אתכם למועדון.</p>`;
 
   const active = memberships.filter(m => m.status !== 'left');
   if (!active.length) {
@@ -567,10 +584,24 @@ function _renderFirebaseMemberGrid(grid, memberships, clubId) {
     return;
   }
   grid.innerHTML = active.map(m => `
-    <button class="profile-card" data-user-id="${m.userId}" onclick="selectProfile('${m.userId}', '${clubId}')">
+    <button class="profile-card" data-user-id="${m.userId}" data-reader-name="${String(m.name || m.userId).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" onclick="selectProfile('${m.userId}', '${clubId}')">
       ${_avatarHtml(m.emoji || m.avatar || '📚', 'profile-avatar')}
       <span class="profile-name">${m.name || m.userId}</span>
     </button>`).join('');
+}
+
+function filterWhoReadsNames(query) {
+  const normalized = String(query || '').trim().toLocaleLowerCase('he');
+  const cards = Array.from(document.querySelectorAll('#who-reads-grid .profile-card'));
+  let visible = 0;
+  cards.forEach(card => {
+    const name = String(card.dataset.readerName || card.textContent || '').toLocaleLowerCase('he');
+    const match = !normalized || name.includes(normalized);
+    card.hidden = !match;
+    if (match) visible += 1;
+  });
+  const noMatch = document.getElementById('who-reads-no-match');
+  if (noMatch) noMatch.hidden = !normalized || visible > 0;
 }
 
 /** Legacy fallback — כל המועדונים מהמכשיר */
@@ -723,6 +754,13 @@ async function selectProfile(userId, clubIdHint) {
 }
 
 function _enterPersonalHome(userId, profile) {
+  // לאחר שהילד בחר את שמו, הקישור מילא את תפקידו. מנקים את פרמטר המועדון
+  // כדי שרענון הבא יחזיר לאותו ילד ולא ידרוש בחירה מחדש.
+  const entryParams = new URLSearchParams(window.location.search);
+  if (entryParams.has('club') && window.history?.replaceState) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
   // Legacy Bridge: אם profile._legacyIndex קיים — העבר לנתיב ה-Legacy
   if (profile?._legacyIndex !== undefined) {
     if (typeof selectStudent === 'function') selectStudent(profile._legacyIndex);
@@ -1957,7 +1995,15 @@ async function setProgressDisplayMode(clubId, mode) {
   showTeacherClassScreen();
 }
 
-function goToTeacherArea() {
+function goToTeacherArea(updateUrl = true) {
+  if (updateUrl && window.history?.replaceState) {
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.searchParams.set('teacher', '1');
+    url.hash = '';
+    window.history.replaceState(null, '', url.toString());
+  }
+  setNavVisible(false);
   const t = typeof getCurrentTeacher === 'function' ? getCurrentTeacher() : null;
   if (t) showTeacherDashboard(t);
   else if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
@@ -1985,6 +2031,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
+  filterWhoReadsNames,
   showClubStudents, goBackToClubStudents,
   enterReadingSession, showTeacherClassScreen, editClubGoal, setProgressDisplayMode, removeClubMember,
   toggleAddStudentForm, submitAddStudent,
