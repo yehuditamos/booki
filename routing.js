@@ -898,6 +898,7 @@ function showTeacherStoryLibrary() {
   if (!_activeClubId && !window.currentClubId) return;
   setNavVisible(false);
   showScreen('screen-teacher-stories');
+  if (typeof initClassStoryCreator === 'function') initClassStoryCreator();
   if (typeof renderTeacherClassStories === 'function') renderTeacherClassStories();
 }
 

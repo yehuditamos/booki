@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=42" />
+  <link rel="stylesheet" href="style.css?v=43" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -760,8 +760,19 @@ window.addEventListener('pageshow', function (e) {
   <div class="teacher-stories-groundwork teacher-stories-live">
     <img src="assets/booki/teacher/booki-teacher-helper.png" alt="בוקי עוזר למורה" width="190" height="190">
     <h3>יוצרים סיפור חדש עם הכיתה</h3>
-    <p>את פותחת סיפור, הילדים בוחרים כמה לכתוב ומצלמים את כתב היד. את מאשרת, מסדרת ומדפיסה.</p>
-    <div class="story-create-form"><label>שם הסיפור<input id="class-story-title" maxlength="70" placeholder="למשל: ההרפתקה ביער"></label><label>משפט פתיחה או הסבר לילדים<textarea id="class-story-opening" maxlength="240" placeholder="היום נכתוב יחד סיפור על..."></textarea></label><button class="btn-giant btn-green" onclick="createClassStory()">פתיחת הסיפור לילדים</button><p id="class-story-create-msg" role="status"></p></div>
+    <p>בוחרים סיפור שלם. בוקי מחלק אותו אוטומטית בין כל ילדי המועדון, וכל ילד מצלם את החלק שלו בכתב יד.</p>
+    <div class="story-create-form">
+      <label>שם הספר הכיתתי<input id="class-story-title" maxlength="70" placeholder="למשל: ההרפתקה ביער"></label>
+      <strong class="story-source-heading">מאיפה מגיע הסיפור?</strong>
+      <input id="class-story-source-mode" type="hidden" value="own">
+      <div class="story-source-choices"><button type="button" class="story-source-choice active" data-mode="own" onclick="setClassStorySource('own')">✍️ טקסט שלי</button><button type="button" class="story-source-choice" data-mode="app" onclick="setClassStorySource('app')">📚 סיפור מבוקי</button></div>
+      <div id="class-story-own-source"><label>הדביקי כאן את הסיפור המלא<textarea id="class-story-full-text" maxlength="12000" rows="9" placeholder="הדביקי את כל הסיפור מתחילתו ועד סופו…" oninput="updateClassStoryPlan()"></textarea></label></div>
+      <div id="class-story-app-source" style="display:none"><label>בחרי סיפור מהספרייה<select id="class-story-app-select" onchange="onClassStoryAppSelected()"></select></label></div>
+      <label>הודעה קצרה לילדים — לא חובה<textarea id="class-story-opening" maxlength="240" placeholder="היום נכתוב יחד את הסיפור..."></textarea></label>
+      <div id="class-story-member-count" class="story-member-count">סופרת את ילדי המועדון…</div>
+      <div id="class-story-plan" class="story-division-plan"></div>
+      <button class="btn-giant btn-green" onclick="createClassStory()">חלוקת הסיפור ופתיחתו לילדים</button><p id="class-story-create-msg" role="status"></p>
+    </div>
     <h3 class="teacher-story-list-title">הסיפורים שלנו</h3><div id="teacher-class-stories-list"></div>
   </div>
 </section>
@@ -1192,7 +1203,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="data-club-types.js?v=2"></script>
 <script src="seed-clubs.js?v=3"></script>
 <script src="firebase-clubs.js?v=5"></script>
-<script src="class-stories.js?v=2"></script>
+<script src="class-stories.js?v=3"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
 <script src="auth.js?v=7"></script>
