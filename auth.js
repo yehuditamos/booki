@@ -156,9 +156,11 @@
     if (!form) return;
     const isReg = _authMode === 'register';
     form.innerHTML = `
+      <div class="auth-mode-title">${isReg ? 'יצירת חשבון מורה חדש' : 'כניסה לחשבון קיים'}</div>
+      <p class="auth-mode-help">${isReg ? 'ממלאים שלושה פרטים ומיד מתחילים להקים את המועדון.' : 'הכניסי את האימייל והסיסמה שאיתם נרשמת.'}</p>
       <div class="auth-tabs">
-        <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login')">כניסה</button>
-        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">הקמת חשבון</button>
+        <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login')">כבר יש לי חשבון</button>
+        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">זו הפעם הראשונה שלי</button>
       </div>
       ${isReg ? `<div class="auth-first-time-heading">✨ פעם ראשונה בבוקי? מכאן מקימים חשבון מורה</div>` : ''}
       ${isReg ? `<input id="ta-name" type="text" class="input-field" placeholder="שם מלא" autocomplete="name" />` : ''}
