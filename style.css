@@ -1033,6 +1033,7 @@ label { font-weight: 700; font-size: 1rem; }
   transition: all .2s;
 }
 .profile-card:hover { border-color: var(--booki-green); background: #f0fff4; transform: translateY(-4px); box-shadow: 0 6px 18px color-mix(in srgb, var(--booki-green) 20%, transparent); }
+.profile-card[hidden] { display: none !important; }
 .profile-avatar { font-size: 2.4rem; }
 .profile-name   { font-size: .82rem; font-weight: 700; text-align: center; color: var(--text); }
 .profile-pts    { font-size: .72rem; color: var(--muted); background: #f3f3f3; padding: 2px 8px; border-radius: 20px; }
