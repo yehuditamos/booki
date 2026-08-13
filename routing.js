@@ -1639,6 +1639,31 @@ function enterReadingSession() {
   if (_activeClubId && typeof showWhoReads === 'function') showWhoReads(_activeClubId);
 }
 
+async function copyBookiSaveInstructions() {
+  const club = window._currentTeacherClubData;
+  const lines = [
+    '📱 איך שומרים את בוקי כמו אפליקציה?',
+    club?.joinLink ? 'הקישור הקבוע של הכיתה: ' + club.joinLink : '',
+    '🍎 באייפון:',
+    '1. פותחים את הקישור ב־Safari.',
+    '2. לוחצים על כפתור השיתוף ⬆️.',
+    '3. בוחרים „הוסף למסך הבית”.',
+    '🤖 באנדרואיד:',
+    '1. פותחים את הקישור ב־Chrome.',
+    '2. לוחצים על שלוש הנקודות ⋮.',
+    '3. בוחרים „הוספה למסך הבית” או „התקנת אפליקציה”.',
+    '📌 מומלץ לנעוץ את ההודעה בקבוצת הכיתה, כדי שהקישור לא ייעלם.',
+    'בוקי היא כרגע אפליקציית ווב. הקישור הזה הוא הבית הקבוע שממנו הילדים נכנסים לקרוא.'
+  ].filter(Boolean).join('\n\n');
+  const feedback = document.getElementById('tc-share-feedback');
+  try {
+    await navigator.clipboard.writeText(lines);
+    if (feedback) feedback.textContent = 'הוראות השמירה הועתקו. אפשר להדביק ולשלוח להורים 📱';
+  } catch {
+    if (feedback) feedback.textContent = 'לא הצלחנו להעתיק. נסי שוב או השתמשי בכפתור השיתוף.';
+  }
+}
+
 // ─── Teacher Class Screen ─────────────────────────────────────────────────────
 
 function _classGoBack() {
@@ -2078,6 +2103,7 @@ Object.assign(window, {
   startReading,
   // Teacher
   showTeacherDashboard, enterTeacherClub, goToTeacherArea, confirmDeleteClub,
+  copyBookiSaveInstructions,
   filterWhoReadsNames,
   showClubStudents, goBackToClubStudents,
   enterReadingSession, showTeacherClassScreen, editClubGoal, setProgressDisplayMode, removeClubMember,
