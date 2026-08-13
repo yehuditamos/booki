@@ -11,7 +11,7 @@
   <title>יער הקריאה של בוקי</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=32" />
+  <link rel="stylesheet" href="style.css?v=33" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -650,7 +650,7 @@ window.addEventListener('pageshow', function (e) {
 <section id="screen-teacher-auth" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-splash')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <button class="btn-back" onclick="showTeacherDashboard()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>כניסה למורים</h2>
     </div>
   </div>
@@ -673,7 +673,8 @@ window.addEventListener('pageshow', function (e) {
     <p id="td-teacher-name" class="td-subtitle"></p>
   </div>
   <div class="td-body">
-    <button class="btn-td-secondary" onclick="showCreateClub()">+ יצירת מועדון חדש</button>
+    <div class="teacher-dashboard-guide"><strong>מה עושים כאן?</strong><span>בוחרים מועדון קיים, או מקימים מועדון חדש לכיתה.</span></div>
+    <button class="btn-td-secondary" onclick="showCreateClub()">+ הקמת מועדון חדש</button>
     <div id="td-clubs-list" class="td-clubs-list"></div>
   </div>
 </section>
@@ -689,6 +690,12 @@ window.addEventListener('pageshow', function (e) {
   <div class="tc-body">
     <div class="tc-hero">
       <span id="tc-club-emoji" class="tc-hero-emoji">📚</span>
+    </div>
+    <div id="tc-share-panel" class="tc-share-panel" style="display:none">
+      <div><strong>מצרפים את התלמידים</strong><span>שולחים להם קישור אחד, וזהו.</span></div>
+      <button id="tc-share-button" onclick="shareCurrentTeacherClub()">שיתוף הקישור</button>
+      <button id="tc-copy-button" class="tc-copy-link" onclick="copyCurrentTeacherClubLink()">העתקת הקישור</button>
+      <span id="tc-share-feedback" class="tc-share-feedback" role="status"></span>
     </div>
     <button class="tc-class-card" onclick="showTeacherClassScreen()">
       <span class="tc-card-icon">📊</span>
@@ -802,6 +809,7 @@ window.addEventListener('pageshow', function (e) {
     <div class="step-bar"><div class="step-fill" style="width:66%"></div></div>
   </div>
   <div class="form-card">
+    <p class="teacher-step-help">אפשר להוסיף את כל הכיתה עכשיו, או לדלג ולהוסיף תלמידים אחר כך.</p>
     <label for="club-name-input">שם המועדון <span class="required">*</span></label>
     <input id="club-name-input" type="text" class="input-field" placeholder="לדוגמה: מיתרים כיתה ב׳" />
     <label>סמל המועדון</label>
@@ -856,7 +864,7 @@ window.addEventListener('pageshow', function (e) {
 
     <p id="member-count" class="member-count-label"></p>
     <div id="member-list" class="member-list"></div>
-    <button id="btn-go-review" class="btn-giant btn-green" onclick="goToReview()">המשך ⬅️</button>
+    <button id="btn-go-review" class="btn-giant btn-green" onclick="goToReview()">המשך לסיכום ←</button>
   </div>
 </section>
 
@@ -880,7 +888,8 @@ window.addEventListener('pageshow', function (e) {
     <div id="review-member-list" class="review-member-list"></div>
   </div>
   <div style="padding:0 16px 24px">
-    <button id="btn-create-club" class="btn-giant btn-green" onclick="createClub()">צור מועדון! 🚀</button>
+    <p id="create-club-error" class="auth-error" style="display:none"></p>
+    <button id="btn-create-club" class="btn-giant btn-green" onclick="createClub()">יצירת המועדון</button>
   </div>
 </section>
 
@@ -1153,7 +1162,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="class-stories.js?v=1"></script>
 <script src="firebase-shop.js?v=7"></script>
 <script src="firebase-messages.js?v=6"></script>
-<script src="auth.js?v=3"></script>
+<script src="auth.js?v=4"></script>
 <script src="analytics.js?v=2"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
@@ -1181,8 +1190,8 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=19"></script>
-<script src="admin-setup.js?v=2"></script>
+<script src="routing.js?v=20"></script>
+<script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
 <script src="script.js?v=25"></script>
