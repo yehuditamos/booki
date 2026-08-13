@@ -1028,7 +1028,28 @@ label { font-weight: 700; font-size: 1rem; }
 .profile-pts    { font-size: .72rem; color: var(--muted); background: #f3f3f3; padding: 2px 8px; border-radius: 20px; }
 
 .who-reads-empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 40px 20px; font-size: .95rem; }
-.who-reads-footer { text-align: center; padding: 0 16px 32px; }
+.who-reads-footer {
+  text-align: center;
+  padding: 8px 20px calc(28px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+.who-reads-search-label { font-size: 1rem; font-weight: 900; color: var(--text); }
+.who-reads-search {
+  width: min(100%, 420px);
+  min-height: 52px;
+  padding: 12px 18px;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--text);
+  font: 700 1rem/1.4 inherit;
+  text-align: right;
+  outline: none;
+}
+.who-reads-search:focus { border-color: var(--booki-green); box-shadow: 0 0 0 4px color-mix(in srgb, var(--booki-green) 16%, transparent); }
 .btn-join-another {
   background: none;
   border: 2px dashed var(--border);
