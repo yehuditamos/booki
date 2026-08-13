@@ -242,6 +242,9 @@
 
   async function teacherSignOut() {
     await signOutTeacher();
+    if (window.history?.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
     if (typeof showScreen === 'function') showScreen('screen-splash');
   }
 
