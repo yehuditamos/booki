@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=39" />
+  <link rel="stylesheet" href="style.css?v=40" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -300,6 +300,11 @@ window.addEventListener('pageshow', function (e) {
       <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-read-in-app.png" alt="" loading="lazy" width="38" height="38">
       <span data-nk="לִקְרוֹא סִפּוּר בְּבוּקִי">לקרוא סיפור בבוקי</span>
     </button>
+    <button class="chooser-option chooser-option-letters" onclick="closeReadingChooser(); showLettersReading();">
+      <span class="chooser-letter-thumb" aria-hidden="true">א</span>
+      <span>קוראים אותיות</span>
+      <small>למי שרק מתחיל/ה</small>
+    </button>
     <button class="chooser-option" onclick="closeReadingChooser(); startBookiReading();">
       <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-physical-book-timer.png" alt="" loading="lazy" width="38" height="38">
       <span data-nk="לִקְרוֹא סֵפֶר עִם טַיְמֶר">לקרוא ספר עם טיימר</span>
@@ -337,18 +342,13 @@ window.addEventListener('pageshow', function (e) {
       <button class="btn-back" onclick="showScreen('screen-main')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2 data-nk="סִפְרִיַּת הַסִּפּוּרִים">ספריית הסיפורים</h2>
     </div>
-    <div class="library-tabs">
-      <button class="tab-btn active" id="tab-all"      onclick="filterLibrary('all')"><span data-nk="הַכֹּל">הכל</span></button>
-      <button class="tab-btn"        id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 <span data-nk="צְעָדִים רִאשׁוֹנִים">צעדים ראשונים</span></button>
-      <button class="tab-btn"        id="tab-bookworms" onclick="filterLibrary('תולעי ספרים')">📚 <span data-nk="תּוֹלַעֵי סְפָרִים">תולעי ספרים</span></button>
-      <button class="tab-btn"        id="tab-tanakh"   onclick="filterLibrary('תנ״ך לילדים')">📜 <span data-nk="תַּנַ״ךְ לִילָדִים">תנ״ך לילדים</span></button>
-      <button class="tab-btn"        id="tab-familiar" onclick="filterLibrary('מוכרים')">📚 <span data-nk="מֻכָּרִים">מוכרים</span></button>
-      <button class="tab-btn"        id="tab-original" onclick="filterLibrary('מקוריים')">✨ <span data-nk="מְקוֹרִיִּים">מקוריים</span></button>
-      <button class="tab-btn"        id="tab-long"     onclick="filterLibrary('ארוכים')">📖 <span data-nk="אֲרֻכִּים">ארוכים</span></button>
-      <button class="tab-btn"        id="tab-values"   onclick="filterLibrary('ערכים וחברות')">💛 <span data-nk="עֲרָכִים וַחֲבֵרוּת">ערכים וחברות</span></button>
-      <button class="tab-btn"        id="tab-nature"   onclick="filterLibrary('טבע וסקרנות')">🌿 <span data-nk="טֶבַע וְסַקְרָנוּת">טבע וסקרנות</span></button>
-      <button class="tab-btn"        id="tab-family"   onclick="filterLibrary('משפחה וחגים')">🏠 <span data-nk="מִשְׁפָּחָה וְחַגִּים">משפחה וחגים</span></button>
+    <div class="library-tabs library-tabs-simple">
+      <button class="tab-btn active" id="tab-recommended" onclick="filterLibrary('recommended')">⭐ בשבילי</button>
+      <button class="tab-btn" id="tab-beginner" onclick="filterLibrary('צעדים ראשונים')">🌱 מתחילים</button>
+      <button class="tab-btn" id="tab-short" onclick="filterLibrary('short')">⚡ קצר ולעניין</button>
+      <button class="tab-btn" id="tab-all" onclick="filterLibrary('all')">📚 כל הסיפורים</button>
     </div>
+    <label class="library-search"><span>🔎</span><input id="library-search-input" type="search" placeholder="איזה סיפור בא לך?" oninput="searchLibrary(this.value)"></label>
   </div>
   <div id="for-you-section" class="for-you-section" style="display:none">
     <div class="for-you-header">⭐ <span data-nk="בִּמְיֻחָד בִּשְׁבִילְךָ">במיוחד בשבילך</span></div>
@@ -356,6 +356,22 @@ window.addEventListener('pageshow', function (e) {
     <div class="for-you-divider">📚 <span data-nk="כָּל הַסִּפּוּרִים">כל הסיפורים</span></div>
   </div>
   <div id="story-list" class="story-list"></div>
+  <button id="library-show-more" class="library-show-more" style="display:none" onclick="showMoreLibraryStories()">הצגת עוד סיפורים</button>
+</section>
+
+<!-- ══ קוראים אותיות — מתחילים ════════════════════════════════════ -->
+<section id="screen-letters-reading" class="screen letters-screen">
+  <div class="screen-header sticky-header"><div class="header-row"><button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button><h2>קוראים אותיות</h2></div></div>
+  <div class="letters-intro"><span class="letters-booki">🦉</span><div><strong>בוחרים אות ומתחילים</strong><p>לחצו על אות כדי לראות ולשמוע אותה.</p></div></div>
+  <div id="letters-grid" class="letters-grid"></div>
+  <div id="letter-practice" class="letter-practice" style="display:none">
+    <button class="letter-practice-close" onclick="closeLetterPractice()" aria-label="סגירה">×</button>
+    <span id="letter-focus" class="letter-focus"></span>
+    <button class="letter-speak" onclick="speakCurrentLetter()">🔊 לשמוע</button>
+    <p>עכשיו קוראים יחד:</p>
+    <div id="letter-combinations" class="letter-combinations"></div>
+    <button id="letter-next" class="btn-giant btn-green" onclick="nextPracticeLetter()">לאות הבאה ←</button>
+  </div>
 </section>
 
 <!-- ══ קורא סיפורים ════════════════════════════════════════════════ -->
@@ -1203,7 +1219,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=28"></script>
+<script src="script.js?v=29"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=5"></script>
 <script src="booki-reading.js?v=9"></script>
