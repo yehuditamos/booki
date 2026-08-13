@@ -1987,6 +1987,7 @@ label { font-weight: 700; font-size: 1rem; }
 
 /* ─── Teacher Club Screen ────────────────────────────────────── */
 .tc-body { padding: 20px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
+.tc-assistant-card{display:flex;flex-direction:column;gap:10px;background:#fff;border:1px solid #dce6df;border-radius:22px;padding:18px;box-shadow:0 5px 18px rgba(41,78,53,.12)}.tc-assistant-badge{align-self:flex-start;background:#fff2ae;color:#684c00;border-radius:20px;padding:5px 10px;font-size:.75rem;font-weight:900}.tc-assistant-card h3{font-size:1.3rem;margin:2px 0 5px}.tc-action-choice{display:flex;align-items:center;gap:12px;width:100%;padding:13px;border:0;border-radius:15px;background:#f3f7f4;color:var(--text);text-align:right;font-family:inherit;cursor:pointer}.tc-action-choice:active{transform:scale(.98)}.tc-choice-icon{font-size:1.65rem}.tc-action-choice>span:last-child{display:flex;flex-direction:column;gap:2px}.tc-action-choice strong{font-size:1rem}.tc-action-choice small{font-size:.78rem;color:var(--muted)}.tc-more-management{border-top:1px solid var(--border);padding-top:12px}.tc-more-management summary{cursor:pointer;text-align:center;color:var(--muted);font-weight:800}.tc-more-management button{display:block;width:100%;margin-top:8px;padding:11px;border:1px solid var(--border);border-radius:12px;background:#fff;font-family:inherit;text-align:right}.tc-more-management small{color:var(--muted)}
 .tc-hero { text-align: center; padding: 12px 0 4px; }
 .tc-hero-emoji { font-size: 5rem; line-height: 1; }
 .tc-class-card {
