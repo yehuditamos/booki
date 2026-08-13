@@ -22,7 +22,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=36" />
+  <link rel="stylesheet" href="style.css?v=37" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -721,7 +721,10 @@ window.addEventListener('pageshow', function (e) {
       <button id="tc-share-button" onclick="shareCurrentTeacherClub()">שיתוף לכיתה</button>
       <button id="tc-copy-button" class="tc-copy-link" onclick="copyCurrentTeacherClubLink()">העתקת הודעה וקישור</button>
       <span id="tc-share-feedback" class="tc-share-feedback" role="status"></span>
-      <details class="tc-save-guide"><summary>איך שומרים את בוקי כמו אפליקציה?</summary><div><p><strong>באייפון:</strong> פותחים ב־Safari ← שיתוף ⬆️ ← „הוסף למסך הבית”.</p><p><strong>באנדרואיד:</strong> פותחים ב־Chrome ← ⋮ ← „הוספה למסך הבית” או „התקנת אפליקציה”.</p><p><strong>בקבוצת WhatsApp:</strong> שולחים את ההודעה, לוחצים עליה לחיצה ארוכה ובוחרים „הצמדה”. כך הקישור לא ייעלם בין ההודעות.</p><p class="tc-web-note">בוקי היא כרגע אפליקציית ווב. עד הכניסה לחנויות האפליקציות, הקישור הזה הוא דלת הכניסה הקבועה של הכיתה.</p></div></details>
+      <div class="tc-save-guide-row">
+        <details class="tc-save-guide"><summary>איך שומרים את בוקי כמו אפליקציה?</summary><div><p><strong>באייפון:</strong> פותחים ב־Safari ← שיתוף ⬆️ ← „הוסף למסך הבית”.</p><p><strong>באנדרואיד:</strong> פותחים ב־Chrome ← ⋮ ← „הוספה למסך הבית” או „התקנת אפליקציה”.</p><p><strong>בקבוצת WhatsApp:</strong> שולחים את ההודעה, לוחצים עליה לחיצה ארוכה ובוחרים „הצמדה”. כך הקישור לא ייעלם בין ההודעות.</p><p class="tc-web-note">בוקי היא כרגע אפליקציית ווב. עד הכניסה לחנויות האפליקציות, הקישור הזה הוא דלת הכניסה הקבועה של הכיתה.</p></div></details>
+        <button type="button" class="tc-copy-guide" onclick="copyBookiSaveInstructions()">📋 העתקת הוראות להורים</button>
+      </div>
     </div>
     <button class="tc-class-card" onclick="showTeacherClassScreen()">
       <span class="tc-card-icon">📊</span>
@@ -1216,7 +1219,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=1"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=22"></script>
+<script src="routing.js?v=23"></script>
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
