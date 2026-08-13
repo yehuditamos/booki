@@ -245,9 +245,11 @@
   async function teacherSignOut() {
     await signOutTeacher();
     if (window.history?.replaceState) {
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', window.location.pathname + '?teacher=1');
     }
-    if (typeof showScreen === 'function') showScreen('screen-splash');
+    // יציאה מאזור הניהול נשארת באזור המורה — לעולם לא עוברת למסכי תלמידים.
+    if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
+    else if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
   }
 
   // ─── Global exports ───────────────────────────────────────────────────────────
