@@ -998,15 +998,18 @@ function enterShopFromCelebration() {
 
 async function checkHomeShopTeaser(clubId) {
   const card = document.getElementById('home-shop-teaser');
-  if (!card) return;
-  if (!clubId) { card.style.display = 'none'; return; }
+  const goalCard = document.getElementById('home-class-goal');
+  if (!card && !goalCard) return;
+  if (!clubId) {
+    if (card) card.style.display = 'none';
+    if (goalCard) goalCard.style.display = 'none';
+    return;
+  }
 
   const [club, shopState] = await Promise.all([
     typeof fbLoadClub      === 'function' ? fbLoadClub(clubId)      : Promise.resolve(null),
     typeof fbLoadShopState === 'function' ? fbLoadShopState(clubId) : Promise.resolve(null),
   ]);
-
-  if (!club?.goal && !shopState) { card.style.display = 'none'; return; }
 
   let goalTarget = club?.goal?.target || 1500;
   let goalProgress = null;
@@ -1047,7 +1050,19 @@ async function checkHomeShopTeaser(clubId) {
   const remainEl = document.getElementById('home-shop-teaser-remaining');
   if (remainEl) remainEl.textContent = blooming ? '🎉 החנות פתוחה!' : `עוד ${remaining} ${unit}`;
 
-  card.style.display = '';
+  if (card) card.style.display = '';
+
+  const goalNumbers = document.getElementById('home-class-goal-numbers');
+  const goalFill = document.getElementById('home-class-goal-fill');
+  const goalRemaining = document.getElementById('home-class-goal-remaining');
+  if (goalNumbers) goalNumbers.textContent = `${goalProgress} מתוך ${goalTarget} ${unit}`;
+  if (goalFill) goalFill.style.width = pct + '%';
+  if (goalRemaining) {
+    goalRemaining.textContent = blooming
+      ? '🎉 הגענו ליעד — בואו לראות את העץ!'
+      : `עוד ${remaining} ${unit} · לצפייה בעץ המלא`;
+  }
+  if (goalCard) goalCard.style.display = 'flex';
 }
 
 // ─── Student Shop — Browsing (Milestone 3) ────────────────────────────────────

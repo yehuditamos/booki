@@ -207,6 +207,19 @@ window.addEventListener('pageshow', function (e) {
     </button>
     <p class="home-start-hint">לחצו כאן ובחרו איך תרצו לקרוא היום</p>
 
+    <button id="home-class-goal" class="home-class-goal" style="display:none" onclick="showClassView()" aria-label="פתיחת העץ והיעד הכיתתי">
+      <span class="home-class-goal-tree" aria-hidden="true">🌳</span>
+      <span class="home-class-goal-body">
+        <span class="home-class-goal-topline">
+          <strong>היעד הכיתתי</strong>
+          <b id="home-class-goal-numbers"></b>
+        </span>
+        <span class="home-class-goal-track" aria-hidden="true"><i id="home-class-goal-fill"></i></span>
+        <small id="home-class-goal-remaining"></small>
+      </span>
+      <span class="home-class-goal-arrow" aria-hidden="true">←</span>
+    </button>
+
     <!-- "חדש על המדף" — קיצור אחד, מדף ספרים ויזואלי; מוצג רק אם יש סיפורים חדשים -->
     <button id="home-shelf-card" class="home-shelf-card" style="display:none" onclick="_openHomeShelf()">
       <div class="home-shelf-books" aria-hidden="true">
@@ -324,15 +337,19 @@ window.addEventListener('pageshow', function (e) {
     <h2>ספריית הכיתה</h2>
   </div></div>
   <div class="class-library-body">
+    <button id="class-library-goal-card" class="class-library-goal-card" onclick="showClassView()">
+      <span class="class-library-goal-tree" aria-hidden="true">🌳</span>
+      <span><strong>העץ והיעד הכיתתי</strong><small>רואים כמה קראנו יחד, מצמיחים עלים ופירות</small></span>
+      <b>למסך המלא ←</b>
+    </button>
     <div class="class-library-hero">
       <img src="assets/booki/core/states/booki-reading.png" alt="בוקי קורא" width="180" height="180">
-      <h3>הספרים שאנחנו יוצרים יחד</h3>
-      <p>כאן יישמרו הסיפורים שנכתבו בכתב היד של ילדי הכיתה.</p>
+      <div><h3>הספרים שאנחנו יוצרים יחד</h3>
+      <p>הסיפורים שנכתבו בכתב היד של ילדי הכיתה.</p></div>
     </div>
     <div id="active-class-stories" class="active-class-stories"></div>
     <div id="class-story-shelf" class="class-story-shelf" aria-live="polite"></div>
     <div id="class-story-empty" class="class-story-empty"><span aria-hidden="true">📚</span><strong>המדף מחכה לסיפור הראשון שלנו</strong><p>כשהמורה תפתח סיפור כיתתי, הוא יופיע כאן.</p></div>
-    <button class="class-progress-link" onclick="showClassView()">ליעד ולהתקדמות הכיתה ←</button>
   </div>
 </section>
 
@@ -1342,8 +1359,8 @@ window.addEventListener('pageshow', function (e) {
     <span class="btab-label" data-nk="הַכַּרְטִיס שֶׁלִּי">הכרטיס שלי</span>
   </button>
   <button id="nav-tab-class" class="booki-tab" data-for="class" onclick="showClassLibrary()" style="display:none">
-    <span class="btab-icon">📚</span>
-    <span class="btab-label" data-nk="סִפְרִיַּת הַכִּתָּה">ספריית הכיתה</span>
+    <span class="btab-icon">🌳</span>
+    <span class="btab-label" data-nk="הַכִּתָּה שֶׁלִּי">הכיתה שלי</span>
   </button>
 </nav>
 
