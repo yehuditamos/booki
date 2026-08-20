@@ -626,6 +626,19 @@ window.addEventListener('pageshow', function (e) {
   </div>
 </section>
 
+<!-- אישור זהות לפני פתיחת כרטיס קורא — מונע קריאה בטעות על שם ילד אחר -->
+<div id="reader-confirm-overlay" class="reader-confirm-overlay" style="display:none"
+     role="dialog" aria-modal="true" aria-labelledby="reader-confirm-title"
+     onclick="if(event.target===this) cancelReaderIdentity()">
+  <div class="reader-confirm-card">
+    <div id="reader-confirm-avatar" class="reader-confirm-avatar" aria-hidden="true">📚</div>
+    <h2 id="reader-confirm-title">זה הכרטיס שלך?</h2>
+    <p>רק כדי שנשמור את הדקות בכרטיס הנכון</p>
+    <button id="reader-confirm-yes" class="reader-confirm-yes" onclick="confirmReaderIdentity()">כן, זה אני</button>
+    <button class="reader-confirm-no" onclick="cancelReaderIdentity()">אופס, זה לא אני…</button>
+  </div>
+</div>
+
 <!-- ══ Club Dashboard ════════════════════════════════════════════ -->
 <section id="screen-club-dashboard" class="screen">
   <div class="screen-header sticky-header">
