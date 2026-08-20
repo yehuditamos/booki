@@ -196,9 +196,9 @@ async function routeOnLoad() {
     return;
   }
 
-  // לא מחובר — מסך פתיחה
-  _updateSplashForRole();
-  showScreen('screen-splash');
+  // אין קורא שמור ואין קישור מועדון — השורש שייך לזרימת המורה החדשה.
+  // מסך ה-splash הישן הוצא משימוש ואסור להציגו כ-fallback.
+  goToTeacherArea(false);
 }
 
 /** "מתחילים" — טוען מועדוני תלמיד מ-Firebase (multi-club), Fallback ל-device */
@@ -237,7 +237,7 @@ async function startReading() {
 
   // Fallback — מועדוני המכשיר
   const deviceClubs = getDeviceClubs();
-  if (!deviceClubs.length) { showScreen('screen-splash'); return; }
+  if (!deviceClubs.length) { goToTeacherArea(); return; }
   const titleEl = document.getElementById('club-select-title');
   if (titleEl) titleEl.textContent = '🌳 מועדונים קיימים';
   _clubSelectMode = 'device';
@@ -252,7 +252,7 @@ async function startReading() {
 function goHome() {
   setNavVisible(false);
   if (hasDeviceClubs()) showScreen('screen-home');
-  else { _updateSplashForRole(); showScreen('screen-splash'); }
+  else routeOnLoad();
 }
 
 function _updateSplashForRole() {
@@ -524,8 +524,8 @@ async function showWhoReads(clubId) {
   showScreen('screen-who-reads');
 
   if (!effectiveClubId) {
-    // אין מועדון מזוהה — חזרה למסך הכניסה במקום הצגת כל הרשימה הישנה
-    showScreen('screen-splash');
+    // אין מועדון מזוהה — לא חוזרים למסך הפתיחה הישן.
+    routeOnLoad();
     return;
   }
 
@@ -1005,7 +1005,7 @@ function goBackToClubStudents() {
 function goBackFromJoin() {
   if (_activeClubId) showScreen('screen-who-reads');
   else if (hasDeviceClubs()) showScreen('screen-home');
-  else { _updateSplashForRole(); showScreen('screen-splash'); }
+  else routeOnLoad();
 }
 
 function goBackToJoinEntry() {
@@ -1088,11 +1088,11 @@ function _copyShareText() {
 
 // ─── כלי פיתוח (קונסול) ──────────────────────────────────────────────────────
 
-/** window.resetBookiDevice() — מנקה localStorage ומחזיר ל-screen-splash */
+/** window.resetBookiDevice() — מנקה localStorage וחוזר לזרימת המורה החדשה. */
 window.resetBookiDevice = function() {
   clearDeviceLocalCache();
-  console.log('[booki] ✅ resetBookiDevice — המכשיר אופס. מחזיר ל-splash...');
-  showScreen('screen-splash');
+  console.log('[booki] ✅ resetBookiDevice — המכשיר אופס. מחזיר לאזור המורה...');
+  goToTeacherArea();
 };
 
 /** clearDeviceLocalCache() — מנקה מועדוני בדיקה, שומר Bootstrap/Legacy */

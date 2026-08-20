@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="בוקי" />
-  <link rel="manifest" href="manifest.webmanifest?v=1" />
+  <link rel="manifest" href="manifest.webmanifest?v=2" />
   <link rel="apple-touch-icon" sizes="180x180" href="/booki/apple-touch-icon-v2.png" />
   <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/booki/apple-touch-icon-v2.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/booki-favicon-32.png?v=1" />
@@ -47,11 +47,12 @@
 })();
 </script>
 
-<!-- המסך היחיד שנצבע בזמן שקישור המורה טוען את Firebase ושאר הקוד. -->
-<section id="screen-teacher-boot" class="screen" aria-live="polite">
+<!-- מסך טעינה ניטרלי: זה המסך היחיד שמותר לצייר לפני שה-router יודע אם
+     מדובר בקורא שמור, קישור מועדון או מורה. מסך הפתיחה הישן לעולם אינו default. -->
+<section id="screen-teacher-boot" class="screen active" aria-live="polite">
   <div class="teacher-boot-card">
-    <div class="teacher-boot-icon">👩‍🏫</div>
-    <strong>פותחים את אזור המורה</strong>
+    <div class="teacher-boot-icon">📚</div>
+    <strong>פותחים את בוקי</strong>
     <span>עוד רגע הכול מוכן…</span>
     <div class="teacher-boot-dots"><i></i><i></i><i></i></div>
   </div>
@@ -85,7 +86,7 @@ window.addEventListener('pageshow', function (e) {
 </section>
 
 <!-- ══ מסך פתיחה ══════════════════════════════════════════════════ -->
-<section id="screen-splash" class="screen active">
+<section id="screen-splash" class="screen">
   <div class="splash-book-confetti" aria-hidden="true">
     <span class="sbc-book sbc-1">📕</span>
     <span class="sbc-book sbc-2">📗</span>
@@ -836,7 +837,7 @@ window.addEventListener('pageshow', function (e) {
 <section id="screen-create-type" class="screen">
   <div class="screen-header sticky-header">
     <div class="header-row">
-      <button class="btn-back" onclick="showScreen('screen-splash')"><span data-nk="חֲזָרָה">חזרה</span> →</button>
+      <button class="btn-back" onclick="goToTeacherArea()"><span data-nk="חֲזָרָה">חזרה</span> →</button>
       <h2>יצירת מועדון</h2>
     </div>
     <p class="step-indicator">שלב 1 מתוך 3 — סוג המועדון</p>

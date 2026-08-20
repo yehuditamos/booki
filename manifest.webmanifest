@@ -4,8 +4,6 @@
   "description": "קוראים, צוברים דקות ומצמיחים יחד את העץ הכיתתי",
   "lang": "he",
   "dir": "rtl",
-  "id": "./",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#FFF8E7",
