@@ -3011,3 +3011,46 @@ body:not(.nav-visible) .btn-niqud-toggle { bottom: calc(14px + env(safe-area-ins
   opacity: .4; letter-spacing: 6px;
   margin-top: 18px;
 }
+
+/* ─── אישור כרטיס קורא ───────────────────────────────────────────────────── */
+body.reader-confirm-open { overflow: hidden; }
+.reader-confirm-overlay {
+  position: fixed; inset: 0; z-index: 12000;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(30, 45, 58, .48);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.reader-confirm-card {
+  width: min(100%, 390px);
+  padding: 30px 24px 22px;
+  border-radius: 30px;
+  background: #fffdf7;
+  box-shadow: 0 22px 60px rgba(25, 43, 55, .28);
+  text-align: center;
+  direction: rtl;
+}
+.reader-confirm-avatar {
+  width: 96px; height: 96px; margin: 0 auto 14px;
+  display: grid; place-items: center;
+  border-radius: 50%; background: #edf8e9;
+  font-size: 3.6rem;
+}
+.reader-confirm-avatar .profile-avatar { font-size: 3.6rem; }
+.reader-confirm-avatar img.profile-avatar { width: 78px; height: 78px; object-fit: contain; }
+.reader-confirm-card h2 { margin: 0 0 8px; color: var(--text); font-size: clamp(1.7rem, 7vw, 2.15rem); }
+.reader-confirm-card p { margin: 0 0 24px; color: var(--muted); font-weight: 700; line-height: 1.5; }
+.reader-confirm-yes,
+.reader-confirm-no {
+  width: 100%; min-height: 58px; border-radius: 18px;
+  font-family: inherit; font-size: 1.15rem; font-weight: 900; cursor: pointer;
+}
+.reader-confirm-yes {
+  border: 0; background: linear-gradient(180deg, #35d56e, #18b957); color: #fff;
+  box-shadow: 0 6px 0 #0b9140, 0 10px 20px rgba(20, 170, 78, .2);
+}
+.reader-confirm-yes:disabled { opacity: .65; cursor: wait; }
+.reader-confirm-no { margin-top: 16px; border: 0; background: transparent; color: #53616b; }
+.reader-confirm-yes:focus-visible,
+.reader-confirm-no:focus-visible { outline: 4px solid #f7c84a; outline-offset: 4px; }

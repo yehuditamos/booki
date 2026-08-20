@@ -584,10 +584,70 @@ function _renderFirebaseMemberGrid(grid, memberships, clubId) {
     return;
   }
   grid.innerHTML = active.map(m => `
-    <button class="profile-card" data-user-id="${m.userId}" data-reader-name="${String(m.name || m.userId).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" onclick="selectProfile('${m.userId}', '${clubId}')">
+    <button class="profile-card" data-user-id="${_readerEsc(m.userId)}" data-club-id="${_readerEsc(clubId)}" data-reader-name="${_readerEsc(m.name || m.userId)}" onclick="requestReaderIdentity(this)">
       ${_avatarHtml(m.emoji || m.avatar || '📚', 'profile-avatar')}
-      <span class="profile-name">${m.name || m.userId}</span>
+      <span class="profile-name">${_readerEsc(m.name || m.userId)}</span>
     </button>`).join('');
+}
+
+function _readerEsc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+let _pendingReaderIdentity = null;
+let _readerConfirmReturnFocus = null;
+
+/** מבקש אישור לפני טעינת פרופיל — משמש גם בכניסה הראשונה וגם בהחלפת קורא. */
+function requestReaderIdentity(card) {
+  if (!card) return;
+  const name = String(card.dataset.readerName || '').trim();
+  const legacyIndex = card.dataset.legacyIndex;
+  _pendingReaderIdentity = legacyIndex !== undefined
+    ? { kind: 'legacy', index: Number(legacyIndex) }
+    : { kind: 'firebase', userId: card.dataset.userId, clubId: card.dataset.clubId };
+  _readerConfirmReturnFocus = card;
+
+  const overlay = document.getElementById('reader-confirm-overlay');
+  const title = document.getElementById('reader-confirm-title');
+  const avatar = document.getElementById('reader-confirm-avatar');
+  if (!overlay || !title || !avatar) return;
+  title.textContent = `אתה ${name}?`;
+  avatar.replaceChildren();
+  const sourceAvatar = card.querySelector('.profile-avatar');
+  if (sourceAvatar) avatar.appendChild(sourceAvatar.cloneNode(true));
+  else avatar.textContent = '📚';
+  overlay.style.display = 'flex';
+  document.body.classList.add('reader-confirm-open');
+  setTimeout(() => document.getElementById('reader-confirm-yes')?.focus(), 0);
+}
+
+async function confirmReaderIdentity() {
+  const pending = _pendingReaderIdentity;
+  if (!pending) return;
+  const yes = document.getElementById('reader-confirm-yes');
+  if (yes) yes.disabled = true;
+  _closeReaderIdentityDialog(false);
+  try {
+    if (pending.kind === 'legacy') selectLegacyProfile(pending.index);
+    else await selectProfile(pending.userId, pending.clubId);
+  } finally {
+    if (yes) yes.disabled = false;
+  }
+}
+
+function cancelReaderIdentity() {
+  _closeReaderIdentityDialog(true);
+}
+
+function _closeReaderIdentityDialog(restoreFocus) {
+  const overlay = document.getElementById('reader-confirm-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.classList.remove('reader-confirm-open');
+  _pendingReaderIdentity = null;
+  if (restoreFocus && _readerConfirmReturnFocus?.isConnected) _readerConfirmReturnFocus.focus();
+  _readerConfirmReturnFocus = null;
 }
 
 function filterWhoReadsNames(query) {
@@ -625,9 +685,9 @@ function _renderLegacyProfiles(grid) {
   grid.innerHTML = STUDENT_NAMES.map((name, i) => {
     const s = (typeof loadStudentLocal === 'function') ? loadStudentLocal(i) : {};
     return `
-      <button class="profile-card" onclick="selectLegacyProfile(${i})">
+      <button class="profile-card" data-legacy-index="${i}" data-reader-name="${_readerEsc(name)}" onclick="requestReaderIdentity(this)">
         <span class="profile-avatar">${typeof STUDENT_EMOJIS !== 'undefined' ? STUDENT_EMOJIS[i] : '📚'}</span>
-        <span class="profile-name">${name}</span>
+        <span class="profile-name">${_readerEsc(name)}</span>
         ${s.points > 0 ? `<span class="profile-pts">${s.points}נק׳</span>` : ''}
       </button>`;
   }).join('');
@@ -2104,7 +2164,7 @@ Object.assign(window, {
   routeOnLoad, dismissWelcome, openBugReport,
   showWhoReads, showClubDashboard, enterReadingFromDashboard,
   // Profile selection
-  selectProfile, selectLegacyProfile,
+  selectProfile, selectLegacyProfile, requestReaderIdentity, confirmReaderIdentity, cancelReaderIdentity,
   // Club selection
   goClubs, pickClub,
   // Nav
