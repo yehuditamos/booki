@@ -107,7 +107,20 @@ function pickHomeGreetingMessage() {
   return (typeof isNiqudOn === 'function' && isNiqudOn()) ? item.nk : item.plain;
 }
 
+function getHomeReaderName() {
+  const activeReader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  const nameFromState = window.currentStudentData?.name || activeReader?.name;
+  const nameFromHeader = document.getElementById('current-student-name')?.textContent?.trim();
+  const name = String(nameFromState || nameFromHeader || '').trim();
+  return name && name !== '—' ? name : '';
+}
+
+function getPersonalHomeQuestion() {
+  const name = getHomeReaderName();
+  return name ? `${name} מוכן לקרוא יחד עם הכיתה?` : 'מוכנים לקרוא יחד עם הכיתה?';
+}
+
 function renderHomeEncouragement() {
   const el = document.getElementById('home-encouragement');
-  if (el) el.textContent = pickHomeGreetingMessage();
+  if (el) el.textContent = getPersonalHomeQuestion();
 }
