@@ -247,7 +247,7 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .home-header { display: flex; align-items: center; justify-content: space-between; padding: calc(18px + env(safe-area-inset-top)) 20px 0; position: relative; z-index: 1; }
 .home-header-id { display: flex; align-items: center; gap: 10px; }
 .greeting-avatar { font-size: 2rem; }
-.greeting-name { font-size: 1.25rem; font-weight: 900; }
+.greeting-name { font-size: clamp(1.65rem, 6vw, 2.05rem); font-weight: 900; line-height:1.05; }
 .home-encouragement { font-size: .85rem; color: var(--muted); margin: 2px 20px 0; }
 
 /* "החלף" — אייקון קטן בלבד, מוצג רק כשיש קורא אחר אמיתי להחליף אליו */
