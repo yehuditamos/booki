@@ -262,7 +262,10 @@ function _wireBookiProgressCharacter() {
   const stage = document.getElementById('home-console-stage');
   if (!stage || stage.dataset.progressWired === '1') return;
   stage.dataset.progressWired = '1';
-  stage.classList.add('home-booki-progress-trigger');
+  // שם מחלקה חדש בכוונה: מנתק לחלוטין כלל CSS ישן שהוסיף תווית כחולה
+  // ונשמר בחלק מגרסאות ה-PWA על מסך הבית.
+  stage.classList.remove('home-booki-progress-trigger');
+  stage.classList.add('home-booki-progress-frame');
   if (!document.getElementById('home-booki-click-confetti')) {
     const confetti = document.createElement('div');
     confetti.id = 'home-booki-click-confetti';
