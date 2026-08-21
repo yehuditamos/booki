@@ -169,6 +169,7 @@ function _openHomeShelf() {
 // ─── "בוקי, איך אני מתקדם?" — משוב אישי מנתוני קריאה אמיתיים בלבד ───
 
 let _bookiProgressTask = { shelf:null };
+let _bookiProgressOpening = false;
 
 function _buildBookiProgressFeedback() {
   const data = (typeof currentStudentData !== 'undefined' && currentStudentData) || {};
@@ -203,8 +204,8 @@ function _buildBookiProgressFeedback() {
   return `${hello}אני עדיין לומד להכיר אותך. עצם הכניסה שלך לבוקי מספרת לי שיש כאן רצון להתקדם. המשימה הראשונה שלנו: לבחור סיפור אחד ולקרוא יחד.`;
 }
 
-function _launchBookiProgressSparkles() {
-  const area = document.getElementById('booki-progress-sparkles');
+function _launchBookiProgressSparkles(areaId = 'booki-progress-sparkles') {
+  const area = document.getElementById(areaId);
   if (!area) return;
   area.innerHTML = '';
   for (let i = 0; i < 28; i++) {
@@ -225,16 +226,29 @@ function openBookiProgressDialog() {
   message.textContent = text;
   dialog.style.display = 'flex';
   document.body.classList.add('booki-progress-open');
-  _launchBookiProgressSparkles();
-  if (typeof speakHebrew === 'function') speakHebrew(text);
   document.getElementById('booki-progress-task')?.focus();
+}
+
+function celebrateBookiAndShowProgress() {
+  if (_bookiProgressOpening) return;
+  const stage = document.getElementById('home-console-stage');
+  if (!stage) return;
+  _bookiProgressOpening = true;
+  stage.classList.remove('booki-progress-celebrate');
+  void stage.offsetWidth;
+  stage.classList.add('booki-progress-celebrate');
+  _launchBookiProgressSparkles('home-booki-click-confetti');
+  setTimeout(() => {
+    stage.classList.remove('booki-progress-celebrate');
+    _bookiProgressOpening = false;
+    openBookiProgressDialog();
+  }, 650);
 }
 
 function closeBookiProgressDialog() {
   const dialog = document.getElementById('booki-progress-dialog');
   if (dialog) dialog.style.display = 'none';
   document.body.classList.remove('booki-progress-open');
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
 }
 
 function acceptBookiProgressTask() {
@@ -249,11 +263,18 @@ function _wireBookiProgressCharacter() {
   if (!stage || stage.dataset.progressWired === '1') return;
   stage.dataset.progressWired = '1';
   stage.classList.add('home-booki-progress-trigger');
-  stage.addEventListener('click', openBookiProgressDialog);
+  if (!document.getElementById('home-booki-click-confetti')) {
+    const confetti = document.createElement('div');
+    confetti.id = 'home-booki-click-confetti';
+    confetti.className = 'home-booki-click-confetti';
+    confetti.setAttribute('aria-hidden', 'true');
+    stage.appendChild(confetti);
+  }
+  stage.addEventListener('click', celebrateBookiAndShowProgress);
   stage.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      openBookiProgressDialog();
+      celebrateBookiAndShowProgress();
     }
   });
 }
