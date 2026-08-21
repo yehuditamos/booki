@@ -166,122 +166,6 @@ function _openHomeShelf() {
   showLibrary(window._homeShelfTarget || 'all');
 }
 
-// ─── "בוקי, איך אני מתקדם?" — משוב אישי מנתוני קריאה אמיתיים בלבד ───
-
-let _bookiProgressTask = { shelf:null };
-let _bookiProgressOpening = false;
-
-function _buildBookiProgressFeedback() {
-  const data = (typeof currentStudentData !== 'undefined' && currentStudentData) || {};
-  const history = Array.isArray(data.history) ? data.history : [];
-  const name = typeof getHomeReaderName === 'function' ? getHomeReaderName() : '';
-  const hello = name ? `${name}, ` : '';
-  const appStories = history.filter(item => item && item.type === 'app');
-  const noNiqudStories = appStories.filter(item => item.niqudMode === 'none' && (item.noNiqudWords || 0) > 0);
-  const mixedStories = appStories.filter(item => item.niqudMode === 'mixed' && (item.noNiqudWords || 0) > 0);
-  const uniqueAppStories = new Set(appStories.map(item => item.storyId).filter(Boolean)).size;
-  const uniqueNoNiqudStories = new Set(noNiqudStories.map(item => item.storyId).filter(Boolean)).size;
-  const noNiqudWords = appStories.reduce((sum, item) => sum + (Number(item.noNiqudWords) || 0), 0);
-  const streak = typeof computeStreakDays === 'function' ? computeStreakDays(history) : 0;
-
-  if (noNiqudStories.length) {
-    _bookiProgressTask = { shelf:'advanced' };
-    return `${hello}כבר השלמת ${uniqueNoNiqudStories} ${uniqueNoNiqudStories === 1 ? 'סיפור' : 'סיפורים'} במסלול בלי ניקוד וקראת ${noNiqudWords} מילים בלי ניקוד. זאת התקדמות אמיצה! המשימה שלי אליך: לבחור עוד סיפור ולנסות בו עמוד אחד בלי ניקוד.`;
-  }
-  if (mixedStories.length) {
-    _bookiProgressTask = { shelf:null };
-    return `${hello}כבר ניסית לקרוא משפטים בלי ניקוד במסלול חצי־חצי. ידעת גם מתי להיעזר בי — וככה קוראים לומדים! המשימה שלי אליך: לנסות היום עמוד אחד במסלול בלי ניקוד.`;
-  }
-  if (appStories.length) {
-    _bookiProgressTask = { shelf:null };
-    return `${hello}סיימת ${uniqueAppStories} ${uniqueAppStories === 1 ? 'סיפור' : 'סיפורים'} בבוקי${streak >= 2 ? ` ושמרת על רצף של ${streak} ימים` : ''}. אני רואה את ההתמדה שלך! המשימה שלי אליך: לבחור סיפור ולנסות אותו במסלול חצי־חצי.`;
-  }
-  if ((data.totalMinutes || 0) > 0) {
-    _bookiProgressTask = { shelf:'starter' };
-    return `${hello}כבר צברת ${data.totalMinutes} דקות קריאה. בכל פעם שחוזרים לקרוא, המוח מתחזק! המשימה שלי אליך: לבחור היום סיפור אחד ולסיים אותו.`;
-  }
-  _bookiProgressTask = { shelf:'starter' };
-  return `${hello}אני עדיין לומד להכיר אותך. עצם הכניסה שלך לבוקי מספרת לי שיש כאן רצון להתקדם. המשימה הראשונה שלנו: לבחור סיפור אחד ולקרוא יחד.`;
-}
-
-function _launchBookiProgressSparkles(areaId = 'booki-progress-sparkles') {
-  const area = document.getElementById(areaId);
-  if (!area) return;
-  area.innerHTML = '';
-  for (let i = 0; i < 28; i++) {
-    const sparkle = document.createElement('i');
-    sparkle.textContent = i % 3 === 0 ? '⭐' : '✨';
-    sparkle.style.setProperty('--x', `${(Math.random() * 280 - 140).toFixed(0)}px`);
-    sparkle.style.setProperty('--y', `${(Math.random() * 250 - 125).toFixed(0)}px`);
-    sparkle.style.animationDelay = `${(Math.random() * .35).toFixed(2)}s`;
-    area.appendChild(sparkle);
-  }
-}
-
-function openBookiProgressDialog() {
-  const dialog = document.getElementById('booki-progress-dialog');
-  const message = document.getElementById('booki-progress-message');
-  if (!dialog || !message) return;
-  const text = _buildBookiProgressFeedback();
-  message.textContent = text;
-  dialog.style.display = 'flex';
-  document.body.classList.add('booki-progress-open');
-  document.getElementById('booki-progress-task')?.focus();
-}
-
-function celebrateBookiAndShowProgress() {
-  if (_bookiProgressOpening) return;
-  const stage = document.getElementById('home-console-stage');
-  if (!stage) return;
-  _bookiProgressOpening = true;
-  stage.classList.remove('booki-progress-celebrate');
-  void stage.offsetWidth;
-  stage.classList.add('booki-progress-celebrate');
-  _launchBookiProgressSparkles('home-booki-click-confetti');
-  setTimeout(() => {
-    stage.classList.remove('booki-progress-celebrate');
-    _bookiProgressOpening = false;
-    openBookiProgressDialog();
-  }, 650);
-}
-
-function closeBookiProgressDialog() {
-  const dialog = document.getElementById('booki-progress-dialog');
-  if (dialog) dialog.style.display = 'none';
-  document.body.classList.remove('booki-progress-open');
-}
-
-function acceptBookiProgressTask() {
-  closeBookiProgressDialog();
-  if (typeof showLibrary !== 'function') return;
-  showLibrary();
-  if (_bookiProgressTask.shelf && typeof openLibraryShelf === 'function') openLibraryShelf(_bookiProgressTask.shelf);
-}
-
-function _wireBookiProgressCharacter() {
-  const stage = document.getElementById('home-console-stage');
-  if (!stage || stage.dataset.progressWired === '1') return;
-  stage.dataset.progressWired = '1';
-  // שם מחלקה חדש בכוונה: מנתק לחלוטין כלל CSS ישן שהוסיף תווית כחולה
-  // ונשמר בחלק מגרסאות ה-PWA על מסך הבית.
-  stage.classList.remove('home-booki-progress-trigger');
-  stage.classList.add('home-booki-progress-frame');
-  if (!document.getElementById('home-booki-click-confetti')) {
-    const confetti = document.createElement('div');
-    confetti.id = 'home-booki-click-confetti';
-    confetti.className = 'home-booki-click-confetti';
-    confetti.setAttribute('aria-hidden', 'true');
-    stage.appendChild(confetti);
-  }
-  stage.addEventListener('click', celebrateBookiAndShowProgress);
-  stage.addEventListener('keydown', event => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      celebrateBookiAndShowProgress();
-    }
-  });
-}
-
 // ─── אנימציית כניסה — בוקי/כפתורים/פס-התקדמות/טקסטים, עד 900ms, פעם בכל כניסה למסך ───
 
 function _playHomeEntranceAnimation() {
@@ -320,8 +204,7 @@ function _initHomeMagic() {
   _renderHomeAchievementCard();
   _renderHomeSpeech();
   _renderHomeShelfShortcuts();
-  _wireBookiProgressCharacter();
   _playHomeEntranceAnimation();
 }
 
-Object.assign(window, { _initHomeMagic, openBookiProgressDialog, closeBookiProgressDialog, acceptBookiProgressTask });
+Object.assign(window, { _initHomeMagic });

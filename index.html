@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=48" />
+  <link rel="stylesheet" href="style.css?v=49" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -222,7 +222,7 @@ window.addEventListener('pageshow', function (e) {
 
   <!-- קונסולת הקריאה — בוקי + שלוש פעולות הקריאה כפעולה מיידית, לא בורר-ביניים -->
   <div class="home-console-wrap">
-    <div id="home-console-stage" class="home-console-stage" role="button" tabindex="0" aria-label="בוקי, איך אני מתקדם?"></div>
+    <div id="home-console-stage" class="home-console-stage"></div>
 
     <div class="home-speech-bubble">
       <p class="home-encouragement" id="home-encouragement">מוכנים לקרוא יחד עם הכיתה?</p>
@@ -304,17 +304,6 @@ window.addEventListener('pageshow', function (e) {
           <span class="console-item-sublabel" data-nk="לְדַוֵּחַ לְבוּקִי">לדווח לבוקי</span>
         </div>
       </div>
-    </div>
-  </div>
-
-  <div id="booki-progress-dialog" class="booki-progress-dialog" style="display:none" role="dialog" aria-modal="true" aria-labelledby="booki-progress-title" onclick="if(event.target===this) closeBookiProgressDialog()">
-    <div class="booki-progress-card">
-      <button class="booki-progress-close" onclick="closeBookiProgressDialog()" aria-label="סגירה">×</button>
-      <div id="booki-progress-sparkles" class="booki-progress-sparkles" aria-hidden="true"></div>
-      <div class="booki-progress-face" aria-hidden="true">🦉</div>
-      <h2 id="booki-progress-title">בוקי, איך אני מתקדם?</h2>
-      <p id="booki-progress-message" class="booki-progress-message"></p>
-      <button id="booki-progress-task" class="booki-progress-task" onclick="acceptBookiProgressTask()">📖 אני רוצה את המשימה!</button>
     </div>
   </div>
 
@@ -1327,7 +1316,7 @@ window.addEventListener('pageshow', function (e) {
 
 <script src="script.js?v=36"></script>
 <script src="motivation.js?v=7"></script>
-<script src="booki-home-magic.js?v=8"></script>
+<script src="booki-home-magic.js?v=9"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>
