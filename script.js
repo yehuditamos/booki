@@ -282,6 +282,7 @@ async function selectStudent(id) {
   currentStudentData = await loadStudentFull(id);
   document.getElementById('current-student-name').textContent = currentStudentData.name;
   if (typeof _initHomeMagic === 'function') _initHomeMagic();
+  if (typeof maybeShowBackToSchoolPromo === 'function') maybeShowBackToSchoolPromo(id);
 }
 
 function logout() {
@@ -306,6 +307,7 @@ const BOOKI_LIBRARY_SHELVES = [
   { id:'adventure', emoji:'🧭', title:'הרפתקאות וטבע', subtitle:'חיות, מסעות ועולמות רחוקים', libraries:['adventure','animals'] },
   { id:'science', emoji:'🔭', title:'מדע וסקרנות', subtitle:'מגלים איך העולם עובד', libraries:['science'] },
   { id:'heritage', emoji:'📜', title:'תנ״ך וחכמים', subtitle:'סיפורים עם לב, דרך וערכים', libraries:['tanakh','chazal'] },
+  { id:'back-to-school', emoji:'🎒', title:'חוזרים ללימודים', subtitle:'התחלות חדשות, חברים וכיתה', libraries:['back-to-school'] },
   { id:'holidays', emoji:'🍯', title:'חגים ועונות', subtitle:'סיפורים לזמנים המיוחדים בשנה', libraries:['holidays'] },
   { id:'advanced', emoji:'📚', title:'לקוראים מתקדמים', subtitle:'סיפורים ארוכים והרפתקאות גדולות', libraries:['bookworms','long'] },
 ];
@@ -422,6 +424,41 @@ function searchLibrary(value) {
 function showMoreLibraryStories() {
   _libraryVisibleCount += 6;
   filterLibrary(_libraryFilter, false);
+}
+
+// קמפיין חד־פעמי לכל קורא ולכל מכשיר. שינוי המזהה מאפשר קמפיין עתידי חדש.
+const BACK_TO_SCHOOL_CAMPAIGN_ID = 'back-to-school-2026-v1';
+let _backToSchoolPromoTimer = null;
+
+function maybeShowBackToSchoolPromo(readerId) {
+  const id = readerId ?? currentStudentId;
+  if (id === null || id === undefined || id === '') return;
+  const storageKey = `booki_campaign_seen:${BACK_TO_SCHOOL_CAMPAIGN_ID}:${encodeURIComponent(String(id))}`;
+  try { if (localStorage.getItem(storageKey) === '1') return; } catch (_) {}
+
+  clearTimeout(_backToSchoolPromoTimer);
+  _backToSchoolPromoTimer = setTimeout(() => {
+    const home = document.getElementById('screen-main');
+    const overlay = document.getElementById('back-to-school-promo');
+    if (!home?.classList.contains('active') || !overlay) return;
+    try { localStorage.setItem(storageKey, '1'); } catch (_) {}
+    overlay.style.display = 'flex';
+    document.body.classList.add('back-to-school-promo-open');
+    document.getElementById('back-to-school-promo-action')?.focus();
+  }, 450);
+}
+
+function dismissBackToSchoolPromo() {
+  clearTimeout(_backToSchoolPromoTimer);
+  const overlay = document.getElementById('back-to-school-promo');
+  if (overlay) overlay.style.display = 'none';
+  document.body.classList.remove('back-to-school-promo-open');
+}
+
+function openBackToSchoolShelf() {
+  dismissBackToSchoolPromo();
+  showLibrary();
+  openLibraryShelf('back-to-school');
 }
 
 // ─── קוראים אותיות ──────────────────────────────────────────────────

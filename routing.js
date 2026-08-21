@@ -882,6 +882,7 @@ function _enterPersonalHome(userId, profile) {
   if (typeof checkHomeShopTeaser === 'function') checkHomeShopTeaser(_activeClubId);
   showScreen('screen-main');
   if (typeof _initHomeMagic === 'function') _initHomeMagic();
+  if (typeof maybeShowBackToSchoolPromo === 'function') maybeShowBackToSchoolPromo(userId);
   _updateBugLabel();
 
   const clubBtn = document.getElementById('btn-switch-club');

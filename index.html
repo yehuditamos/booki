@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=44" />
+  <link rel="stylesheet" href="style.css?v=45" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -198,6 +198,25 @@ window.addEventListener('pageshow', function (e) {
       <p id="shop-celebration-numbers" class="shop-celebration-numbers"></p>
       <button class="btn-giant btn-booki-read" onclick="enterShopFromCelebration()">🛍️ <span data-nk="לְהִכָּנֵס לַחֲנוּת">להיכנס לחנות</span></button>
       <button class="btn-footer-link" onclick="dismissShopCelebration()"><span data-nk="מְאֻחָר יוֹתֵר">מאוחר יותר</span></button>
+    </div>
+  </div>
+
+  <!-- הודעת השקה חד־פעמית לכל קורא: חוזרים ללימודים -->
+  <div id="back-to-school-promo" class="back-to-school-promo" style="display:none"
+       role="dialog" aria-modal="true" aria-labelledby="back-to-school-promo-title"
+       onclick="if(event.target===this) dismissBackToSchoolPromo()">
+    <div class="back-to-school-promo-card">
+      <button class="back-to-school-promo-close" onclick="dismissBackToSchoolPromo()" aria-label="סגירה">×</button>
+      <div class="school-confetti" aria-hidden="true">
+        <span>✏️</span><span>📐</span><span>🖍️</span><span>📓</span><span>✂️</span><span>📝</span>
+      </div>
+      <div class="school-backpack" aria-hidden="true">🎒</div>
+      <p class="school-new-new">חדש! חדש! חדש!</p>
+      <h2 id="back-to-school-promo-title">בוקי מחכה לך עם סיפורים חדשים</h2>
+      <div class="school-promo-ribbon">חוזרים ללימודים</div>
+      <p class="school-promo-copy">שלושה סיפורים חדשים על כיתה, חברים והתחלות חדשות כבר מחכים לך!</p>
+      <button id="back-to-school-promo-action" class="school-promo-action" onclick="openBackToSchoolShelf()">🎒 לסיפורי חוזרים ללימודים</button>
+      <button class="school-promo-later" onclick="dismissBackToSchoolPromo()">אחר כך</button>
     </div>
   </div>
 
@@ -1259,6 +1278,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="content/stories-tanakh.js?v=1"></script>
 <script src="content/stories-folk.js?v=1"></script>
 <script src="content/stories-holidays.js?v=2"></script>
+<script src="content/stories-school.js?v=1"></script>
 <script src="content/stories-chazal.js?v=1"></script>
 <script src="content/stories-science.js?v=1"></script>
 <script src="content/stories-animals.js?v=1"></script>
@@ -1270,14 +1290,14 @@ window.addEventListener('pageshow', function (e) {
 <script src="content/stories-bookworms.js?v=2"></script>
 
 <!-- אגרגטור + לוגיקה (חייבים לטעון אחרי כל קבצי content/) -->
-<script src="stories.js?v=1"></script>
+<script src="stories.js?v=2"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=24"></script>
+<script src="routing.js?v=25"></script>
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=33"></script>
+<script src="script.js?v=34"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=5"></script>
 <script src="booki-reading.js?v=9"></script>

@@ -16,6 +16,7 @@ try {
     ...(typeof STORIES_TANAKH    !== 'undefined' && Array.isArray(STORIES_TANAKH)    ? STORIES_TANAKH    : []),
     ...(typeof STORIES_FOLK      !== 'undefined' && Array.isArray(STORIES_FOLK)      ? STORIES_FOLK      : []),
     ...(typeof STORIES_HOLIDAYS  !== 'undefined' && Array.isArray(STORIES_HOLIDAYS)  ? STORIES_HOLIDAYS  : []),
+    ...(typeof STORIES_BACK_TO_SCHOOL !== 'undefined' && Array.isArray(STORIES_BACK_TO_SCHOOL) ? STORIES_BACK_TO_SCHOOL : []),
     ...(typeof STORIES_CHAZAL    !== 'undefined' && Array.isArray(STORIES_CHAZAL)    ? STORIES_CHAZAL    : []),
     ...(typeof STORIES_SCIENCE   !== 'undefined' && Array.isArray(STORIES_SCIENCE)   ? STORIES_SCIENCE   : []),
     ...(typeof STORIES_ANIMALS   !== 'undefined' && Array.isArray(STORIES_ANIMALS)   ? STORIES_ANIMALS   : []),
@@ -106,4 +107,3 @@ function getStoriesByTags(tags = []) {
     console.log(`[stories.js] ✅ ${STORIES.length} סיפורים — כל הבדיקות עברו בהצלחה`);
   }
 })();
-
