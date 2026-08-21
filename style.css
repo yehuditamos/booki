@@ -426,6 +426,33 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .home-booki-message-trigger:focus-visible .booki-character-stage > img {
   filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px #f1bf3b);
 }
+.booki-unread-cue {
+  position:absolute; z-index:8; left:50%; bottom:7px; translate:-50% 0;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  width:max-content; max-width:240px; pointer-events:none;
+}
+.booki-unread-envelope { position:relative; display:block; font-size:2rem; line-height:1; filter:drop-shadow(0 4px 5px rgba(43,47,70,.25)); }
+.booki-unread-envelope i {
+  position:absolute; top:-2px; right:-5px; width:10px; height:10px;
+  border:2px solid #fff; border-radius:50%; background:#ef3f50;
+  box-shadow:0 1px 4px rgba(90,20,30,.28);
+}
+.booki-unread-cue strong {
+  padding:5px 11px; border-radius:999px; background:#fff; color:#34435c;
+  box-shadow:0 5px 15px rgba(38,53,77,.18); font-size:.72rem; font-weight:900;
+  white-space:nowrap;
+}
+@media (prefers-reduced-motion:no-preference) {
+  .home-console-stage.has-booki-unread .booki-character-stage > img { animation:bookiUnreadNudge 3.4s ease-in-out infinite; }
+  .booki-unread-envelope { animation:bookiEnvelopeFloat 1.7s ease-in-out infinite; }
+}
+@keyframes bookiUnreadNudge {
+  0%,72%,100%{transform:translateY(0) rotate(0)}
+  78%{transform:translateY(-3px) rotate(-2deg)}
+  84%{transform:translateY(-4px) rotate(2deg)}
+  90%{transform:translateY(-2px) rotate(-1deg)}
+}
+@keyframes bookiEnvelopeFloat { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-5px) rotate(3deg)} }
 
 body.booki-personal-message-open { overflow:hidden; }
 .booki-personal-message {
@@ -456,7 +483,7 @@ body.booki-personal-message-open { overflow:hidden; }
 @keyframes bookiTextMessageIn { from{opacity:0;transform:translateY(18px) scale(.92)} to{opacity:1;transform:none} }
 @keyframes bookiTextMessageOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(10px) scale(.96)} }
 @media (prefers-reduced-motion:reduce) {
-  .booki-personal-message,.booki-text-message,.is-closing .booki-text-message { animation:none; }
+  .booki-personal-message,.booki-text-message,.is-closing .booki-text-message,.booki-unread-envelope { animation:none; }
 }
 
 /* ─── בועת דיבור — עוטפת את home-encouragement הקיים, לא נוגעת ב-id/בלוגיקה ─── */
