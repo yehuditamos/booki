@@ -680,6 +680,7 @@ button { cursor: pointer; font-family: inherit; border: none; }
 .story-card-left { display: flex; align-items: center; gap: 12px; }
 .story-emoji  { font-size: 2rem; flex-shrink: 0; }
 .story-title  { font-size: 1.05rem; font-weight: 700; display: block; }
+.story-new-label { display:inline-block;margin-right:7px;padding:2px 7px;border-radius:999px;background:#ef5b5b;color:#fff;font-size:.62rem;font-weight:900;vertical-align:middle;box-shadow:0 2px 5px rgba(166,45,45,.18); }
 .story-meta   { font-size: .8rem; color: var(--muted); margin-top: 2px; }
 .read-badge { background: #E8F5E9; color: var(--green); padding: 4px 10px; border-radius: 20px; font-size: .8rem; font-weight: 700; white-space: nowrap; }
 .new-badge  { background: #EBF5FB; color: var(--blue2); padding: 4px 10px; border-radius: 20px; font-size: .85rem; font-weight: 700; white-space: nowrap; }
