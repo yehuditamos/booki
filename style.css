@@ -411,6 +411,54 @@ button { cursor: pointer; font-family: inherit; border: none; }
   pointer-events: none;
 }
 
+/* בוקי הוא אזור הלחיצה עצמו: ההילה נוצרת מן האלפא של תמונת ה-PNG ולכן
+   עוקבת אחרי קווי הדמות ואינה מלבן. */
+.home-booki-message-trigger { cursor:pointer; touch-action:manipulation; }
+.home-booki-message-trigger .booki-character-stage > img {
+  filter: drop-shadow(0 0 2px rgba(255,255,255,.95))
+          drop-shadow(0 5px 9px rgba(78,63,139,.28));
+  transition: filter .18s ease, transform .16s ease;
+}
+.home-booki-message-trigger:active .booki-character-stage > img {
+  filter: drop-shadow(0 1px 2px rgba(78,63,139,.14));
+}
+.home-booki-message-trigger:focus-visible { outline:none; }
+.home-booki-message-trigger:focus-visible .booki-character-stage > img {
+  filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 7px #f1bf3b);
+}
+
+body.booki-personal-message-open { overflow:hidden; }
+.booki-personal-message {
+  position:fixed; inset:0; z-index:12700; align-items:center; justify-content:center;
+  padding:22px; background:rgba(24,34,52,.58);
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  animation:bookiMessageBackdropIn .24s ease both;
+}
+.booki-personal-message.is-closing { animation:bookiMessageBackdropOut .23s ease both; }
+.booki-text-message {
+  width:min(100%,370px); box-sizing:border-box; padding:19px 20px 17px;
+  border:1px solid rgba(255,255,255,.9); border-radius:25px;
+  background:rgba(255,255,255,.97); color:#293d5d; direction:rtl;
+  box-shadow:0 24px 70px rgba(10,20,38,.38), inset 0 1px 0 #fff;
+  cursor:pointer; outline:none; animation:bookiTextMessageIn .36s cubic-bezier(.2,.9,.25,1.12) both;
+}
+.is-closing .booki-text-message { animation:bookiTextMessageOut .2s ease both; }
+.booki-text-message-head { display:flex; align-items:center; gap:11px; padding-bottom:11px; border-bottom:1px solid #e8ebef; }
+.booki-text-message-avatar { display:grid; place-items:center; width:43px; height:43px; flex:0 0 43px; border-radius:50%; background:#fff0c8; font-size:1.35rem; }
+.booki-text-message-head div { display:flex; flex-direction:column; text-align:right; }
+.booki-text-message-head strong { font-size:1rem; }
+.booki-text-message-head small { color:#8a949d; font-size:.7rem; }
+.booki-text-message p { margin:17px 0 12px; white-space:pre-line; font-size:1.08rem; font-weight:750; line-height:1.72; text-align:right; }
+.booki-text-message footer { color:#7254a3; font-weight:900; text-align:right; }
+.booki-text-message-dismiss { display:block; margin-top:17px; color:#929aa1; font-size:.68rem; font-weight:700; text-align:center; }
+@keyframes bookiMessageBackdropIn { from{opacity:0} to{opacity:1} }
+@keyframes bookiMessageBackdropOut { from{opacity:1} to{opacity:0} }
+@keyframes bookiTextMessageIn { from{opacity:0;transform:translateY(18px) scale(.92)} to{opacity:1;transform:none} }
+@keyframes bookiTextMessageOut { from{opacity:1;transform:none} to{opacity:0;transform:translateY(10px) scale(.96)} }
+@media (prefers-reduced-motion:reduce) {
+  .booki-personal-message,.booki-text-message,.is-closing .booki-text-message { animation:none; }
+}
+
 /* ─── בועת דיבור — עוטפת את home-encouragement הקיים, לא נוגעת ב-id/בלוגיקה ─── */
 .home-speech-bubble {
   position: relative; z-index: 2;
