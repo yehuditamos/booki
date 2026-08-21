@@ -429,9 +429,6 @@ const BOOKI_LETTERS = ['א','ב','ג','ד','ה','ו','ז','ח','ט','י','כ','�
 const BOOKI_LETTER_NAMES = ['אָלֶף','בֵּית','גִּימֶל','דָּלֶת','הֵא','וָו','זַיִן','חֵית','טֵית','יוֹד','כַּף','לָמֶד','מֵם','נוּן','סָמֶךְ','עַיִן','פֵּא','צַדִּי','קוֹף','רֵישׁ','שִׁין','תָּו'];
 const BOOKI_NIQQUD = [
   { mark:'\u05B0', name:'שְׁוָא' },
-  { mark:'\u05B1', name:'חֲטַף סֶגּוֹל' },
-  { mark:'\u05B2', name:'חֲטַף פַּתַח' },
-  { mark:'\u05B3', name:'חֲטַף קָמַץ' },
   { mark:'\u05B4', name:'חִירִיק' },
   { mark:'\u05B5', name:'צֵירֵי' },
   { mark:'\u05B6', name:'סֶגּוֹל' },
@@ -440,12 +437,8 @@ const BOOKI_NIQQUD = [
   { mark:'\u05B9', name:'חוֹלָם' },
   { mark:'\u05BB', name:'קֻבּוּץ' },
 ];
-const BOOKI_LETTER_VARIANTS = {
-  ב: [{ mark:'\u05BC', label:'בּ — עִם דָּגֵשׁ' }, { mark:'', label:'ב — בְּלִי דָּגֵשׁ' }],
-  כ: [{ mark:'\u05BC', label:'כּ — עִם דָּגֵשׁ' }, { mark:'', label:'כ — בְּלִי דָּגֵשׁ' }],
-  פ: [{ mark:'\u05BC', label:'פּ — עִם דָּגֵשׁ' }, { mark:'', label:'פ — בְּלִי דָּגֵשׁ' }],
-  ש: [{ mark:'\u05C1', label:'שׁ — שִׁין' }, { mark:'\u05C2', label:'שׂ — שִׂין' }],
-};
+// צורת בסיס אחת בלבד לכל אות: בלי קבוצות כפולות ובלי ניקוד מתקדם.
+const BOOKI_LETTER_BASE_MARK = { ב:'\u05BC', כ:'\u05BC', פ:'\u05BC', ש:'\u05C1' };
 let _practiceLetterIndex = 0;
 
 // תווית ההשקה זמנית: נעלמת אוטומטית אחרי חודש, בלי צורך בפריסה נוספת.
@@ -468,19 +461,14 @@ function openLetterPractice(index) {
   const letter = BOOKI_LETTERS[index];
   document.getElementById('letter-focus').textContent = letter;
   document.getElementById('letter-practice-title').textContent = `האות ${BOOKI_LETTER_NAMES[index]} בכל צורות הניקוד`;
-  const variants = BOOKI_LETTER_VARIANTS[letter] || [{ mark:'', label:'' }];
-  document.getElementById('letter-niqqud-groups').innerHTML = variants.map(variant => {
-    const heading = variant.label ? `<h4>${variant.label}</h4>` : '';
-    const cards = BOOKI_NIQQUD.map(niqqud => {
-      // סדר סימני הניקוד ב-Unicode: אות, סימן תנועה, ואז דגש/נקודת שין.
-      // הדפדפן מציג אותם באותו אשכול טיפוגרפי גם כשהסדר הקנוני משתנה.
-      const sounded = letter + niqqud.mark + variant.mark;
-      return `<button class="letter-niqqud-card" onclick="speakLetterForm(this.dataset.sound)" data-sound="${sounded}" aria-label="${variant.label ? variant.label + ', ' : ''}${niqqud.name}">
+  const baseMark = BOOKI_LETTER_BASE_MARK[letter] || '';
+  const cards = BOOKI_NIQQUD.map(niqqud => {
+      const sounded = letter + niqqud.mark + baseMark;
+      return `<button class="letter-niqqud-card" onclick="speakLetterForm(this.dataset.sound)" data-sound="${sounded}" aria-label="${niqqud.name}">
         <strong>${sounded}</strong><span>${niqqud.name}</span><small aria-hidden="true">🔊</small>
       </button>`;
-    }).join('');
-    return `<section class="letter-niqqud-group">${heading}<div class="letter-niqqud-grid">${cards}</div></section>`;
   }).join('');
+  document.getElementById('letter-niqqud-groups').innerHTML = `<section class="letter-niqqud-group"><div class="letter-niqqud-grid">${cards}</div></section>`;
   document.getElementById('letter-practice').style.display = 'flex';
   document.getElementById('letter-practice').scrollIntoView({ behavior:'smooth', block:'start' });
   speakCurrentLetter();
