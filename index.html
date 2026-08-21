@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=49" />
+  <link rel="stylesheet" href="style.css?v=50" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -222,7 +222,8 @@ window.addEventListener('pageshow', function (e) {
 
   <!-- קונסולת הקריאה — בוקי + שלוש פעולות הקריאה כפעולה מיידית, לא בורר-ביניים -->
   <div class="home-console-wrap">
-    <div id="home-console-stage" class="home-console-stage"></div>
+    <div id="home-console-stage" class="home-console-stage" role="button" tabindex="0"
+         aria-label="פתיחת הודעה מבוקי"></div>
 
     <div class="home-speech-bubble">
       <p class="home-encouragement" id="home-encouragement">מוכנים לקרוא יחד עם הכיתה?</p>
@@ -305,6 +306,24 @@ window.addEventListener('pageshow', function (e) {
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- הודעה אישית מבוקי — נפתחת רק בלחיצה על הדמות -->
+  <div id="booki-personal-message" class="booki-personal-message" style="display:none"
+       role="dialog" aria-modal="true" aria-labelledby="booki-personal-message-title"
+       onclick="closeBookiPersonalMessage()">
+    <article class="booki-text-message" onclick="closeBookiPersonalMessage()" tabindex="0">
+      <div class="booki-text-message-head">
+        <span class="booki-text-message-avatar" aria-hidden="true">💜</span>
+        <div>
+          <strong id="booki-personal-message-title">הודעה מבוקי</strong>
+          <small>עכשיו</small>
+        </div>
+      </div>
+      <p id="booki-personal-message-text"></p>
+      <footer>באהבה, בוקי 💜</footer>
+      <small class="booki-text-message-dismiss">לחצו על ההודעה כדי לחזור</small>
+    </article>
   </div>
 
   <!-- כרטיס חנות קבוע — נקודות/התקדמות ליעד הכיתה, מוצג רק כשיש הקשר מועדון עם יעד/חנות -->
@@ -1316,7 +1335,7 @@ window.addEventListener('pageshow', function (e) {
 
 <script src="script.js?v=36"></script>
 <script src="motivation.js?v=7"></script>
-<script src="booki-home-magic.js?v=9"></script>
+<script src="booki-home-magic.js?v=10"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>
