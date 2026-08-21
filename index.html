@@ -326,6 +326,7 @@ window.addEventListener('pageshow', function (e) {
       <span class="chooser-letter-thumb" aria-hidden="true">א</span>
       <span>קוראים אותיות</span>
       <small>למי שרק מתחיל/ה</small>
+      <span id="letters-new-badge" class="letters-new-badge" aria-label="חדש">חדש</span>
     </button>
     <button class="chooser-option" onclick="closeReadingChooser(); startBookiReading();">
       <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-physical-book-timer.png" alt="" loading="lazy" width="38" height="38">
@@ -390,15 +391,14 @@ window.addEventListener('pageshow', function (e) {
 <!-- ══ קוראים אותיות — מתחילים ════════════════════════════════════ -->
 <section id="screen-letters-reading" class="screen letters-screen">
   <div class="screen-header sticky-header"><div class="header-row"><button class="btn-back" onclick="showScreen('screen-main')">חזרה →</button><h2>קוראים אותיות</h2></div></div>
-  <div class="letters-intro"><span class="letters-booki">🦉</span><div><strong>בוחרים אות ומתחילים</strong><p>לחצו על אות כדי לראות ולשמוע אותה.</p></div></div>
+  <div class="letters-intro"><span class="letters-booki">🦉</span><div><strong>איזו אות נלמד היום?</strong><p>בחרו אות, ואז לחצו על כל סימן ניקוד כדי לשמוע אותו.</p></div></div>
   <div id="letters-grid" class="letters-grid"></div>
   <div id="letter-practice" class="letter-practice" style="display:none">
     <button class="letter-practice-close" onclick="closeLetterPractice()" aria-label="סגירה">×</button>
-    <span id="letter-focus" class="letter-focus"></span>
-    <button class="letter-speak" onclick="speakCurrentLetter()">🔊 לשמוע</button>
-    <p>עכשיו קוראים יחד:</p>
-    <div id="letter-combinations" class="letter-combinations"></div>
-    <button id="letter-next" class="btn-giant btn-green" onclick="nextPracticeLetter()">לאות הבאה ←</button>
+    <button id="letter-focus" class="letter-focus" onclick="speakCurrentLetter()" aria-label="השמעת שם האות"></button>
+    <h3 id="letter-practice-title"></h3>
+    <p class="letter-practice-help">לחצו על כל צורה ושמעו איך קוראים אותה 🔊</p>
+    <div id="letter-niqqud-groups" class="letter-niqqud-groups"></div>
   </div>
 </section>
 
