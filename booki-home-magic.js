@@ -198,6 +198,57 @@ function _bookiPersonalMessageText() {
   return `היי ${name} :)\nרק רציתי לומר לך! ${praise}`;
 }
 
+function _bookiMessageReaderKey() {
+  const readerId = (typeof currentStudentId !== 'undefined' && currentStudentId)
+    || (typeof getHomeReaderName === 'function' && getHomeReaderName())
+    || 'guest';
+  return `booki_personal_message_read:${encodeURIComponent(String(readerId))}`;
+}
+
+function _bookiMessageFingerprint() {
+  const text = _bookiPersonalMessageText();
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function _isBookiMessageUnread() {
+  try { return localStorage.getItem(_bookiMessageReaderKey()) !== _bookiMessageFingerprint(); }
+  catch (_) { return true; }
+}
+
+function _renderBookiUnreadCue() {
+  const stage = document.getElementById('home-console-stage');
+  if (!stage) return;
+  let cue = stage.querySelector('.booki-unread-cue');
+  if (!_isBookiMessageUnread()) {
+    cue?.remove();
+    stage.classList.remove('has-booki-unread');
+    return;
+  }
+  stage.classList.add('has-booki-unread');
+  if (!cue) {
+    cue = document.createElement('span');
+    cue.className = 'booki-unread-cue';
+    cue.setAttribute('aria-hidden', 'true');
+    cue.innerHTML = `<span class="booki-unread-envelope">💌<i></i></span><strong></strong>`;
+    stage.appendChild(cue);
+  }
+  const name = (typeof getHomeReaderName === 'function' && getHomeReaderName()) || '';
+  cue.querySelector('strong').textContent = name
+    ? `${name}, יש לי הודעה בשבילך!`
+    : 'יש לי הודעה בשבילך!';
+}
+
+function _markBookiMessageRead() {
+  try { localStorage.setItem(_bookiMessageReaderKey(), _bookiMessageFingerprint()); }
+  catch (_) { /* במצב גלישה פרטי ההודעה עדיין עובדת, גם אם לא ניתן לזכור קריאה */ }
+  _renderBookiUnreadCue();
+}
+
 function _playBookiMessageSound() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -233,7 +284,8 @@ function openBookiPersonalMessage() {
 
 function closeBookiPersonalMessage() {
   const overlay = document.getElementById('booki-personal-message');
-  if (!overlay || overlay.style.display === 'none') return;
+  if (!overlay || overlay.style.display === 'none' || overlay.classList.contains('is-closing')) return;
+  _markBookiMessageRead();
   overlay.classList.add('is-closing');
   setTimeout(() => {
     overlay.style.display = 'none';
@@ -260,6 +312,7 @@ function _wireBookiPersonalMessage() {
       closeBookiPersonalMessage();
     }
   });
+  _renderBookiUnreadCue();
 }
 
 // ─── אנימציית כניסה — בוקי/כפתורים/פס-התקדמות/טקסטים, עד 900ms, פעם בכל כניסה למסך ───
@@ -301,6 +354,7 @@ function _initHomeMagic() {
   _renderHomeSpeech();
   _renderHomeShelfShortcuts();
   _wireBookiPersonalMessage();
+  _renderBookiUnreadCue();
   _playHomeEntranceAnimation();
 }
 
