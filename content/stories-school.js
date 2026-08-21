@@ -13,6 +13,7 @@ const STORIES_BACK_TO_SCHOOL = [
     libraryId: "back-to-school",
     shelves:   ["starter"],
     category:  "חוזרים ללימודים · מתחילים",
+    newUntil:  "2026-09-21T23:59:59+03:00", // חודש מיום ההשקה
     title:     "הַתִּיק הַמּוּכָן",
     emoji:     "🎒",
     tags:      ["חזרה לבית הספר", "תיק", "כיתה", "🌱 קורא ראשון"],
@@ -35,6 +36,7 @@ const STORIES_BACK_TO_SCHOOL = [
     id:        "school-seat-next-to-me",
     libraryId: "back-to-school",
     category:  "חוזרים ללימודים",
+    newUntil:  "2026-09-21T23:59:59+03:00",
     title:     "הַמָּקוֹם שֶׁלְּיָדִי",
     emoji:     "🪑",
     tags:      ["חזרה לבית הספר", "חברות", "ילדה חדשה", "שייכות"],
@@ -58,6 +60,7 @@ const STORIES_BACK_TO_SCHOOL = [
     libraryId: "back-to-school",
     shelves:   ["advanced"],
     category:  "חוזרים ללימודים · מתקדמים",
+    newUntil:  "2026-09-21T23:59:59+03:00",
     title:     "תַּעֲלוּמַת הַקַּלְמָר הַנּוֹדֵד",
     emoji:     "✏️",
     lengthLabel: "🔵 ארוך",
