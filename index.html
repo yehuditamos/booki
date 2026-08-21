@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=45" />
+  <link rel="stylesheet" href="style.css?v=46" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -222,7 +222,7 @@ window.addEventListener('pageshow', function (e) {
 
   <!-- קונסולת הקריאה — בוקי + שלוש פעולות הקריאה כפעולה מיידית, לא בורר-ביניים -->
   <div class="home-console-wrap">
-    <div id="home-console-stage" class="home-console-stage"></div>
+    <div id="home-console-stage" class="home-console-stage" role="button" tabindex="0" aria-label="בוקי, איך אני מתקדם?"></div>
 
     <div class="home-speech-bubble">
       <p class="home-encouragement" id="home-encouragement">מוכנים לקרוא יחד עם הכיתה?</p>
@@ -304,6 +304,17 @@ window.addEventListener('pageshow', function (e) {
           <span class="console-item-sublabel" data-nk="לְדַוֵּחַ לְבוּקִי">לדווח לבוקי</span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="booki-progress-dialog" class="booki-progress-dialog" style="display:none" role="dialog" aria-modal="true" aria-labelledby="booki-progress-title" onclick="if(event.target===this) closeBookiProgressDialog()">
+    <div class="booki-progress-card">
+      <button class="booki-progress-close" onclick="closeBookiProgressDialog()" aria-label="סגירה">×</button>
+      <div id="booki-progress-sparkles" class="booki-progress-sparkles" aria-hidden="true"></div>
+      <div class="booki-progress-face" aria-hidden="true">🦉</div>
+      <h2 id="booki-progress-title">בוקי, איך אני מתקדם?</h2>
+      <p id="booki-progress-message" class="booki-progress-message"></p>
+      <button id="booki-progress-task" class="booki-progress-task" onclick="acceptBookiProgressTask()">📖 אני רוצה את המשימה!</button>
     </div>
   </div>
 
@@ -428,6 +439,10 @@ window.addEventListener('pageshow', function (e) {
     <span id="reader-page-counter" class="page-counter">עמוד 1 מתוך 1</span>
   </div>
   <h2 id="reader-story-title" class="reader-title"></h2>
+  <div class="reader-niqud-toolbar">
+    <button id="reader-niqud-mode-btn" class="reader-niqud-mode-btn" onclick="openNiqudModeChooser()" aria-haspopup="dialog"></button>
+    <button id="reader-niqud-help-btn" class="reader-niqud-help-btn" onclick="revealNiqudForCurrentPage()">✨ צריך ניקוד לרגע?</button>
+  </div>
   <div class="reader-content">
     <div id="reader-text" class="reader-text"></div>
   </div>
@@ -440,6 +455,16 @@ window.addEventListener('pageshow', function (e) {
   </div>
   <div id="finish-reading-div" class="finish-reading hidden">
     <button class="btn-giant btn-green celebrate-btn" onclick="finishAppReading()">🎉 <span data-nk="סִיַּמְתִּי לְהַיּוֹם!">סיימתי להיום!</span></button>
+  </div>
+
+  <div id="niqud-mode-dialog" class="niqud-mode-dialog" style="display:none" role="dialog" aria-modal="true" aria-labelledby="niqud-mode-title">
+    <div class="niqud-mode-card">
+      <h2 id="niqud-mode-title">מסלול הניקוד שלי</h2>
+      <p>איך נוח לך לקרוא את הסיפור?</p>
+      <button onclick="chooseStoryNiqudMode('full')"><b>אָ</b><span><strong>ניקוד איתי</strong><small>כל הסיפור עם ניקוד</small></span></button>
+      <button onclick="chooseStoryNiqudMode('mixed')"><b>אֲא</b><span><strong>חצי־חצי</strong><small>משפט עם ניקוד ומשפט בלי</small></span></button>
+      <button onclick="chooseStoryNiqudMode('none')"><b>א</b><span><strong>בלי ניקוד</strong><small>אתגר הקריאה שלי</small></span></button>
+    </div>
   </div>
 </section>
 
@@ -578,6 +603,7 @@ window.addEventListener('pageshow', function (e) {
       </div>
     </div>
     <p id="complete-encouragement" class="complete-encouragement"></p>
+    <div id="complete-bonus-breakdown" class="complete-bonus-breakdown" style="display:none"></div>
     <p class="complete-tree-msg">🌳 <span data-nk="כָּל דַּקַּת קְרִיאָה עוֹזֶרֶת לָעֵץ שֶׁלְּךָ לִגְדֹּל!">כל דקת קריאה עוזרת לעץ שלך לגדול!</span></p>
     <p class="complete-msg"><span data-nk="הַדַּקּוֹת וְהַנְּקֻדּוֹת נוֹסְפוּ לְכַרְטִיס הַקּוֹרֵא שֶׁלְּךָ!">הדקות והנקודות נוספו לכרטיס הקורא שלך!</span> 📚</p>
     <button class="btn-giant btn-white-on-purple" onclick="showScreen('screen-main')">🏠 <span data-nk="חֲזָרָה לַתַּפְרִיט">חזרה לתפריט</span></button>
@@ -1297,9 +1323,9 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=34"></script>
+<script src="script.js?v=35"></script>
 <script src="motivation.js?v=7"></script>
-<script src="booki-home-magic.js?v=5"></script>
+<script src="booki-home-magic.js?v=6"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>
