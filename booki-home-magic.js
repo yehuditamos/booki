@@ -166,6 +166,102 @@ function _openHomeShelf() {
   showLibrary(window._homeShelfTarget || 'all');
 }
 
+// ─── הודעה אישית מבוקי ────────────────────────────────────────────
+// ההודעה מבוססת רק על נתונים שכבר נשמרו בכרטיס הקורא. אין דירוג של הילד
+// ואין טענה שלא ניתן להסיק מההיסטוריה שלו.
+function _bookiPersonalMessageText() {
+  const data = (typeof currentStudentData !== 'undefined' && currentStudentData) || {};
+  const history = Array.isArray(data.history) ? data.history.filter(Boolean) : [];
+  const name = (typeof getHomeReaderName === 'function' && getHomeReaderName()) || 'קורא יקר';
+  const appStories = history.filter(item => item.type === 'app');
+  const noNiqud = appStories.filter(item => item.niqudMode === 'none' && Number(item.noNiqudWords) > 0);
+  const mixed = appStories.filter(item => item.niqudMode === 'mixed');
+  const noNiqudWords = noNiqud.reduce((sum, item) => sum + (Number(item.noNiqudWords) || 0), 0);
+  const uniqueStories = new Set(appStories.map(item => item.storyId || item.storyTitle).filter(Boolean)).size;
+  const streak = typeof computeStreakDays === 'function' ? computeStreakDays(history) : 0;
+  const minutes = Math.max(0, Number(data.totalMinutes) || 0);
+
+  let praise;
+  if (noNiqudWords > 0) {
+    praise = `אני גאה בך על שקראת ${noNiqudWords} ${noNiqudWords === 1 ? 'מילה' : 'מילים'} בלי ניקוד. זה מראה שהעזת לנסות ולסמוך על הקריאה שלך!`;
+  } else if (mixed.length > 0) {
+    praise = 'אני גאה בך על שניסית לקרוא חצי־חצי — גם עם ניקוד וגם בלעדיו. ככה בונים ביטחון בקריאה, צעד אחר צעד!';
+  } else if (uniqueStories > 0) {
+    praise = `אני גאה בך על שסיימת ${uniqueStories} ${uniqueStories === 1 ? 'סיפור' : 'סיפורים'} בבוקי. כל סיפור שסיימת מחזק את הקריאה שלך!`;
+  } else if (streak >= 2) {
+    praise = `אני גאה בך על שחזרת לקרוא ${streak} ימים ברצף. ההתמדה שלך היא כוח אמיתי!`;
+  } else if (minutes > 0) {
+    praise = `אני גאה בך על ${minutes} דקות הקריאה שכבר צברת. כל דקה כזאת היא עוד צעד בדרך שלך!`;
+  } else {
+    praise = 'אני שמח שחזרת לקרוא איתי. כל סיפור מתחיל בצעד קטן, ואני כאן איתך!';
+  }
+  return `היי ${name} :)\nרק רציתי לומר לך! ${praise}`;
+}
+
+function _playBookiMessageSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [[659.25, 0], [880, .11]].forEach(([frequency, delay]) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(.12, now + delay + .018);
+      gain.gain.exponentialRampToValueAtTime(.0001, now + delay + .22);
+      oscillator.connect(gain).connect(ctx.destination);
+      oscillator.start(now + delay);
+      oscillator.stop(now + delay + .24);
+    });
+    setTimeout(() => ctx.close().catch(() => {}), 600);
+  } catch (_) { /* הצליל הוא שיפור בלבד; ההודעה תמיד תיפתח גם בלעדיו */ }
+}
+
+function openBookiPersonalMessage() {
+  const overlay = document.getElementById('booki-personal-message');
+  const text = document.getElementById('booki-personal-message-text');
+  if (!overlay || !text || overlay.style.display === 'flex') return;
+  text.textContent = _bookiPersonalMessageText();
+  overlay.style.display = 'flex';
+  document.body.classList.add('booki-personal-message-open');
+  _playBookiMessageSound();
+  overlay.querySelector('.booki-text-message')?.focus({ preventScroll:true });
+}
+
+function closeBookiPersonalMessage() {
+  const overlay = document.getElementById('booki-personal-message');
+  if (!overlay || overlay.style.display === 'none') return;
+  overlay.classList.add('is-closing');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('is-closing');
+    document.body.classList.remove('booki-personal-message-open');
+    document.getElementById('home-console-stage')?.focus({ preventScroll:true });
+  }, 230);
+}
+
+function _wireBookiPersonalMessage() {
+  const stage = document.getElementById('home-console-stage');
+  if (!stage || stage.dataset.messageWired === '1') return;
+  stage.dataset.messageWired = '1';
+  stage.classList.add('home-booki-message-trigger');
+  stage.addEventListener('click', openBookiPersonalMessage);
+  stage.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openBookiPersonalMessage();
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && document.body.classList.contains('booki-personal-message-open')) {
+      closeBookiPersonalMessage();
+    }
+  });
+}
+
 // ─── אנימציית כניסה — בוקי/כפתורים/פס-התקדמות/טקסטים, עד 900ms, פעם בכל כניסה למסך ───
 
 function _playHomeEntranceAnimation() {
@@ -204,7 +300,8 @@ function _initHomeMagic() {
   _renderHomeAchievementCard();
   _renderHomeSpeech();
   _renderHomeShelfShortcuts();
+  _wireBookiPersonalMessage();
   _playHomeEntranceAnimation();
 }
 
-Object.assign(window, { _initHomeMagic });
+Object.assign(window, { _initHomeMagic, openBookiPersonalMessage, closeBookiPersonalMessage });
