@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=46" />
+  <link rel="stylesheet" href="style.css?v=47" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -461,9 +461,11 @@ window.addEventListener('pageshow', function (e) {
     <div class="niqud-mode-card">
       <h2 id="niqud-mode-title">מסלול הניקוד שלי</h2>
       <p>איך נוח לך לקרוא את הסיפור?</p>
-      <button onclick="chooseStoryNiqudMode('full')"><b>אָ</b><span><strong>ניקוד איתי</strong><small>כל הסיפור עם ניקוד</small></span></button>
-      <button onclick="chooseStoryNiqudMode('mixed')"><b>אֲא</b><span><strong>חצי־חצי</strong><small>משפט עם ניקוד ומשפט בלי</small></span></button>
-      <button onclick="chooseStoryNiqudMode('none')"><b>א</b><span><strong>בלי ניקוד</strong><small>אתגר הקריאה שלי</small></span></button>
+      <div class="niqud-mode-options">
+        <button onclick="chooseStoryNiqudMode('full')"><b>אָ</b><small>עם ניקוד</small></button>
+        <button onclick="chooseStoryNiqudMode('mixed')"><b><span>אָ</span><span>א</span></b><small>חצי־חצי</small></button>
+        <button onclick="chooseStoryNiqudMode('none')"><b>א</b><small>בלי ניקוד</small></button>
+      </div>
     </div>
   </div>
 </section>
@@ -1323,9 +1325,9 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=35"></script>
+<script src="script.js?v=36"></script>
 <script src="motivation.js?v=7"></script>
-<script src="booki-home-magic.js?v=6"></script>
+<script src="booki-home-magic.js?v=7"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=13"></script>
 <script src="owner-dashboard.js?v=4"></script>

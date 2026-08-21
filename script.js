@@ -532,8 +532,8 @@ function speakHebrew(text) {
 // ─── קורא הסיפורים ──────────────────────────────────────────────────
 
 const STORY_NIQUD_MODES = {
-  full:  { label:'ניקוד איתי', icon:'אָ' },
-  mixed: { label:'חצי־חצי', icon:'אֲא' },
+  full:  { label:'עם ניקוד', icon:'אָ' },
+  mixed: { label:'חצי־חצי', icon:'אָ א' },
   none:  { label:'בלי ניקוד', icon:'א' },
 };
 let _storyNiqudSession = null;
