@@ -720,6 +720,40 @@ body.back-to-school-promo-open { overflow:hidden; }
 
 .reader-content { margin: 0 16px 16px; min-height: 240px; background: #FFFEF8; border: 3px solid #FAD7A0; border-radius: 24px; display: flex; align-items: center; justify-content: center; padding: 32px 24px; }
 .reader-text { font-size: 1.65rem; line-height: 2.4; text-align: center; font-weight: 600; white-space: pre-line; letter-spacing: .3px; }
+.reader-niqud-toolbar { display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin:0 16px 14px; }
+.reader-niqud-mode-btn,.reader-niqud-help-btn { min-height:43px;border:0;border-radius:999px;padding:9px 15px;font:800 .86rem inherit;cursor:pointer; }
+.reader-niqud-mode-btn { background:#273d61;color:#fff;box-shadow:0 4px 0 #172741; }
+.reader-niqud-help-btn { background:#fff5c8;color:#725b08;border:2px solid #f0d363; }
+.reader-niqud-help-btn:disabled { opacity:.8;cursor:default; }
+.niqud-mode-dialog { position:fixed;inset:0;z-index:13000;align-items:center;justify-content:center;padding:20px;background:rgba(28,43,65,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px); }
+.niqud-mode-card { width:min(100%,390px);border:4px solid #fff;border-radius:30px;padding:24px;background:linear-gradient(160deg,#fff9df,#e8f7ee);box-shadow:0 22px 60px rgba(20,35,55,.35);text-align:center;direction:rtl; }
+.niqud-mode-card h2 { margin:0;color:#263a59;font-size:1.55rem; }
+.niqud-mode-card>p { margin:7px 0 17px;color:#607078;font-weight:700; }
+.niqud-mode-card>button { width:100%;display:flex;align-items:center;gap:15px;margin:10px 0;padding:13px 15px;border:2px solid #dbe6df;border-radius:18px;background:#fff;color:#263a59;text-align:right;cursor:pointer;box-shadow:0 4px 10px rgba(40,65,75,.08); }
+.niqud-mode-card>button>b { display:grid;place-items:center;flex:0 0 52px;height:52px;border-radius:15px;background:#e8f4ff;color:#245ec5;font-size:1.5rem; }
+.niqud-mode-card>button>span { display:flex;flex-direction:column;gap:3px; }
+.niqud-mode-card>button strong { font-size:1.05rem; }
+.niqud-mode-card>button small { color:#718087;font-size:.8rem; }
+.complete-bonus-breakdown { display:flex;flex-direction:column;gap:7px;width:min(100%,390px);margin:16px auto;padding:14px 17px;border:2px solid #f4d66d;border-radius:18px;background:#fff9d9;color:#47545b;text-align:right; }
+.complete-bonus-breakdown span { display:flex;justify-content:space-between;gap:12px;font-weight:750; }
+.complete-bonus-breakdown strong { margin-top:5px;color:#17834b;text-align:center; }
+.complete-bonus-breakdown small { color:#69767c;text-align:center;line-height:1.4; }
+
+body.booki-progress-open { overflow:hidden; }
+.home-booki-progress-trigger { cursor:pointer;touch-action:manipulation; }
+.home-booki-progress-trigger::after { content:'איך אני מתקדם? ✨';position:absolute;z-index:5;left:50%;bottom:18px;translate:-50% 0;white-space:nowrap;padding:5px 10px;border:2px solid #fff;border-radius:999px;background:#4b69c6;color:#fff;font-size:.68rem;font-weight:900;box-shadow:0 4px 10px rgba(35,55,95,.2);pointer-events:none; }
+.home-booki-progress-trigger:focus-visible { outline:5px solid #f4c542;outline-offset:5px;border-radius:30px; }
+.booki-progress-dialog { position:fixed;inset:0;z-index:12600;align-items:center;justify-content:center;padding:20px;background:rgba(34,48,72,.58);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px); }
+.booki-progress-card { position:relative;overflow:hidden;width:min(100%,390px);padding:25px 22px 21px;border:4px solid #fff;border-radius:32px;background:linear-gradient(155deg,#fff7c8,#e4f7ff 48%,#e9fae8);box-shadow:0 24px 70px rgba(20,35,55,.35);text-align:center;direction:rtl; }
+.booki-progress-close { position:absolute;z-index:4;left:13px;top:11px;width:39px;height:39px;border:0;border-radius:50%;background:rgba(255,255,255,.88);color:#52616b;font:900 1.55rem/1 inherit;cursor:pointer; }
+.booki-progress-face { position:relative;z-index:2;font-size:5rem;line-height:1;margin-bottom:6px;animation:bookiFeedbackPop .65s cubic-bezier(.2,.9,.3,1.25) both; }
+@keyframes bookiFeedbackPop { from{opacity:0;transform:scale(.4) rotate(-10deg)} to{opacity:1;transform:scale(1) rotate(0)} }
+.booki-progress-card h2 { position:relative;z-index:2;margin:5px 0 10px;color:#263a59;font-size:1.45rem; }
+.booki-progress-message { position:relative;z-index:2;min-height:115px;margin:0;padding:17px;border-radius:20px;background:rgba(255,255,255,.83);color:#3e505b;font-size:1rem;font-weight:750;line-height:1.7; }
+.booki-progress-task { position:relative;z-index:2;width:100%;min-height:59px;margin-top:16px;border:0;border-radius:18px;background:linear-gradient(180deg,#32cb75,#14a956);color:#fff;font:900 1rem inherit;box-shadow:0 6px 0 #087f3d;cursor:pointer; }
+.booki-progress-sparkles { position:absolute;z-index:1;left:50%;top:35%;width:1px;height:1px;pointer-events:none; }
+.booki-progress-sparkles i { position:absolute;font-style:normal;font-size:1.05rem;animation:bookiSparkleBurst 1.2s ease-out both; }
+@keyframes bookiSparkleBurst { from{opacity:1;transform:translate(0,0) scale(.3) rotate(0)} to{opacity:0;transform:translate(var(--x),var(--y)) scale(1.2) rotate(180deg)} }
 
 .page-dots-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
 .page-dots { display: flex; gap: 7px; }

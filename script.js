@@ -111,9 +111,17 @@ function _getAppStoryElapsedMinutes(timer, now = Date.now()) {
 function _handleAppReaderScreenChange(screenId) {
   if (!_appStoryTimer) return;
   _setAppStoryTimerRunning(screenId === 'screen-reader' && document.visibilityState === 'visible');
+  if (_storyNiqudSession) {
+    _syncNiqudPageTime();
+    if (screenId === 'screen-reader' && document.visibilityState === 'visible') _startNiqudPageTime();
+  }
 }
 document.addEventListener('visibilitychange', () => {
   if (_appStoryTimer) _setAppStoryTimerRunning(_isAppStoryActivelyVisible());
+  if (_storyNiqudSession) {
+    _syncNiqudPageTime();
+    if (document.visibilityState === 'visible' && document.getElementById('screen-reader')?.classList.contains('active')) _startNiqudPageTime();
+  }
 });
 
 /**
@@ -523,6 +531,159 @@ function speakHebrew(text) {
 
 // ─── קורא הסיפורים ──────────────────────────────────────────────────
 
+const STORY_NIQUD_MODES = {
+  full:  { label:'ניקוד איתי', icon:'אָ' },
+  mixed: { label:'חצי־חצי', icon:'אֲא' },
+  none:  { label:'בלי ניקוד', icon:'א' },
+};
+let _storyNiqudSession = null;
+
+function _storyNiqudPreferenceKey() {
+  return `booki_story_niqud_mode:${encodeURIComponent(String(currentStudentId ?? 'guest'))}`;
+}
+function _loadStoryNiqudPreference() {
+  const profileMode = currentStudentData?.niqudPreference;
+  if (STORY_NIQUD_MODES[profileMode]) return profileMode;
+  try {
+    const saved = localStorage.getItem(_storyNiqudPreferenceKey());
+    return STORY_NIQUD_MODES[saved] ? saved : 'full';
+  } catch (_) { return 'full'; }
+}
+function _countStoryWords(text) {
+  return String(text || '').trim().split(/\s+/).filter(Boolean).length;
+}
+function _storySentenceParts(text) {
+  return String(text || '').split(/(?<=[.!?׃։])\s+|\n+/).filter(Boolean);
+}
+function _sentenceOffsetForPage(pageIndex) {
+  if (!currentStory?.pages || pageIndex <= 0) return 0;
+  return currentStory.pages.slice(0, pageIndex).reduce((sum, page) => sum + _storySentenceParts(page.text).length, 0);
+}
+function _mixedNiqudText(text, pageIndex = currentPageIndex) {
+  const parts = _storySentenceParts(text);
+  const offset = _sentenceOffsetForPage(pageIndex);
+  return parts.map((part, index) => (offset + index) % 2 === 0 ? part : stripNiqud(part)).join('\n');
+}
+function _mixedPlainWordCount(text, pageIndex) {
+  const parts = _storySentenceParts(text);
+  const offset = _sentenceOffsetForPage(pageIndex);
+  return parts.reduce((sum, part, index) => sum + ((offset + index) % 2 ? _countStoryWords(part) : 0), 0);
+}
+function _newStoryNiqudSession(mode) {
+  return { mode, pages:{}, pageIndex:null, pageActiveMs:0, pageActiveSince:null };
+}
+function _syncNiqudPageTime(now = Date.now()) {
+  if (!_storyNiqudSession?.pageActiveSince) return;
+  _storyNiqudSession.pageActiveMs += Math.max(0, now - _storyNiqudSession.pageActiveSince);
+  _storyNiqudSession.pageActiveSince = null;
+}
+function _startNiqudPageTime(now = Date.now()) {
+  if (_storyNiqudSession && _isAppStoryActivelyVisible()) _storyNiqudSession.pageActiveSince = now;
+}
+function _finalizeNiqudPage(now = Date.now()) {
+  if (!_storyNiqudSession || _storyNiqudSession.pageIndex === null || !currentStory) return;
+  _syncNiqudPageTime(now);
+  const index = _storyNiqudSession.pageIndex;
+  const text = currentStory.pages[index]?.text || '';
+  const words = _countStoryWords(text);
+  const minimumMs = Math.min(15000, Math.max(3000, words * 150));
+  const previous = _storyNiqudSession.pages[index] || {};
+  _storyNiqudSession.pages[index] = {
+    activeMs: Math.max(previous.activeMs || 0, _storyNiqudSession.pageActiveMs),
+    qualified: (previous.qualified || false) || _storyNiqudSession.pageActiveMs >= minimumMs,
+    revealed: previous.revealed || false,
+    words,
+    mode: _storyNiqudSession.mode,
+    modeChanged: previous.modeChanged || false,
+  };
+  _storyNiqudSession.pageIndex = null;
+  _storyNiqudSession.pageActiveMs = 0;
+}
+function _enterNiqudPage(index) {
+  _finalizeNiqudPage();
+  _storyNiqudSession.pageIndex = index;
+  _storyNiqudSession.pageActiveMs = _storyNiqudSession.pages[index]?.activeMs || 0;
+  _storyNiqudSession.pageActiveSince = null;
+  _startNiqudPageTime();
+}
+function _currentNiqudPageWasRevealed() {
+  return !!_storyNiqudSession?.pages?.[currentPageIndex]?.revealed;
+}
+
+function openNiqudModeChooser() {
+  _syncNiqudPageTime();
+  if (_appStoryTimer) _setAppStoryTimerRunning(false);
+  const dialog = document.getElementById('niqud-mode-dialog');
+  if (dialog) dialog.style.display = 'flex';
+}
+function chooseStoryNiqudMode(mode) {
+  if (!STORY_NIQUD_MODES[mode]) return;
+  if (_appStoryTimer && _storyNiqudSession && _storyNiqudSession.mode !== mode) {
+    const existing = _storyNiqudSession.pages[currentPageIndex] || {};
+    _storyNiqudSession.pages[currentPageIndex] = { ...existing, modeChanged:true };
+    _storyNiqudSession.pageActiveMs = 0;
+  }
+  try { localStorage.setItem(_storyNiqudPreferenceKey(), mode); } catch (_) {}
+  if (currentStudentData) currentStudentData.niqudPreference = mode;
+  if (!_storyNiqudSession) _storyNiqudSession = _newStoryNiqudSession(mode);
+  else _storyNiqudSession.mode = mode;
+  const dialog = document.getElementById('niqud-mode-dialog');
+  if (dialog) dialog.style.display = 'none';
+  if (!_appStoryTimer) {
+    _startAppStoryTimer(currentStory.id);
+    _enterNiqudPage(currentPageIndex);
+  } else {
+    _setAppStoryTimerRunning(true);
+    _startNiqudPageTime();
+  }
+  renderReaderPage();
+}
+function revealNiqudForCurrentPage() {
+  if (!_storyNiqudSession) return;
+  const existing = _storyNiqudSession.pages[currentPageIndex] || {};
+  _storyNiqudSession.pages[currentPageIndex] = { ...existing, revealed:true };
+  renderReaderPage();
+}
+
+function _storyNiqudSummary(history = []) {
+  _finalizeNiqudPage();
+  const mode = _storyNiqudSession?.mode || 'full';
+  const pages = Object.entries(_storyNiqudSession?.pages || {});
+  let qualifiedPages = 0, noNiqudWords = 0, helpPages = 0;
+  let strongestMode = 'full';
+  pages.forEach(([pageIndex, page]) => {
+    if (!page.qualified) return;
+    qualifiedPages++;
+    if (page.revealed) { helpPages++; return; }
+    if (page.modeChanged) return;
+    if (page.mode === 'none') {
+      strongestMode = 'none';
+      noNiqudWords += page.words || 0;
+    } else if (page.mode === 'mixed') {
+      if (strongestMode !== 'none') strongestMode = 'mixed';
+      noNiqudWords += _mixedPlainWordCount(currentStory.pages[Number(pageIndex)]?.text || '', Number(pageIndex));
+    }
+  });
+  const totalWords = currentStory.pages.reduce((sum, page) => sum + _countStoryWords(page.text), 0);
+  const completionQualified = qualifiedPages >= Math.ceil(currentStory.pages.length * .6);
+  const lengthBonus = completionQualified ? (totalWords <= 80 ? 1 : totalWords <= 180 ? 2 : 3) : 0;
+  const courageBonus = noNiqudWords > 0 ? Math.min(6, Math.max(1, Math.floor(noNiqudWords / 40))) : 0;
+  const firstMode = (strongestMode === 'mixed' || strongestMode === 'none') && noNiqudWords > 0
+    && !history.some(item => item.type === 'app'
+      && (item.niqudMode === strongestMode || (strongestMode === 'mixed' && item.niqudMode === 'none'))
+      && (item.noNiqudWords || 0) > 0);
+  const milestoneBonus = firstMode ? (strongestMode === 'none' ? 3 : 2) : 0;
+  const alreadyToday = history.some(item => item.type === 'app' && item.storyId === currentStory.id && item.date === todayStr());
+  return {
+    mode: strongestMode, selectedMode: mode, qualifiedPages, noNiqudWords, helpPages,
+    lengthBonus: alreadyToday ? 0 : lengthBonus,
+    courageBonus: alreadyToday ? 0 : courageBonus,
+    milestoneBonus,
+    completionQualified,
+    alreadyToday,
+  };
+}
+
 function startStory(storyId) {
   currentStory = getStoryById(storyId);
   if (!currentStory) return;
@@ -533,8 +694,9 @@ function startStory(storyId) {
   }
   document.getElementById('reader-story-title').textContent = currentStory.title;
   showScreen('screen-reader');
-  _startAppStoryTimer(currentStory.id);
+  _storyNiqudSession = _newStoryNiqudSession(_loadStoryNiqudPreference());
   renderReaderPage();
+  openNiqudModeChooser();
 }
 
 function renderReaderPage() {
@@ -544,9 +706,20 @@ function renderReaderPage() {
   // Bug fix (product ask): כפתור הניקוד עד עכשיו לא נגע בטקסט סיפורים בכלל (רק בממשק
   // הקבוע) — עכשיו הוא שולט גם כאן: מסיר ניקוד כשכבוי (בטוח לעשות תמיד), ומשאיר
   // כמו שכתוב במקור כשדלוק. ספריות שלא כתובות עם ניקוד מלכתחילה נשארות ללא שינוי.
-  const showNiqud = typeof isNiqudOn !== 'function' || isNiqudOn();
-  document.getElementById('reader-text').textContent =
-    showNiqud || typeof stripNiqud !== 'function' ? page.text : stripNiqud(page.text);
+  const mode = _storyNiqudSession?.mode || 'full';
+  const revealed = _currentNiqudPageWasRevealed();
+  const displayText = revealed || mode === 'full' ? page.text
+    : mode === 'mixed' ? _mixedNiqudText(page.text, currentPageIndex)
+    : stripNiqud(page.text);
+  document.getElementById('reader-text').textContent = displayText;
+  const modeBtn = document.getElementById('reader-niqud-mode-btn');
+  if (modeBtn) modeBtn.textContent = `${STORY_NIQUD_MODES[mode].icon} ${STORY_NIQUD_MODES[mode].label}`;
+  const helpBtn = document.getElementById('reader-niqud-help-btn');
+  if (helpBtn) {
+    helpBtn.style.display = mode === 'full' ? 'none' : '';
+    helpBtn.disabled = revealed;
+    helpBtn.textContent = revealed ? '✓ הניקוד מוצג בעמוד הזה' : '✨ צריך ניקוד לרגע?';
+  }
   document.getElementById('reader-page-counter').textContent =
     `עמוד ${currentPageIndex + 1} מתוך ${total}`;
 
@@ -566,14 +739,18 @@ function renderReaderPage() {
 
 function nextPage() {
   if (currentPageIndex < currentStory.pages.length - 1) {
+    _finalizeNiqudPage();
     currentPageIndex++;
+    _enterNiqudPage(currentPageIndex);
     renderReaderPage();
   }
 }
 
 function prevPage() {
   if (currentPageIndex > 0) {
+    _finalizeNiqudPage();
     currentPageIndex--;
+    _enterNiqudPage(currentPageIndex);
     renderReaderPage();
   }
 }
@@ -581,6 +758,7 @@ function prevPage() {
 function exitReader() {
   if (confirm('לצאת מהסיפור? ההתקדמות לא תישמר.')) {
     _stopAppStoryTimer();
+    _storyNiqudSession = null;
     filterLibrary('all');
     showScreen('screen-library');
   }
@@ -601,7 +779,9 @@ async function finishAppReading() {
   }
 
   const minutes = _getAppStoryElapsedMinutes(_appStoryTimer);
-  const points = minutes * 1;
+  const niqud = _storyNiqudSummary((currentStudentData && currentStudentData.history) || []);
+  const basePoints = minutes;
+  const points = basePoints + niqud.lengthBonus + niqud.courageBonus + niqud.milestoneBonus;
 
   const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
   const prevMinutes = s.totalMinutes;
@@ -615,6 +795,14 @@ async function finishAppReading() {
     storyTitle: currentStory.title,
     minutes,
     points,
+    basePoints,
+    niqudMode: niqud.mode,
+    qualifiedPages: niqud.qualifiedPages,
+    noNiqudWords: niqud.noNiqudWords,
+    niqudHelpPages: niqud.helpPages,
+    lengthBonus: niqud.lengthBonus,
+    courageBonus: niqud.courageBonus,
+    milestoneBonus: niqud.milestoneBonus,
     date: todayStr()
   });
   currentStudentData = s;
@@ -629,6 +817,10 @@ async function finishAppReading() {
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title, minutes, points,
+      niqudMode: niqud.mode, qualifiedPages: niqud.qualifiedPages,
+      noNiqudWords: niqud.noNiqudWords, niqudHelpPages: niqud.helpPages,
+      lengthBonus: niqud.lengthBonus, courageBonus: niqud.courageBonus,
+      milestoneBonus: niqud.milestoneBonus,
     }).catch(() => {});
   }
   if (window.currentClubId && !Number.isInteger(currentStudentId)
@@ -647,7 +839,8 @@ async function finishAppReading() {
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
   _stopAppStoryTimer();
-  showComplete(minutes, points, { levelUp, streakDays });
+  _storyNiqudSession = null;
+  showComplete(minutes, points, { levelUp, streakDays, niqudBonus: { ...niqud, basePoints } });
   } catch (e) {
     console.error('[booki] finishAppReading failed:', e);
     alert('לא הצלחנו לשמור את הקריאה. נסו שוב בעוד רגע.');
@@ -787,6 +980,24 @@ function showComplete(minutes, points, opts = {}) {
           shopRemaining: 0,
         })
       : '';
+  }
+
+  const bonusEl = document.getElementById('complete-bonus-breakdown');
+  if (bonusEl) {
+    const bonus = opts.niqudBonus;
+    if (bonus) {
+      const rows = [`<span>⏱️ זמן קריאה <b>+${bonus.basePoints}</b></span>`];
+      if (bonus.lengthBonus) rows.push(`<span>📚 סיום הסיפור <b>+${bonus.lengthBonus}</b></span>`);
+      if (bonus.courageBonus) rows.push(`<span>✨ בונוס אומץ בלי ניקוד <b>+${bonus.courageBonus}</b></span>`);
+      if (bonus.milestoneBonus) rows.push(`<span>🏅 הישג ראשון במסלול <b>+${bonus.milestoneBonus}</b></span>`);
+      if (bonus.alreadyToday) rows.push(`<small>את בונוס הסיפור הזה כבר אספת היום — דקות הקריאה עדיין נוספו.</small>`);
+      if (bonus.noNiqudWords > 0) rows.push(`<strong>קראת ${bonus.noNiqudWords} מילים בלי ניקוד!</strong>`);
+      bonusEl.innerHTML = rows.join('');
+      bonusEl.style.display = '';
+    } else {
+      bonusEl.innerHTML = '';
+      bonusEl.style.display = 'none';
+    }
   }
 
   launchConfetti();
