@@ -310,6 +310,15 @@ const BOOKI_LIBRARY_SHELVES = [
   { id:'advanced', emoji:'📚', title:'לקוראים מתקדמים', subtitle:'סיפורים ארוכים והרפתקאות גדולות', libraries:['bookworms','long'] },
 ];
 
+function _storyBelongsToShelf(story, shelf) {
+  return shelf.libraries.includes(story.libraryId) || (Array.isArray(story.shelves) && story.shelves.includes(shelf.id));
+}
+
+function _isStoryNew(story, now = Date.now()) {
+  const until = story && story.newUntil ? new Date(story.newUntil).getTime() : 0;
+  return Number.isFinite(until) && now < until;
+}
+
 function showLibrary() {
   showScreen('screen-library');
   const forYou = document.getElementById('for-you-section'); if (forYou) forYou.style.display = 'none';
@@ -324,7 +333,7 @@ function showLibraryCategories() {
   document.getElementById('library-story-view').style.display = 'none';
   const stories = typeof getAllStories === 'function' ? getAllStories() : [];
   document.getElementById('library-category-grid').innerHTML = BOOKI_LIBRARY_SHELVES.map(shelf => {
-    const count = stories.filter(s => shelf.libraries.includes(s.libraryId)).length;
+    const count = stories.filter(s => _storyBelongsToShelf(s, shelf)).length;
     return `<button class="library-category-card library-category-${shelf.id}" onclick="openLibraryShelf('${shelf.id}')"><span class="library-category-emoji">${shelf.emoji}</span><span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${count} סיפורים ←</b></span></button>`;
   }).join('');
 }
@@ -352,7 +361,7 @@ function filterLibrary(filter, resetCount = true) {
     const allStories = typeof getAllStories === 'function' ? getAllStories() : [];
     let stories = allStories;
     const shelf = BOOKI_LIBRARY_SHELVES.find(x => x.id === filter);
-    if (shelf) stories = stories.filter(s => shelf.libraries.includes(s.libraryId));
+    if (shelf) stories = stories.filter(s => _storyBelongsToShelf(s, shelf));
     else if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
     else if (filter === 'short') stories = stories.filter(s => (s.pages || []).length <= 7);
     else if (filter === 'recommended') {
@@ -382,7 +391,7 @@ function filterLibrary(filter, resetCount = true) {
           <div class="story-card-left">
             <span class="story-emoji">${story.emoji || '📖'}</span>
             <div class="story-info">
-              <span class="story-title">${story.title || ''}</span>
+              <span class="story-title">${story.title || ''}${_isStoryNew(story) ? '<b class="story-new-label">חדש</b>' : ''}</span>
               <span class="story-meta">${story.category || ''} · ${pages.length} עמודים · כ-${Math.round(totalMins)} דק׳${story.lengthLabel ? ' · ' + story.lengthLabel : ''}</span>
             </div>
           </div>
