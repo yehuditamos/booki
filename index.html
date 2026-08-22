@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=51" />
+  <link rel="stylesheet" href="style.css?v=52" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -286,7 +286,7 @@ window.addEventListener('pageshow', function (e) {
         <span class="console-sparkle console-sparkle-1">✦</span>
         <span class="console-sparkle console-sparkle-2">✦</span>
         <div class="console-item">
-          <button class="console-btn console-btn-side console-btn-right" onclick="showLibrary()">
+          <button class="console-btn console-btn-side console-btn-right" onclick="enterAppStoryReading()">
             <img class="console-btn-icon" src="assets/booki/reading-journey/booki-read-in-app.png" alt="" loading="eager" width="96" height="96">
           </button>
           <span class="console-item-label" data-nk="לִקְרוֹא בְּבוּקִי">לקרוא בבוקי</span>
@@ -356,7 +356,7 @@ window.addEventListener('pageshow', function (e) {
       <div id="chooser-header-stage" class="chooser-header-stage"></div>
       <p id="chooser-title" class="chooser-title" data-nk="אֵיךְ רוֹצִים לִקְרוֹא הַיּוֹם?">איך רוצים לקרוא היום?</p>
     </div>
-    <button class="chooser-option" onclick="closeReadingChooser(); showLibrary();">
+    <button class="chooser-option" onclick="closeReadingChooser(); enterAppStoryReading();">
       <img class="chooser-option-thumb" src="assets/booki/reading-journey/booki-read-in-app.png" alt="" loading="lazy" width="38" height="38">
       <span data-nk="לִקְרוֹא סִפּוּר בְּבוּקִי">לקרוא סיפור בבוקי</span>
     </button>
@@ -451,6 +451,7 @@ window.addEventListener('pageshow', function (e) {
     <button id="reader-niqud-mode-btn" class="reader-niqud-mode-btn" onclick="openNiqudModeChooser()" aria-haspopup="dialog"></button>
     <button id="reader-niqud-help-btn" class="reader-niqud-help-btn" onclick="revealNiqudForCurrentPage()">✨ צריך ניקוד לרגע?</button>
   </div>
+  <button id="reader-pause-btn" class="reader-pause-btn" onclick="pauseAppStory()">⏸️ אני צריך הפסקה</button>
   <div class="reader-content">
     <div id="reader-text" class="reader-text"></div>
   </div>
@@ -1333,7 +1334,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=36"></script>
+<script src="script.js?v=37"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
