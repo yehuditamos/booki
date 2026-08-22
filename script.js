@@ -344,7 +344,8 @@ function showLibraryCategories() {
   const stories = typeof getAllStories === 'function' ? getAllStories() : [];
   document.getElementById('library-category-grid').innerHTML = BOOKI_LIBRARY_SHELVES.map(shelf => {
     const count = stories.filter(s => _storyBelongsToShelf(s, shelf)).length;
-    return `<button class="library-category-card library-category-${shelf.id}" onclick="openLibraryShelf('${shelf.id}')"><span class="library-category-emoji">${shelf.emoji}</span><span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${count} סיפורים ←</b></span></button>`;
+    const empty = count === 0;
+    return `<button class="library-category-card library-category-${shelf.id}${empty ? ' library-category-coming-soon' : ''}" ${empty ? 'disabled aria-disabled="true"' : `onclick="openLibraryShelf('${shelf.id}')"`}><span class="library-category-emoji">${shelf.emoji}</span>${empty ? '<span class="library-coming-soon-label">בקרוב</span>' : ''}<span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${empty ? 'סיפורים חדשים בדרך' : `${count} סיפורים ←`}</b></span></button>`;
   }).join('');
 }
 
@@ -685,6 +686,7 @@ function _storyNiqudSummary(history = []) {
 }
 
 function startStory(storyId) {
+  _clearPausedAppStory();
   currentStory = getStoryById(storyId);
   if (!currentStory) return;
   currentPageIndex = 0;
@@ -697,6 +699,77 @@ function startStory(storyId) {
   _storyNiqudSession = _newStoryNiqudSession(_loadStoryNiqudPreference());
   renderReaderPage();
   openNiqudModeChooser();
+}
+
+// ─── כפתור ביטחון: הפסקה בטוחה והמשך מאותו עמוד ───────────────────
+const _PAUSED_APP_STORY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function _pausedAppStoryKey() {
+  return `booki_paused_story:${encodeURIComponent(String(currentStudentId ?? 'guest'))}`;
+}
+function _clearPausedAppStory() {
+  try { localStorage.removeItem(_pausedAppStoryKey()); } catch (_) {}
+}
+function _loadPausedAppStory() {
+  try {
+    const raw = localStorage.getItem(_pausedAppStoryKey());
+    const saved = raw ? JSON.parse(raw) : null;
+    if (!saved || !saved.storyId || !Number.isInteger(saved.pageIndex)
+        || Date.now() - Number(saved.savedAt || 0) > _PAUSED_APP_STORY_MAX_AGE_MS) {
+      _clearPausedAppStory(); return null;
+    }
+    const story = getStoryById(saved.storyId);
+    if (!story?.pages?.length || saved.pageIndex < 0 || saved.pageIndex >= story.pages.length) {
+      _clearPausedAppStory(); return null;
+    }
+    return { ...saved, story };
+  } catch (_) { _clearPausedAppStory(); return null; }
+}
+function pauseAppStory() {
+  if (!currentStory?.pages?.length) return;
+  _finalizeNiqudPage();
+  const timer = _stopAppStoryTimer();
+  const safeTimer = timer ? { storyId:timer.storyId, activeMs:_safeReadingNumber(timer.activeMs), activeSince:null } : null;
+  const safeNiqud = _storyNiqudSession ? {
+    mode:_storyNiqudSession.mode, pages:_storyNiqudSession.pages || {},
+    pageIndex:null, pageActiveMs:0, pageActiveSince:null,
+  } : null;
+  try {
+    localStorage.setItem(_pausedAppStoryKey(), JSON.stringify({
+      storyId:currentStory.id, pageIndex:currentPageIndex,
+      timer:safeTimer, niqud:safeNiqud, savedAt:Date.now(),
+    }));
+  } catch (_) {}
+  _storyNiqudSession = null;
+  showScreen('screen-main');
+  if (typeof _initHomeMagic === 'function') _initHomeMagic();
+  const notice = document.createElement('div');
+  notice.className = 'reader-pause-saved-notice';
+  notice.setAttribute('role', 'status');
+  notice.textContent = `💜 שמרתי לך את המקום בעמוד ${currentPageIndex + 1}`;
+  document.body.appendChild(notice);
+  setTimeout(() => notice.remove(), 2600);
+}
+function resumePausedAppStory() {
+  const saved = _loadPausedAppStory();
+  if (!saved) return false;
+  currentStory = saved.story;
+  currentPageIndex = saved.pageIndex;
+  document.getElementById('reader-story-title').textContent = currentStory.title;
+  _storyNiqudSession = saved.niqud && STORY_NIQUD_MODES[saved.niqud.mode]
+    ? { ..._newStoryNiqudSession(saved.niqud.mode), ...saved.niqud, pageIndex:null, pageActiveSince:null }
+    : _newStoryNiqudSession(_loadStoryNiqudPreference());
+  _appStoryTimer = saved.timer && String(saved.timer.storyId) === String(currentStory.id)
+    ? { storyId:String(currentStory.id), activeMs:_safeReadingNumber(saved.timer.activeMs), activeSince:null }
+    : { storyId:String(currentStory.id), activeMs:0, activeSince:null };
+  showScreen('screen-reader');
+  _setAppStoryTimerRunning(true);
+  _enterNiqudPage(currentPageIndex);
+  renderReaderPage();
+  return true;
+}
+function enterAppStoryReading() {
+  if (!resumePausedAppStory()) showLibrary();
 }
 
 function renderReaderPage() {
@@ -758,6 +831,7 @@ function prevPage() {
 function exitReader() {
   if (confirm('לצאת מהסיפור? ההתקדמות לא תישמר.')) {
     _stopAppStoryTimer();
+    _clearPausedAppStory();
     _storyNiqudSession = null;
     filterLibrary('all');
     showScreen('screen-library');
@@ -839,6 +913,7 @@ async function finishAppReading() {
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
   _stopAppStoryTimer();
+  _clearPausedAppStory();
   _storyNiqudSession = null;
   showComplete(minutes, points, { levelUp, streakDays, niqudBonus: { ...niqud, basePoints } });
   } catch (e) {
