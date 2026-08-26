@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=52" />
+  <link rel="stylesheet" href="style.css?v=53" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -453,6 +453,7 @@ window.addEventListener('pageshow', function (e) {
   </div>
   <button id="reader-pause-btn" class="reader-pause-btn" onclick="pauseAppStory()">⏸️ אני צריך הפסקה</button>
   <div class="reader-content">
+    <div id="reader-illustration" class="reader-illustration" role="img" hidden></div>
     <div id="reader-text" class="reader-text"></div>
   </div>
   <div class="page-dots-wrap">
@@ -1324,17 +1325,18 @@ window.addEventListener('pageshow', function (e) {
 <script src="content/stories-booki.js?v=1"></script>
 <script src="content/stories-reading.js?v=1"></script>
 <script src="content/stories-beginner.js?v=1"></script>
+<script src="content/stories-one-word.js?v=1"></script>
 <script src="content/stories-bookworms.js?v=2"></script>
 
 <!-- אגרגטור + לוגיקה (חייבים לטעון אחרי כל קבצי content/) -->
-<script src="stories.js?v=2"></script>
+<script src="stories.js?v=3"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
 <script src="routing.js?v=25"></script>
 <script src="admin-setup.js?v=3"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=37"></script>
+<script src="script.js?v=38"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
