@@ -3178,3 +3178,88 @@ body.reader-confirm-open { overflow: hidden; }
 .reader-confirm-no { margin-top: 16px; border: 0; background: transparent; color: #53616b; }
 .reader-confirm-yes:focus-visible,
 .reader-confirm-no:focus-visible { outline: 4px solid #f7c84a; outline-offset: 4px; }
+
+
+/* ══ סיפורי מילה אחת — איור גדול + מילה אחת בכל עמוד ═════════════ */
+.reader-content.reader-content-illustrated {
+  width: min(92vw, 620px);
+  margin: 12px auto 4px;
+  padding: clamp(16px, 4vw, 26px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 4vw, 24px);
+  background: linear-gradient(180deg, #fffef8, #fff9e8);
+  border: 2px solid rgba(100, 72, 160, .12);
+  border-radius: 30px;
+  box-shadow: 0 14px 34px rgba(70, 46, 110, .12);
+}
+
+.reader-illustration {
+  width: min(100%, 420px);
+  min-height: clamp(190px, 38vh, 300px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 26px;
+  font-size: clamp(7rem, 30vw, 12rem);
+  line-height: 1;
+  filter: drop-shadow(0 10px 12px rgba(50, 45, 70, .16));
+  animation: one-word-illustration-in .36s ease-out both;
+}
+
+.reader-illustration[hidden] { display: none; }
+
+.reader-illustration[data-scene="sky"] {
+  background: linear-gradient(180deg, #bfe9ff 0 70%, #8ed06c 70% 100%);
+}
+.reader-illustration[data-scene="sun"] {
+  background: linear-gradient(180deg, #fff2a8, #bfe9ff);
+}
+.reader-illustration[data-scene="grass"],
+.reader-illustration[data-scene="garden"] {
+  background: linear-gradient(180deg, #c8efff 0 58%, #9ddd76 58% 100%);
+}
+.reader-illustration[data-scene="rain"] {
+  background: linear-gradient(180deg, #cfd9e8, #eaf2f8);
+}
+.reader-illustration[data-scene="earth"] {
+  background: linear-gradient(180deg, #dff2ff 0 55%, #a97955 55% 100%);
+}
+.reader-illustration[data-scene="home"] {
+  background: linear-gradient(145deg, #fff0cf, #f7d7c4);
+}
+.reader-illustration[data-scene="school"] {
+  background: linear-gradient(145deg, #e8f3ff, #fff3c9);
+}
+.reader-illustration[data-scene="night"] {
+  background: radial-gradient(circle at 28% 24%, #fff4a8 0 8%, transparent 9%),
+              linear-gradient(180deg, #24345e, #536da0);
+}
+.reader-illustration[data-scene="celebration"] {
+  background: radial-gradient(circle, #fff7b8, #d8f6ff 62%, #b8e48c);
+}
+
+.reader-content-illustrated .reader-text {
+  width: 100%;
+  min-height: 0;
+  padding: 8px 12px 4px;
+  font-size: clamp(3.2rem, 15vw, 6rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: .02em;
+  text-align: center;
+  color: #34235f;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+@keyframes one-word-illustration-in {
+  from { opacity: 0; transform: translateY(8px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-illustration { animation: none; }
+}

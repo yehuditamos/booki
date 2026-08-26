@@ -25,6 +25,7 @@ try {
     ...(typeof STORIES_BOOKI     !== 'undefined' && Array.isArray(STORIES_BOOKI)     ? STORIES_BOOKI     : []),
     ...(typeof STORIES_READING   !== 'undefined' && Array.isArray(STORIES_READING)   ? STORIES_READING   : []),
     ...(typeof STORIES_BEGINNER  !== 'undefined' && Array.isArray(STORIES_BEGINNER)  ? STORIES_BEGINNER  : []),
+    ...(typeof STORIES_ONE_WORD !== 'undefined' && Array.isArray(STORIES_ONE_WORD) ? STORIES_ONE_WORD : []),
     ...(typeof STORIES_BOOKWORMS !== 'undefined' && Array.isArray(STORIES_BOOKWORMS) ? STORIES_BOOKWORMS : []),
   ];
 } catch (e) {
