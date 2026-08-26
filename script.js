@@ -309,6 +309,7 @@ let _libraryFilter = 'recommended';
 let _libraryQuery = '';
 let _libraryVisibleCount = 6;
 const BOOKI_LIBRARY_SHELVES = [
+  { id:'one-word', emoji:'✨', title:'סיפור של מילה אחת', subtitle:'מילה אחת ואיור בכל עמוד', libraries:['one-word'] },
   { id:'starter', emoji:'🌱', title:'מתחילים לקרוא', subtitle:'אותיות, מילים וסיפורים ראשונים', libraries:['beginner','reading-stages'] },
   { id:'familiar', emoji:'🐢', title:'סיפורים מוכרים', subtitle:'הסיפורים שתמיד כיף לפגוש', libraries:['familiar','folk-tales'] },
   { id:'booki', emoji:'🦉', title:'בוקי והמקוריים', subtitle:'סיפורים חדשים מהעולם של בוקי', libraries:['booki','original'] },
@@ -784,7 +785,21 @@ function renderReaderPage() {
   const displayText = revealed || mode === 'full' ? page.text
     : mode === 'mixed' ? _mixedNiqudText(page.text, currentPageIndex)
     : stripNiqud(page.text);
-  document.getElementById('reader-text').textContent = displayText;
+  const readerText = document.getElementById('reader-text');
+  if (readerText) readerText.textContent = displayText;
+
+  // סיפורי "מילה אחת" מוסיפים איור גדול ורלוונטי לכל עמוד.
+  // האיור מוזן כטקסט בלבד (לא HTML), כדי שתוכן סיפורים לא יוכל להזריק קוד.
+  const readerContent = document.querySelector('#screen-reader .reader-content');
+  const illustrationEl = document.getElementById('reader-illustration');
+  if (illustrationEl) {
+    const hasIllustration = typeof page.illustration === 'string' && page.illustration.trim() !== '';
+    illustrationEl.hidden = !hasIllustration;
+    illustrationEl.textContent = hasIllustration ? page.illustration : '';
+    illustrationEl.dataset.scene = hasIllustration ? (page.scene || 'sky') : '';
+    illustrationEl.setAttribute('aria-label', hasIllustration ? (page.illustrationLabel || stripNiqud(page.text)) : '');
+    if (readerContent) readerContent.classList.toggle('reader-content-illustrated', hasIllustration);
+  }
   const modeBtn = document.getElementById('reader-niqud-mode-btn');
   if (modeBtn) modeBtn.textContent = `${STORY_NIQUD_MODES[mode].icon} ${STORY_NIQUD_MODES[mode].label}`;
   const helpBtn = document.getElementById('reader-niqud-help-btn');
