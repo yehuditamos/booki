@@ -47,17 +47,26 @@
   function render(displayText) {
     const el = text();
     if (!el) return;
-    words = String(displayText || '').split(/\s+/).filter(Boolean);
+    const tokens = String(displayText || '').match(/\S+|\s+/g) || [];
+    words = tokens.filter(token => !/^\s+$/.test(token));
     wordIndex = 0;
     voicedFor = 0;
     silenceFor = 0;
-    el.replaceChildren(...words.map((word, index) => {
+    const nodes = [];
+    let index = 0;
+    tokens.forEach(token => {
+      if (/^\s+$/.test(token)) {
+        nodes.push(document.createTextNode(token));
+        return;
+      }
       const span = document.createElement('span');
       span.className = 'reader-word';
       span.dataset.wordIndex = String(index);
-      span.textContent = word;
-      return span;
-    }));
+      span.textContent = token;
+      nodes.push(span);
+      index++;
+    });
+    el.replaceChildren(...nodes);
     refreshWords();
   }
 

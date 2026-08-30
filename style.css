@@ -795,14 +795,13 @@ body.back-to-school-promo-open { overflow:hidden; }
 
 .reader-content { margin: 0 16px 16px; min-height: 240px; background: #FFFEF8; border: 3px solid #FAD7A0; border-radius: 24px; display: flex; align-items: center; justify-content: center; padding: 32px 24px; }
 .reader-text { font-size: 1.65rem; line-height: 2.4; text-align: center; font-weight: 600; white-space: pre-line; letter-spacing: .3px; }
-.booki-local-listening { margin:0 auto 12px; padding:9px 14px; border-radius:18px; background:#eefaf6; color:#176f5b; display:flex; align-items:center; justify-content:center; gap:8px; font-family:Arial,sans-serif; font-weight:700; }
+.booki-local-listening { width:min(92%,420px); margin:8px auto 14px; padding:4px 12px 4px 6px; border-radius:22px; background:#eefaf6; color:#176f5b; display:flex; align-items:center; justify-content:center; gap:8px; font-family:Arial,sans-serif; font-weight:700; }
 .booki-local-listening[hidden] { display:none; }
-.booki-listening-face { font-size:1.35rem; transition:transform .12s ease; }
-.booki-local-listening.voice-active .booki-listening-face { transform:scale(1.12) rotate(-4deg); }
+.booki-listening-character { width:54px; height:54px; object-fit:contain; flex:0 0 auto; transition:transform .12s ease,filter .15s ease; }
+.booki-local-listening.voice-active .booki-listening-character { transform:scale(1.07) rotate(-2deg); filter:drop-shadow(0 4px 8px rgba(24,184,174,.25)); }
 .booki-listening-meter { display:flex; direction:ltr; align-items:center; gap:3px; height:20px; margin-right:3px; }
 .booki-listening-meter i { width:4px; height:5px; border-radius:8px; background:#18b8ae; transform:scaleY(var(--meter,1)); transition:transform 70ms linear; }
-.reader-word { display:inline; padding:0 .06em; border-radius:.25em; transition:color .18s ease,background .18s ease; }
-.reader-word::after { content:' '; }
+.reader-word { display:inline; padding:0; border-radius:.16em; transition:color .18s ease,background .18s ease; }
 .reader-word.is-heard { color:#16865f; background:#e1f7e9; }
 .reader-word.is-listening-now { background:#fff0a8; }
 .reader-niqud-toolbar { display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin:0 16px 14px; }
