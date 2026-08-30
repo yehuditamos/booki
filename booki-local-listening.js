@@ -2,8 +2,10 @@
   'use strict';
 
   const ROOM_CALIBRATION_MS = 900;
+  const QUIET_TO_ARM_MS = 260;
   const MIN_NEAR_VOICE_RMS = .045;
-  const SILENCE_RESET_MS = 650;
+  const SILENCE_RESET_MS = 1200;
+  const WORD_COOLDOWN_MS = 110;
 
   let stream = null;
   let context = null;
@@ -14,9 +16,7 @@
   let startedAt = 0;
   let previousAt = 0;
   let roomFloor = .01;
-  let readerPeak = 0;
-  let voicedFor = 0;
-  let silenceFor = 0;
+  let detector = null;
   let wordIndex = 0;
   let words = [];
 
@@ -41,7 +41,71 @@
 
   function expectedMs(index) {
     const letters = plainLength(words[index]);
-    return Math.max(390, Math.min(920, 230 + Math.max(2, letters) * 88));
+    return Math.max(300, Math.min(720, 170 + Math.max(2, letters) * 65));
+  }
+
+  function createDetector() {
+    let floor = .01;
+    let armed = false;
+    let quietFor = 0;
+    let voicedFor = 0;
+    let silenceFor = 0;
+    let cooldownFor = 0;
+
+    return {
+      process(rms, elapsed, sinceStart, neededMs) {
+        const calibrating = sinceStart < ROOM_CALIBRATION_MS;
+        if (calibrating) {
+          // קפיצה חדה של פתיחת המיקרופון אינה רעש חדר ואסור ללמוד ממנה.
+          if (rms < MIN_NEAR_VOICE_RMS) floor = Math.max(.006, floor * .9 + rms * .1);
+          return { calibrating:true, armed:false, voiceActive:false, confirmed:false, floor };
+        }
+
+        const threshold = Math.max(MIN_NEAR_VOICE_RMS, floor * 3.2);
+        const voiceActive = rms >= threshold;
+
+        // לא מאשרים אף מילה עד שהיה רגע שקט אחרי פתיחת המיקרופון.
+        // כך רעש ההפעלה או דיבור שכבר התחיל בזמן הכיול לא צובעים את המילה הראשונה.
+        if (!armed) {
+          if (voiceActive) quietFor = 0;
+          else quietFor += elapsed;
+          if (quietFor >= QUIET_TO_ARM_MS) armed = true;
+          return { calibrating:false, armed, voiceActive:false, confirmed:false, floor };
+        }
+
+        if (!voiceActive) floor = Math.max(.006, floor * .995 + rms * .005);
+
+        if (cooldownFor > 0) {
+          cooldownFor = Math.max(0, cooldownFor - elapsed);
+          return { calibrating:false, armed:true, voiceActive, confirmed:false, floor };
+        }
+
+        if (voiceActive) {
+          voicedFor += elapsed;
+          silenceFor = 0;
+          if (voicedFor >= neededMs) {
+            voicedFor = 0;
+            silenceFor = 0;
+            cooldownFor = WORD_COOLDOWN_MS;
+            return { calibrating:false, armed:true, voiceActive:true, confirmed:true, floor };
+          }
+        } else if (voicedFor > 0) {
+          silenceFor += elapsed;
+          if (silenceFor >= SILENCE_RESET_MS) {
+            voicedFor = 0;
+            silenceFor = 0;
+          }
+        }
+
+        return { calibrating:false, armed:true, voiceActive, confirmed:false, floor };
+      },
+      resetProgress() {
+        voicedFor = 0;
+        silenceFor = 0;
+        cooldownFor = 0;
+      },
+      snapshot() { return { floor, armed, quietFor, voicedFor, silenceFor, cooldownFor }; },
+    };
   }
 
   function render(displayText) {
@@ -50,8 +114,7 @@
     const tokens = String(displayText || '').match(/\S+|\s+/g) || [];
     words = tokens.filter(token => !/^\s+$/.test(token));
     wordIndex = 0;
-    voicedFor = 0;
-    silenceFor = 0;
+    detector?.resetProgress();
     const nodes = [];
     let index = 0;
     tokens.forEach(token => {
@@ -80,8 +143,6 @@
   function confirmWord() {
     if (wordIndex >= words.length) return;
     wordIndex++;
-    voicedFor = 0;
-    silenceFor = 0;
     refreshWords();
     if (wordIndex >= words.length && status()) status().textContent = 'שמעתי אותך קורא!';
   }
@@ -98,32 +159,20 @@
     const rms = Math.sqrt(energy / samples.length);
     const elapsed = Math.min(100, previousAt ? now - previousAt : 16);
     previousAt = now;
-    const calibrating = now - startedAt < ROOM_CALIBRATION_MS;
+    const state = detector.process(rms, elapsed, now - startedAt, expectedMs(wordIndex));
+    roomFloor = state.floor;
 
-    if (calibrating) {
-      roomFloor = Math.max(.006, roomFloor * .92 + rms * .08);
+    if (state.calibrating) {
       if (status()) status().textContent = 'בוקי מכוון אוזניים...';
+    } else if (!state.armed) {
+      ui()?.classList.remove('voice-active');
+      if (status()) status().textContent = 'רגע של שקט, ואז מתחילים';
     } else {
-      const baseThreshold = Math.max(MIN_NEAR_VOICE_RMS, roomFloor * 3.2);
-      const learnedThreshold = readerPeak > 0 ? readerPeak * .42 : 0;
-      const threshold = Math.max(baseThreshold, learnedThreshold);
-      const voiceActive = rms >= threshold;
-      ui()?.classList.toggle('voice-active', voiceActive);
-
-      if (voiceActive) {
-        readerPeak = Math.max(readerPeak * .997, rms);
-        voicedFor += elapsed;
-        silenceFor = 0;
+      ui()?.classList.toggle('voice-active', state.voiceActive);
+      if (state.voiceActive) {
         if (status()) status().textContent = 'אני שומע אותך';
-      } else {
-        roomFloor = roomFloor * .995 + rms * .005;
-        if (voicedFor > 0) {
-          silenceFor += elapsed;
-          if (silenceFor > SILENCE_RESET_MS) {
-            voicedFor = 0;
-            silenceFor = 0;
-          }
-        }
+      } else if (status() && wordIndex < words.length) {
+        status().textContent = 'בוקי שומע אותך';
       }
 
       const level = Math.min(1, Math.max(0, (rms - roomFloor) * 11));
@@ -131,7 +180,7 @@
         const shape = 1 - Math.abs(index - 2) * .16;
         bar.style.setProperty('--meter', String(1 + level * 3.5 * shape));
       });
-      if (voiceActive && wordIndex < words.length && voicedFor >= expectedMs(wordIndex)) confirmWord();
+      if (state.confirmed && wordIndex < words.length) confirmWord();
     }
     frame = requestAnimationFrame(tick);
   }
@@ -160,9 +209,7 @@
       startedAt = performance.now();
       previousAt = 0;
       roomFloor = .01;
-      readerPeak = 0;
-      voicedFor = 0;
-      silenceFor = 0;
+      detector = createDetector();
       refreshWords();
       frame = requestAnimationFrame(tick);
     } catch (error) {
@@ -183,11 +230,12 @@
     stream?.getTracks().forEach(track => track.stop());
     context?.close().catch(() => {});
     stream = context = source = analyser = null;
+    detector = null;
     ui()?.classList.remove('voice-active');
     if (hide && ui()) ui().hidden = true;
     bars().forEach(bar => bar.style.setProperty('--meter', '1'));
     refreshWords();
   }
 
-  window.BookiLocalListening = { isEnabled, render, start, stop };
+  window.BookiLocalListening = { isEnabled, render, start, stop, _createDetector:createDetector };
 })();
