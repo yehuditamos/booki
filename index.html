@@ -30,7 +30,7 @@
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" />
-  <link rel="stylesheet" href="style.css?v=54" />
+  <link rel="stylesheet" href="style.css?v=55" />
   <link rel="stylesheet" href="assets/booki-background-kit/booki-worlds.css?v=2" />
 </head>
 <body>
@@ -452,13 +452,13 @@ window.addEventListener('pageshow', function (e) {
     <button id="reader-niqud-help-btn" class="reader-niqud-help-btn" onclick="revealNiqudForCurrentPage()">✨ צריך ניקוד לרגע?</button>
   </div>
   <button id="reader-pause-btn" class="reader-pause-btn" onclick="pauseAppStory()">⏸️ אני צריך הפסקה</button>
+  <div id="booki-local-listening" class="booki-local-listening" hidden role="status" aria-live="polite">
+    <img class="booki-listening-character" src="assets/booki/core/states/booki-reading.png" alt="בוקי מקשיב" width="72" height="72">
+    <span id="booki-listening-status">בוקי מכוון אוזניים...</span>
+    <span id="booki-listening-meter" class="booki-listening-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+  </div>
   <div class="reader-content">
     <div id="reader-illustration" class="reader-illustration" role="img" hidden></div>
-    <div id="booki-local-listening" class="booki-local-listening" hidden role="status" aria-live="polite">
-      <span class="booki-listening-face" aria-hidden="true">🦉</span>
-      <span id="booki-listening-status">בוקי מכוון אוזניים...</span>
-      <span id="booki-listening-meter" class="booki-listening-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
-    </div>
     <div id="reader-text" class="reader-text"></div>
   </div>
   <div class="page-dots-wrap">
@@ -1342,7 +1342,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="onboarding.js?v=6"></script>
 
 <script src="script.js?v=39"></script>
-<script src="booki-local-listening.js?v=1"></script>
+<script src="booki-local-listening.js?v=2"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
