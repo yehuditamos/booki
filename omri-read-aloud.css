@@ -1,4 +1,4 @@
-:root { color-scheme: light; font-family:Arial,sans-serif; background:#fff8e7; color:#26324b; }
+:root { color-scheme: light; font-family: Heebo, Arial, sans-serif; background:#fff8e7; color:#26324b; }
 * { box-sizing:border-box; }
 body { margin:0; min-height:100dvh; background:radial-gradient(circle at 85% 8%,#e7f8f2 0 15%,transparent 38%),linear-gradient(155deg,#fff8e7,#f6fbef); }
 button { font:inherit; }

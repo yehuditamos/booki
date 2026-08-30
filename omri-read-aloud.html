@@ -6,7 +6,8 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#fff8e7">
   <title>בוקי מקשיב לעומרי</title>
-  <link rel="stylesheet" href="omri-read-aloud.css?v=2">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap">
+  <link rel="stylesheet" href="omri-read-aloud.css?v=1">
 </head>
 <body>
   <main class="listen-test">
@@ -16,7 +17,7 @@
         <div>
           <p class="listen-kicker">בדיקה פרטית לעומרי</p>
           <h1 id="listen-title">קוראים יחד עם בוקי</h1>
-          <p id="listen-status" class="listen-status" role="status" aria-live="polite">מתחילים לקרוא ובוקי כבר מקשיב.</p>
+          <p id="listen-status" class="listen-status" role="status" aria-live="polite">כשאתה מוכן, לחץ על הכפתור.</p>
         </div>
       </header>
 
@@ -28,15 +29,16 @@
 
       <button id="listen-button" class="listen-button" type="button">
         <span class="listen-button-icon" aria-hidden="true">🎙️</span>
-        <span id="listen-button-label">מתחילים לקרוא</span>
+        <span id="listen-button-label">בוקי, תקשיב לי קורא</span>
       </button>
 
       <button id="reset-button" class="reset-button" type="button" hidden>לקרוא שוב</button>
       <p id="listen-error" class="listen-error" role="alert" hidden></p>
-      <p class="privacy-note">הקול מעובד במכשיר בלבד. הוא אינו נשלח ואינו נשמר.</p>
+      <p class="privacy-note">הקול מעובד בזמן אמת לצורך הבדיקה בלבד ואינו נשמר.</p>
     </section>
   </main>
+  <script src="omri-speech-config.js?v=1"></script>
   <script src="omri-word-matcher.js?v=1"></script>
-  <script src="omri-read-aloud.js?v=2"></script>
+  <script src="omri-read-aloud.js?v=1"></script>
 </body>
 </html>
