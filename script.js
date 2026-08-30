@@ -145,6 +145,7 @@ function showScreen(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   _handleAppReaderScreenChange(id);
+  if (id !== 'screen-reader' && window.BookiLocalListening) window.BookiLocalListening.stop();
   window.scrollTo(0, 0);
   if (typeof applyNiqud === 'function') applyNiqud();
   // נקה Firebase listener כשעוזבים את מסך הכיתה
@@ -639,6 +640,7 @@ function chooseStoryNiqudMode(mode) {
     _startNiqudPageTime();
   }
   renderReaderPage();
+  if (window.BookiLocalListening) window.BookiLocalListening.start();
 }
 function revealNiqudForCurrentPage() {
   if (!_storyNiqudSession) return;
@@ -767,6 +769,7 @@ function resumePausedAppStory() {
   _setAppStoryTimerRunning(true);
   _enterNiqudPage(currentPageIndex);
   renderReaderPage();
+  if (window.BookiLocalListening) window.BookiLocalListening.start();
   return true;
 }
 function enterAppStoryReading() {
@@ -786,7 +789,8 @@ function renderReaderPage() {
     : mode === 'mixed' ? _mixedNiqudText(page.text, currentPageIndex)
     : stripNiqud(page.text);
   const readerText = document.getElementById('reader-text');
-  if (readerText) readerText.textContent = displayText;
+  if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
+  else if (readerText) readerText.textContent = displayText;
 
   // סיפורי "מילה אחת" מוסיפים איור גדול ורלוונטי לכל עמוד.
   // האיור מוזן כטקסט בלבד (לא HTML), כדי שתוכן סיפורים לא יוכל להזריק קוד.
