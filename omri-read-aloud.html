@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#fff8e7">
+  <title>בוקי מקשיב לעומרי</title>
+  <link rel="stylesheet" href="omri-read-aloud.css?v=2">
+</head>
+<body>
+  <main class="listen-test">
+    <section class="listen-card" aria-labelledby="listen-title">
+      <header class="listen-header">
+        <img id="booki-listener" src="assets/booki/core/states/booki-reading.png" alt="בוקי מקשיב" width="176" height="176">
+        <div>
+          <p class="listen-kicker">בדיקה פרטית לעומרי</p>
+          <h1 id="listen-title">קוראים יחד עם בוקי</h1>
+          <p id="listen-status" class="listen-status" role="status" aria-live="polite">מתחילים לקרוא ובוקי כבר מקשיב.</p>
+        </div>
+      </header>
+
+      <div id="listening-meter" class="listening-meter" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div id="reading-text" class="reading-text" aria-label="טקסט לקריאה"></div>
+
+      <button id="listen-button" class="listen-button" type="button">
+        <span class="listen-button-icon" aria-hidden="true">🎙️</span>
+        <span id="listen-button-label">מתחילים לקרוא</span>
+      </button>
+
+      <button id="reset-button" class="reset-button" type="button" hidden>לקרוא שוב</button>
+      <p id="listen-error" class="listen-error" role="alert" hidden></p>
+      <p class="privacy-note">הקול מעובד במכשיר בלבד. הוא אינו נשלח ואינו נשמר.</p>
+    </section>
+  </main>
+  <script src="omri-word-matcher.js?v=1"></script>
+  <script src="omri-read-aloud.js?v=2"></script>
+</body>
+</html>
