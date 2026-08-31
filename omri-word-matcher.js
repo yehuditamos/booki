@@ -13,7 +13,12 @@
     .trim();
   // זיהוי דיבור מחזיר לרוב כתיב מלא ("בבוקר", "לגינה"), בעוד טקסט מנוקד
   // נכתב לעיתים בכתיב חסר. ו/י הן אופציונליות לצורך ההשוואה בלבד.
-  const comparisonKey = value => normalizeHebrew(value).replace(/[וי]/g, '');
+  const comparisonKey = value => {
+    const normalized = normalizeHebrew(value);
+    const consonants = normalized.replace(/[וי]/g, '');
+    // Do not collapse short words such as כל/קול into the same key.
+    return consonants.length >= 3 ? consonants : normalized;
+  };
 
   return class BookiWordMatcher {
     constructor(text, {

@@ -2,6 +2,8 @@
   'use strict';
 
   const DISPLAY_TEXT = 'בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה. הוּא רָאָה פַּרְפַּר כָּחֹל עָף מֵעַל הַפְּרָחִים. נֹעַם עָמַד בְּשֶׁקֶט וְחִכָּה שֶׁהַפַּרְפַּר יִתְקָרֵב.';
+  const TOKEN_ENDPOINT = '/api/deepgram-token';
+  const MAX_SESSION_MS = 10 * 60 * 1000;
   const card = document.querySelector('.owned-card');
   const textEl = document.getElementById('owned-reading-text');
   const statusEl = document.getElementById('owned-status');
@@ -26,28 +28,25 @@
   let silentGain = null;
   let meterFrame = null;
   let socket = null;
+  let sessionTimer = null;
   let listening = false;
   let engineReady = false;
-
-  function engineUrl() {
-    const configured = document.querySelector('meta[name="booki-owned-engine-url"]')?.content?.trim() || '';
-    if (configured) return configured;
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-      return new URLSearchParams(location.search).get('engine') || '';
-    }
-    return '';
-  }
+  let voiceActive = false;
+  let lastVoiceAt = 0;
+  let noiseFloor = .012;
+  let finalTranscript = '';
+  let interimTranscript = '';
 
   function consumeAccessCode() {
     const params = new URLSearchParams(location.search);
     const supplied = params.get('code');
     if (supplied) {
-      sessionStorage.setItem('booki_owned_engine_code', supplied);
+      sessionStorage.setItem('booki_omri_test_code', supplied);
       params.delete('code');
       const next = `${location.pathname}${params.toString() ? `?${params}` : ''}${location.hash}`;
       history.replaceState(null, '', next);
     }
-    return supplied || sessionStorage.getItem('booki_owned_engine_code') || '';
+    return supplied || sessionStorage.getItem('booki_omri_test_code') || '';
   }
 
   function renderWords() {
@@ -69,8 +68,8 @@
     });
   }
 
-  function updateMeter() {
-    if (!listening || !analyser) return;
+  function measureRms() {
+    if (!analyser) return 0;
     const data = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(data);
     let energy = 0;
@@ -78,9 +77,18 @@
       const sample = (value - 128) / 128;
       energy += sample * sample;
     }
-    const rms = Math.sqrt(energy / data.length);
-    const level = Math.min(1, Math.max(0, (rms - .012) * 11));
-    card.classList.toggle('voice-active', rms > .025);
+    return Math.sqrt(energy / data.length);
+  }
+
+  function updateMeter() {
+    if (!listening || !analyser) return;
+    const rms = measureRms();
+    const threshold = Math.max(.018, noiseFloor * 2.15);
+    voiceActive = engineReady && rms > threshold;
+    if (voiceActive) lastVoiceAt = performance.now();
+    else if (engineReady) noiseFloor = noiseFloor * .992 + Math.min(rms, threshold) * .008;
+    card.classList.toggle('voice-active', voiceActive);
+    const level = Math.min(1, Math.max(0, (rms - noiseFloor) * 12));
     meterBars.forEach((bar, index) => {
       const shape = 1 - Math.abs(index - 2) * .16;
       bar.style.setProperty('--meter', String(1 + level * 3.7 * shape));
@@ -88,11 +96,65 @@
     meterFrame = requestAnimationFrame(updateMeter);
   }
 
-  function waitForOpen(ws) {
+  async function calibrateAmbient() {
+    statusEl.textContent = 'רגע, בוקי מכוון את האוזניים...';
+    const samples = [];
+    const startedAt = performance.now();
+    while (performance.now() - startedAt < 900) {
+      samples.push(measureRms());
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+    samples.sort((a, b) => a - b);
+    const quietIndex = Math.max(0, Math.floor(samples.length * .65) - 1);
+    noiseFloor = Math.max(.006, Math.min(.045, samples[quietIndex] || .012));
+  }
+
+  async function requestListeningToken(accessCode) {
+    const response = await fetch(TOKEN_ENDPOINT, {
+      method:'POST',
+      headers:{ 'X-Booki-Test-Code':accessCode },
+      cache:'no-store',
+      credentials:'same-origin',
+    });
+    let payload = {};
+    try { payload = await response.json(); } catch (_) {}
+    if (response.status === 402 || payload.error === 'free_credit_finished') {
+      const error = new Error('free_credit_finished');
+      error.code = 'free_credit_finished';
+      throw error;
+    }
+    if (response.status === 403) {
+      const error = new Error('private_test_only');
+      error.code = 'private_test_only';
+      throw error;
+    }
+    if (!response.ok || !payload.accessToken) throw new Error('token_unavailable');
+    return payload.accessToken;
+  }
+
+  function deepgramUrl(sampleRate) {
+    const params = new URLSearchParams({
+      model:'nova-3',
+      language:'he',
+      encoding:'linear16',
+      sample_rate:String(sampleRate),
+      channels:'1',
+      interim_results:'true',
+      endpointing:'280',
+      utterance_end_ms:'1000',
+      vad_events:'true',
+      smart_format:'false',
+      punctuate:'false',
+      mip_opt_out:'true',
+    });
+    return `wss://api.deepgram.com/v1/listen?${params}`;
+  }
+
+  function waitForOpen(webSocket) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('engine_timeout')), 12_000);
-      ws.addEventListener('open', () => { clearTimeout(timeout); resolve(); }, { once:true });
-      ws.addEventListener('error', () => { clearTimeout(timeout); reject(new Error('engine_connection')); }, { once:true });
+      webSocket.addEventListener('open', () => { clearTimeout(timeout); resolve(); }, { once:true });
+      webSocket.addEventListener('error', () => { clearTimeout(timeout); reject(new Error('engine_connection')); }, { once:true });
     });
   }
 
@@ -108,17 +170,49 @@
     processor.connect(silentGain).connect(context.destination);
   }
 
+  function transcriptFrom(message) {
+    const alternative = message?.channel?.alternatives?.[0];
+    if (!alternative) return '';
+    if (Array.isArray(alternative.words) && alternative.words.length) {
+      return alternative.words
+        .filter(word => Number(word.confidence ?? 1) >= .52)
+        .map(word => String(word.punctuated_word || word.word || '').trim())
+        .filter(Boolean)
+        .join(' ');
+    }
+    return String(alternative.transcript || '').trim();
+  }
+
+  function applyDeepgramMessage(event) {
+    let message;
+    try { message = JSON.parse(event.data); } catch (_) { return; }
+    if (message.type !== 'Results') return;
+    const transcript = transcriptFrom(message);
+    if (!transcript) return;
+    if (!lastVoiceAt || performance.now() - lastVoiceAt > 2800) return;
+
+    if (message.is_final) {
+      finalTranscript = `${finalTranscript} ${transcript}`.trim();
+      interimTranscript = '';
+    } else {
+      interimTranscript = transcript;
+    }
+    const combined = `${finalTranscript} ${interimTranscript}`.trim();
+    const confirmed = matcher.applyTranscript(combined);
+    if (confirmed.length) refreshWords();
+    if (matcher.complete) completeReading();
+  }
+
   async function startListening() {
     clearError();
-    const baseUrl = engineUrl();
-    const code = consumeAccessCode();
-    if (!baseUrl) return showError('מנוע בוקי עדיין לא הופעל בשרת.');
-    if (!code) return showError('קישור הבדיקה הפרטי אינו שלם.');
+    const accessCode = consumeAccessCode();
+    if (!accessCode) return showError('קישור הבדיקה הפרטי אינו שלם.');
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) {
       return showError('המכשיר הזה אינו תומך עדיין במנוע ההאזנה.');
     }
 
     try {
+      statusEl.textContent = 'בוקי מתכונן להקשיב...';
       stream = await navigator.mediaDevices.getUserMedia({
         audio:{ channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true },
         video:false,
@@ -130,65 +224,47 @@
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = .35;
       source.connect(analyser);
-      await connectCapture();
-
-      socket = new WebSocket(baseUrl);
-      socket.binaryType = 'arraybuffer';
-      await waitForOpen(socket);
-      socket.send(JSON.stringify({
-        type:'start',
-        accessCode:code,
-        sampleRate:context.sampleRate,
-        expectedText:DISPLAY_TEXT,
-      }));
-      socket.addEventListener('message', handleEngineMessage);
-      socket.addEventListener('close', event => {
-        if (listening && event.code !== 1000) showError('החיבור למנוע בוקי נותק.');
-      });
-
       listening = true;
       engineReady = false;
+      voiceActive = false;
+      lastVoiceAt = 0;
       card.classList.add('is-listening');
-      statusEl.textContent = 'בוקי מכין את מנוע העברית...';
       listenLabel.textContent = 'סיימתי לקרוא';
       refreshWords();
       meterFrame = requestAnimationFrame(updateMeter);
+
+      await calibrateAmbient();
+      await connectCapture();
+      const accessToken = await requestListeningToken(accessCode);
+      socket = new WebSocket(deepgramUrl(context.sampleRate), ['token', accessToken]);
+      socket.binaryType = 'arraybuffer';
+      socket.addEventListener('message', applyDeepgramMessage);
+      socket.addEventListener('close', event => {
+        if (listening && event.code !== 1000) showError('ההאזנה נעצרה. אפשר לנסות שוב.');
+      });
+      await waitForOpen(socket);
+      engineReady = true;
+      statusEl.textContent = 'בוקי שומע אותך';
+      sessionTimer = setTimeout(() => stopListening(), MAX_SESSION_MS);
     } catch (error) {
       stopAudio();
       if (error?.name === 'NotAllowedError') showError('כדי שבוקי ישמע, צריך לאשר גישה למיקרופון.');
-      else showError('מנוע בוקי לא הצליח להתחבר. נסי שוב.');
+      else if (error?.code === 'free_credit_finished') showError('הקרדיט החינמי של הבדיקה הסתיים. בוקי לא חויב.');
+      else if (error?.code === 'private_test_only') showError('קישור הבדיקה הפרטי אינו תקין.');
+      else showError('ההאזנה אינה זמינה כרגע. נסי שוב.');
     }
-  }
-
-  function handleEngineMessage(event) {
-    let message;
-    try { message = JSON.parse(event.data); } catch (_) { return; }
-    if (message.type === 'preparing') {
-      statusEl.textContent = 'בוקי מכין את מנוע העברית...';
-      return;
-    }
-    if (message.type === 'ready') {
-      engineReady = true;
-      statusEl.textContent = 'אני שומע אותך';
-      return;
-    }
-    if (message.type === 'transcript' && typeof message.text === 'string') {
-      const confirmed = matcher.applyTranscript(message.text);
-      if (confirmed.length) refreshWords();
-      if (matcher.complete) completeReading();
-      return;
-    }
-    if (message.type === 'error') showError('מנוע בוקי אינו זמין כרגע.');
   }
 
   function stopAudio() {
     listening = false;
     engineReady = false;
+    voiceActive = false;
     card.classList.remove('is-listening', 'voice-active');
     if (meterFrame) cancelAnimationFrame(meterFrame);
-    meterFrame = null;
+    if (sessionTimer) clearTimeout(sessionTimer);
+    meterFrame = sessionTimer = null;
     try {
-      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type:'stop' }));
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type:'CloseStream' }));
       socket?.close(1000);
     } catch (_) {}
     try { processor?.disconnect(); } catch (_) {}
@@ -219,6 +295,8 @@
   function resetReading() {
     stopAudio();
     matcher.reset();
+    finalTranscript = '';
+    interimTranscript = '';
     listenBtn.hidden = false;
     listenLabel.textContent = 'בוקי, תקשיב לי קורא';
     resetBtn.hidden = true;
@@ -228,11 +306,16 @@
   }
 
   function showError(message) {
+    if (listening) stopAudio();
     errorEl.textContent = message;
     errorEl.hidden = false;
     statusEl.textContent = 'בוא ננסה שוב';
   }
-  function clearError() { errorEl.hidden = true; errorEl.textContent = ''; }
+
+  function clearError() {
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
 
   listenBtn.addEventListener('click', () => listening ? stopListening() : startListening());
   resetBtn.addEventListener('click', resetReading);
