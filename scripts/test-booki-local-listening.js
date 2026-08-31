@@ -39,4 +39,13 @@ function feed(detector, { rms, from, to, step = 20, neededMs = 360 }) {
     'room noise must never color a word');
 }
 
+{
+  const detector = createDetector();
+  feed(detector, { rms:.01, from:0, to:1200 });
+  assert.equal(detector.snapshot().armed, true);
+  const softReading = feed(detector, { rms:.028, from:1200, to:2000 });
+  assert.ok(softReading.some(state => state.confirmed),
+    'a child reading softly should be detected without shouting');
+}
+
 console.log('booki local listening detector: all tests passed');
