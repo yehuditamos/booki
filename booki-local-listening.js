@@ -7,9 +7,9 @@
   // iPhone/Safari often reports a much lower WebAudio RMS than desktop browsers.
   // Keep the listener sensitive enough for a child's normal reading voice while
   // still adapting to the room's background noise.
-  const MIN_NEAR_VOICE_RMS = .015;
-  const VOICE_MARGIN_RMS = .006;
-  const MAX_VOICE_THRESHOLD_RMS = .035;
+  const MIN_NEAR_VOICE_RMS = .022;
+  const VOICE_MARGIN_RMS = .008;
+  const MAX_VOICE_THRESHOLD_RMS = .040;
   const MAX_ROOM_FLOOR_RMS = .022;
 
   const SILENCE_RESET_MS = 1200;
