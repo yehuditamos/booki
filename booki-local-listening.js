@@ -3,7 +3,15 @@
 
   const ROOM_CALIBRATION_MS = 900;
   const QUIET_TO_ARM_MS = 260;
-  const MIN_NEAR_VOICE_RMS = .045;
+
+  // iPhone/Safari often reports a much lower WebAudio RMS than desktop browsers.
+  // Keep the listener sensitive enough for a child's normal reading voice while
+  // still adapting to the room's background noise.
+  const MIN_NEAR_VOICE_RMS = .015;
+  const VOICE_MARGIN_RMS = .006;
+  const MAX_VOICE_THRESHOLD_RMS = .035;
+  const MAX_ROOM_FLOOR_RMS = .022;
+
   const SILENCE_RESET_MS = 1200;
   const WORD_COOLDOWN_MS = 110;
 
@@ -56,16 +64,25 @@
       process(rms, elapsed, sinceStart, neededMs) {
         const calibrating = sinceStart < ROOM_CALIBRATION_MS;
         if (calibrating) {
-          // קפיצה חדה של פתיחת המיקרופון אינה רעש חדר ואסור ללמוד ממנה.
-          if (rms < MIN_NEAR_VOICE_RMS) floor = Math.max(.006, floor * .9 + rms * .1);
+          // Learn the room level, but cap it so a voice during startup cannot
+          // make Booki "deaf" for the rest of the page.
+          if (rms < .08) {
+            floor = Math.max(.004, Math.min(
+              MAX_ROOM_FLOOR_RMS,
+              floor * .9 + rms * .1
+            ));
+          }
           return { calibrating:true, armed:false, voiceActive:false, confirmed:false, floor };
         }
 
-        const threshold = Math.max(MIN_NEAR_VOICE_RMS, floor * 3.2);
+        const threshold = Math.min(
+          MAX_VOICE_THRESHOLD_RMS,
+          Math.max(MIN_NEAR_VOICE_RMS, floor + VOICE_MARGIN_RMS)
+        );
         const voiceActive = rms >= threshold;
 
-        // לא מאשרים אף מילה עד שהיה רגע שקט אחרי פתיחת המיקרופון.
-        // כך רעש ההפעלה או דיבור שכבר התחיל בזמן הכיול לא צובעים את המילה הראשונה.
+        // Do not confirm the first word until there was a short quiet moment
+        // after opening the microphone.
         if (!armed) {
           if (voiceActive) quietFor = 0;
           else quietFor += elapsed;
@@ -73,7 +90,14 @@
           return { calibrating:false, armed, voiceActive:false, confirmed:false, floor };
         }
 
-        if (!voiceActive) floor = Math.max(.006, floor * .995 + rms * .005);
+        // Follow room changes faster than before, but only while the input is
+        // below the speech threshold.
+        if (!voiceActive) {
+          floor = Math.max(.004, Math.min(
+            MAX_ROOM_FLOOR_RMS,
+            floor * .985 + rms * .015
+          ));
+        }
 
         if (cooldownFor > 0) {
           cooldownFor = Math.max(0, cooldownFor - elapsed);
