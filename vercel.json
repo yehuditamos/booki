@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "booki-omri-listening-test.vercel.app"
+        }
+      ],
+      "destination": "/omri-read-aloud.html"
+    }
+  ]
+}
