@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#fff8e7">
+  <meta name="booki-owned-engine-url" content="">
+  <title>מנוע הקריאה של בוקי — עומרי</title>
+  <link rel="stylesheet" href="omri-owned-engine.css?v=1">
+</head>
+<body>
+  <main class="owned-test">
+    <section class="owned-card" aria-labelledby="owned-title">
+      <header class="owned-header">
+        <img src="assets/booki/core/states/booki-reading.png" alt="בוקי מקשיב" width="152" height="152">
+        <div>
+          <p class="owned-kicker">בדיקת המנוע הפרטית של עומרי</p>
+          <h1 id="owned-title">בוקי מקשיב לקריאה</h1>
+          <p id="owned-status" class="owned-status" role="status" aria-live="polite">מוכנים לקרוא יחד</p>
+        </div>
+      </header>
+
+      <div id="owned-meter" class="owned-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="owned-reading-text" class="owned-reading-text" aria-label="טקסט לקריאה"></div>
+
+      <button id="owned-listen-button" class="owned-listen-button" type="button">
+        <span aria-hidden="true">🎙️</span>
+        <span id="owned-listen-label">בוקי, תקשיב לי קורא</span>
+      </button>
+      <button id="owned-reset-button" class="owned-reset-button" type="button" hidden>לקרוא שוב</button>
+      <p id="owned-error" class="owned-error" role="alert" hidden></p>
+      <p class="owned-privacy">הקול נשלח מוצפן למנוע של בוקי, מעובד בזיכרון בלבד ואינו נשמר.</p>
+    </section>
+  </main>
+  <script src="omri-word-matcher.js?v=2"></script>
+  <script src="booki-owned-listening.js?v=1"></script>
+</body>
+</html>

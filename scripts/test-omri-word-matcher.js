@@ -37,3 +37,29 @@ test('complete ordered transcript confirms the full text', () => {
   matcher.applyTranscript('בבוקר נועם יצא לגינה הוא ראה פרפר כחול עף מעל הפרחים נועם עמד בשקט וחיכה שהפרפר יתקרב');
   assert.equal(matcher.complete, true);
 });
+
+test('strict mode ignores a single background word', () => {
+  const matcher = new Matcher(TEXT, { minEvidenceWords:2 });
+  matcher.applyTranscript('נועם');
+  assert.equal(matcher.confirmed.size, 0);
+});
+
+test('strict mode accepts two adjacent words from the reading', () => {
+  const matcher = new Matcher(TEXT, { minEvidenceWords:2 });
+  matcher.applyTranscript('בבוקר נועם');
+  assert.deepEqual([...matcher.confirmed], [0,1]);
+});
+
+test('owned mode can finish without jumping back to an ASR miss', () => {
+  const matcher = new Matcher('א ב ג ד ה', {
+    minEvidenceWords:2,
+    finishOnFinalWord:true,
+    currentFromAnchor:true,
+  });
+  matcher.applyTranscript('א ב');
+  assert.equal(matcher.nextUnconfirmed(), 2);
+  matcher.applyTranscript('ד ה');
+  assert.equal(matcher.confirmed.has(2), false);
+  assert.equal(matcher.nextUnconfirmed(), 5);
+  assert.equal(matcher.complete, true);
+});
