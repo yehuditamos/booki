@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Booki Engine v1</title>
+<style>body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;padding:20px;background:#fff8ef;color:#2d2d2d}.card{background:white;border-radius:24px;padding:28px;box-shadow:0 8px 30px #0001}h1{margin-top:0}.story{font-size:32px;line-height:2}.word{padding:2px 5px;border-radius:8px}.done{background:#bff0c8}.current{outline:3px solid #ff9d35}button{font-size:20px;padding:14px 24px;border:0;border-radius:999px;background:#ff9d35;cursor:pointer}.status{margin:18px 0;font-size:18px}.heard{margin-top:18px;color:#666}textarea{width:100%;box-sizing:border-box;font-size:20px;min-height:90px}</style></head>
+<body><div class="card"><h1>בוקי מקשיב — Engine v1</h1><p>בדיקת זיהוי מילים אמיתי מול טקסט ידוע מראש. האודיו אינו נשמר.</p><textarea id="source">אמא באה הביתה ואני שמח לראות אותה</textarea><p><button id="start">🎙️ התחל להקשיב</button></p><div class="status" id="status">מוכן לבדיקה</div><div class="story" id="story"></div><div class="heard" id="heard"></div></div>
+<script>
+const norm=s=>String(s||'').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'').replace(/[^\u05D0-\u05EA\s]/g,' ').replace(/\s+/g,' ').trim();
+let words=[],idx=0,rec;
+function render(){words=norm(source.value).split(' ').filter(Boolean);story.innerHTML=words.map((w,i)=>`<span class="word ${i<idx?'done':''} ${i===idx?'current':''}">${w}</span>`).join(' ')}
+function align(transcript){const heard=norm(transcript).split(' ').filter(Boolean);for(const h of heard){let best=-1;for(let j=idx;j<Math.min(words.length,idx+4);j++){if(h===words[j]||similar(h,words[j])){best=j;break}}if(best>=idx)idx=best+1;}render();return heard.join(' ')}
+function similar(a,b){if(!a||!b)return false;if(a===b)return true;if(Math.abs(a.length-b.length)>1)return false;let d=0,i=0,j=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}d++;if(d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}return true}
+render();source.oninput=()=>{idx=0;render()};
+start.onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){status.textContent='הדפדפן הזה לא מספק כרגע מנוע זיהוי דיבור מובנה. נסי Chrome במחשב/Android.';return}rec=new SR();rec.lang='he-IL';rec.continuous=true;rec.interimResults=true;rec.onstart=()=>{status.textContent='אני מקשיב. תתחילי לקרוא 👂';start.textContent='מקשיב...'};rec.onerror=e=>status.textContent='שגיאת מיקרופון: '+e.error;rec.onend=()=>{start.textContent='🎙️ התחל להקשיב'};rec.onresult=e=>{let text='';for(let i=e.resultIndex;i<e.results.length;i++)text+=e.results[i][0].transcript+' ';heard.textContent='שמעתי: '+text;align(text);if(idx>=words.length){status.textContent='שמעתי את כל הטקסט! 🎉';rec.stop()}};rec.start()};
+</script></body></html>
