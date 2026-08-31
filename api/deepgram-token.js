@@ -66,6 +66,9 @@ async function remainingCredit(apiKey) {
   if (projects.length !== 1 || !projects[0].project_id) throw new Error('project_ambiguous');
 
   const balanceResponse = await deepgram(`/projects/${encodeURIComponent(projects[0].project_id)}/balances`, apiKey);
+  // A standard listening key may be forbidden from reading billing data.
+  // This is not an authorization failure for speech-to-text itself.
+  if (balanceResponse.status === 403) return null;
   if (!balanceResponse.ok) throw new Error(`balance_${balanceResponse.status}`);
   const balances = (await balanceResponse.json()).balances || [];
   return balances.reduce((total, balance) => {
@@ -82,13 +85,21 @@ module.exports = async function handler(request, response) {
   const apiKey = process.env.DEEPGRAM_API_KEY;
   const expectedCode = process.env.BOOKI_TEST_CODE;
   const suppliedCode = request.headers['x-booki-test-code'];
-  if (!apiKey || !expectedCode) return json(response, 503, { error:'test_not_configured' });
+  if (!apiKey || !expectedCode) {
+    return json(response, 503, {
+      error:'test_not_configured',
+      missing:[
+        ...(!apiKey ? ['DEEPGRAM_API_KEY'] : []),
+        ...(!expectedCode ? ['BOOKI_TEST_CODE'] : []),
+      ],
+    });
+  }
   if (!sameValue(suppliedCode, expectedCode)) return json(response, 403, { error:'private_test_only' });
 
   try {
     // Fail closed: if the free balance cannot be verified, no listening token is issued.
     const creditUsd = await remainingCredit(apiKey);
-    if (creditUsd <= MIN_FREE_CREDIT_USD) {
+    if (creditUsd !== null && creditUsd <= MIN_FREE_CREDIT_USD) {
       return json(response, 402, { error:'free_credit_finished' });
     }
 
@@ -102,7 +113,7 @@ module.exports = async function handler(request, response) {
     return json(response, 200, {
       accessToken:token.access_token,
       expiresIn:token.expires_in,
-      remainingCreditUsd:Math.floor(creditUsd * 100) / 100,
+      remainingCreditUsd:creditUsd === null ? null : Math.floor(creditUsd * 100) / 100,
     });
   } catch (error) {
     console.error('Booki token broker error:', error?.message || error);

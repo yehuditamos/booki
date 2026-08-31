@@ -240,7 +240,9 @@
       socket.binaryType = 'arraybuffer';
       socket.addEventListener('message', applyDeepgramMessage);
       socket.addEventListener('close', event => {
-        if (listening && event.code !== 1000) showError('ההאזנה נעצרה. אפשר לנסות שוב.');
+        if (listening && event.code !== 1000) {
+          showError('ההאזנה נעצרה. אם הקרדיט החינמי הסתיים, בוקי לא יחויב.');
+        }
       });
       await waitForOpen(socket);
       engineReady = true;
