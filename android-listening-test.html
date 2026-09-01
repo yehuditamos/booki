@@ -12,7 +12,7 @@
     h1{text-align:center;font-size:34px;margin:8px 0 12px}
     .sub,.status{text-align:center;font-size:20px;line-height:1.45}
     .words{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;background:#faf8f1;border-radius:24px;padding:18px;margin:18px 0}
-    .word{font-size:32px;line-height:1.3;padding:8px 11px;border-radius:14px;transition:background .12s,color .12s,transform .12s,outline .12s}
+    .word{font-size:32px;line-height:1.3;padding:8px 11px;border-radius:14px;transition:background .09s,color .09s,transform .09s,outline .09s}
     .word.done{background:#ccefd5;color:#12643b}
     .word.live{background:#eadcff;outline:3px solid #eba63c}
     .word.retry{background:#fff0c7;outline:4px solid #f2994a;animation:retryFlash .55s ease-in-out 3}
@@ -20,6 +20,7 @@
     button{width:100%;border:0;border-radius:24px;padding:18px;font-size:27px;font-weight:700;background:#eba63c;color:#225ed2;box-shadow:0 8px 0 #c87d1e}
     button.stop{background:#8f62d6;color:white;box-shadow:0 8px 0 #6b46b0}
     .ok{color:#7c55d0;font-weight:700}
+    .fast{color:#1d7f57;font-weight:700}
     .retry-text{color:#b35b00;font-weight:700}
     .note{font-size:16px;color:#70777d;text-align:center;line-height:1.4}
     details{margin-top:20px;border-top:1px solid #eee;padding-top:12px;color:#6b7175}
@@ -31,11 +32,11 @@
 <body>
 <main class="card">
   <h1>🎙️ בדיקת בוקי באנדרואיד</h1>
-  <p class="sub">בוקי סלחן להגייה, אבל מתקדם רק אחרי ששמע את המילה שעליה הוא עומד.</p>
+  <p class="sub">בוקי מתאים את עצמו לקצב: מילה־מילה לקורא מתחיל, וברצף מהיר לקורא שטס.</p>
   <div id="words" class="words"></div>
   <button id="btn">מתחילים לקרוא</button>
   <p id="status" class="status">מחכים להתחלה</p>
-  <p class="note">אם מילה לא זוהתה, היא תהבהב ויהיה צריך לומר אותה שוב. המשך המשפט לא יאשר אותה במקומה.</p>
+  <p class="note">בוקי מתקדם כבר מתוצאות הביניים, בלי לחכות לסוף המשפט. אם המילה הנוכחית לא זוהתה — הוא נעצר עליה ולא מדלג קדימה.</p>
 
   <details>
     <summary>פרטי טסט למבוגר</summary>
@@ -53,6 +54,7 @@ const debug=document.getElementById('debug');
 const copyBtn=document.getElementById('copy');
 let rec=null,running=false,done=0,retryIndex=-1,retries=0;
 let lastExpected='',lastHeard='',lastAlternatives=[];
+let retryTimer=null,lastProgressAt=0,lastProgressWords=0;
 const events=[];
 
 function norm(t){
@@ -158,7 +160,20 @@ function paint(){
 }
 function updateDebug(){
   const current=done<expected.length?expected[done]:'סיום';
-  debug.innerHTML=`<strong>המילה הנוכחית:</strong> ${current}<br><strong>שמעתי לאחרונה:</strong> ${lastHeard||'—'}<br><strong>חלופות:</strong> ${lastAlternatives.join(' | ')||'—'}<br><strong>ניסיונות חוזרים במילה:</strong> ${retries}<br><strong>התקדמות:</strong> ${done}/${expected.length}`;
+  debug.innerHTML=`<strong>המילה הנוכחית:</strong> ${current}<br><strong>שמעתי לאחרונה:</strong> ${lastHeard||'—'}<br><strong>חלופות:</strong> ${lastAlternatives.join(' | ')||'—'}<br><strong>ניסיונות חוזרים במילה:</strong> ${retries}<br><strong>מילים בקפיצה האחרונה:</strong> ${lastProgressWords}<br><strong>התקדמות:</strong> ${done}/${expected.length}`;
+}
+function clearRetryTimer(){
+  if(retryTimer)clearTimeout(retryTimer);
+  retryTimer=null;
+}
+function onlyPastWords(text){
+  const heard=norm(text).split(' ').filter(Boolean);
+  if(!heard.length||done===0)return false;
+  const from=Math.max(0,done-6);
+  return heard.every(token=>{
+    for(let i=from;i<done;i++)if(sameCore(token,expected[i]))return true;
+    return false;
+  });
 }
 function flashRetry(heard){
   if(done>=expected.length)return;
@@ -174,6 +189,14 @@ function flashRetry(heard){
   setTimeout(()=>{
     if(retryIndex===done){retryIndex=-1;paint()}
   },1800);
+}
+function scheduleRetry(heard){
+  clearRetryTimer();
+  const position=done;
+  retryTimer=setTimeout(()=>{
+    retryTimer=null;
+    if(running&&done===position&&!onlyPastWords(heard))flashRetry(heard);
+  },420);
 }
 function progressAlternative(text,start){
   const heard=norm(text).split(' ').filter(Boolean);
@@ -191,8 +214,7 @@ function progressAlternative(text,start){
   }
   return {p,matched,missed,heard};
 }
-function commitResult(alternatives){
-  const before=done;
+function bestProgress(alternatives){
   let best={p:done,matched:[],missed:[],heard:[],text:''};
   for(const text of alternatives){
     const result=progressAlternative(text,done);
@@ -200,23 +222,37 @@ function commitResult(alternatives){
       best={...result,text};
     }
   }
+  return best;
+}
+function handleResult(alternatives,isFinal){
+  const before=done;
+  const best=bestProgress(alternatives);
   lastAlternatives=alternatives.map(norm).filter(Boolean);
   lastHeard=norm(best.text||alternatives[0]||'');
 
   if(best.p>before){
+    clearRetryTimer();
     done=best.p;
+    lastProgressWords=done-before;
+    lastProgressAt=performance.now();
     retryIndex=-1;
     retries=0;
-    status.textContent=done>=expected.length?'מושלם! בוקי עקב עד סוף הקטע 🎉':'יופי, ממשיכים';
-    status.className='status ok';
-    events.push({time:new Date().toISOString(),type:'progress',from:before,to:done,heard:lastHeard,matches:best.matched});
+    const fast=lastProgressWords>=3;
+    status.textContent=done>=expected.length?'מושלם! בוקי עקב עד סוף הקטע 🎉':fast?'בוקי רץ איתך!':'יופי, ממשיכים';
+    status.className=fast?'status fast':'status ok';
+    events.push({time:new Date().toISOString(),type:isFinal?'final-progress':'live-progress',from:before,to:done,heard:lastHeard,matches:best.matched});
     paint();
     updateDebug();
     if(done>=expected.length)stop();
     return;
   }
 
-  if(lastHeard)flashRetry(lastHeard);
+  updateDebug();
+  if(isFinal&&lastHeard&&!onlyPastWords(lastHeard))scheduleRetry(lastHeard);
+  else if(!isFinal){
+    status.textContent='בוקי מקשיב בזמן אמת';
+    status.className='status ok';
+  }
 }
 function makeRec(){
   const R=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -225,25 +261,18 @@ function makeRec(){
   x.lang='he-IL';
   x.continuous=true;
   x.interimResults=true;
-  x.maxAlternatives=5;
+  x.maxAlternatives=10;
   x.onstart=()=>{status.textContent='בוקי מקשיב';status.className='status ok';updateDebug()};
   x.onresult=e=>{
     for(let i=e.resultIndex;i<e.results.length;i++){
       const result=e.results[i];
       const alternatives=[];
-      for(let a=0;a<Math.min(result.length,5);a++){
+      for(let a=0;a<Math.min(result.length,10);a++){
         const value=String(result[a]?.transcript||'').trim();
         if(value)alternatives.push(value);
       }
       if(!alternatives.length)continue;
-      lastAlternatives=alternatives.map(norm);
-      lastHeard=norm(alternatives[0]);
-      updateDebug();
-      if(result.isFinal)commitResult(alternatives);
-      else{
-        status.textContent='בוקי מקשיב למילה';
-        status.className='status ok';
-      }
+      handleResult(alternatives,!!result.isFinal);
     }
   };
   x.onerror=e=>{
@@ -256,6 +285,7 @@ function makeRec(){
 function start(){
   if(running){stop();return}
   if(done>=expected.length){done=0;retries=0;retryIndex=-1;events.length=0}
+  clearRetryTimer();
   if(!rec)rec=makeRec();
   if(!rec)return;
   running=true;
@@ -269,6 +299,7 @@ function start(){
 }
 function stop(){
   running=false;
+  clearRetryTimer();
   try{rec?.stop()}catch(_){}
   btn.textContent=done>=expected.length?'לקרוא שוב':'ממשיכים לקרוא';
   btn.classList.remove('stop');
