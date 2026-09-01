@@ -1,670 +1,101 @@
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#fff8e7">
-  <title>קוראים עם בוקי — בדיקת ילדים</title>
-  <style>
-    :root{
-      --bg:#fff8e7;--ink:#29343a;--muted:#747b80;--purple:#8d63d5;
-      --purple-soft:#eee5ff;--green:#35a867;--amber:#ee9f31;--grey:#d9d9d9;
-      --orange:#eba63c;--card:#fff;--danger:#b45a00
-    }
-    *{box-sizing:border-box}
-    html{min-height:100%;background:var(--bg)}
-    body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--ink);padding:16px;min-height:100vh}
-    button{font:inherit}
-    .shell{max-width:790px;margin:auto}
-    .screen{display:none}
-    .screen.active{display:block}
-    .card{background:var(--card);border-radius:30px;padding:22px;box-shadow:0 14px 40px rgba(0,0,0,.07);overflow:hidden;position:relative}
-    h1{text-align:center;font-size:clamp(31px,7vw,52px);margin:4px 0 8px}
-    h2{text-align:center;font-size:clamp(27px,6vw,40px);margin:5px 0 15px}
-    .sub{text-align:center;color:#626a70;font-size:clamp(17px,3.7vw,24px);line-height:1.45;margin:0 auto 16px;max-width:660px}
-    .small{text-align:center;color:#747b80;font-size:15px;line-height:1.5}
-    .privacy{background:#f7f3fb;border-radius:18px;padding:13px 15px;color:#605a67;line-height:1.5;margin-top:16px;font-size:15px}
-    .question{margin:22px 0}
-    .question-title{font-size:clamp(22px,5vw,31px);font-weight:800;text-align:center;margin-bottom:12px}
-    .choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    .choice-grid.two{grid-template-columns:repeat(2,1fr)}
-    .choice{border:3px solid transparent;background:#f2eef8;color:#4d3c69;border-radius:20px;padding:15px 8px;font-size:clamp(17px,3.7vw,24px);font-weight:800;min-height:82px;cursor:pointer;transition:.14s}
-    .choice .emoji{display:block;font-size:30px;margin-bottom:5px}
-    .choice.selected{background:#e7dcfb;border-color:var(--purple);transform:translateY(-2px);box-shadow:0 7px 18px rgba(113,70,175,.18)}
-    .main-btn{width:100%;border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;cursor:pointer;background:var(--orange);color:#1f60d3;box-shadow:0 8px 0 #c87c1e}
-    .main-btn:disabled{background:#ddd;color:#888;box-shadow:0 8px 0 #bbb;cursor:not-allowed}
-    .secondary-btn{width:100%;border:0;border-radius:20px;padding:14px;font-size:19px;font-weight:800;background:#ededed;color:#4f585e;cursor:pointer}
-    .connection{min-height:24px;text-align:center;font-size:15px;margin:11px 0;color:#777}
-    .connection.error{color:#a64029;font-weight:700}
-
-    .page-count{width:max-content;margin:0 auto 12px;padding:7px 14px;border-radius:999px;background:#f3effa;color:#6849a9;font-weight:700}
-    .listen-meter{height:42px;display:flex;justify-content:center;align-items:flex-end;gap:8px;margin-bottom:12px}
-    .listen-meter i{display:block;width:10px;height:18px;border-radius:999px;background:linear-gradient(#c5aaff,var(--purple));transform-origin:center bottom;transition:transform .08s linear,opacity .08s linear;opacity:.55}
-    .story{background:#fbfaf5;border-radius:25px;padding:24px 20px;min-height:360px;transition:background .3s ease,transform .3s ease}
-    .sentence{font-size:clamp(28px,5.8vw,48px);line-height:1.85;margin:0 0 18px}
-    .sentence:last-child{margin-bottom:0}
-    .word{position:relative;display:inline-block;isolation:isolate;padding:.03em .08em;border-radius:50%;color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;opacity:1!important;visibility:visible!important;transition:color .12s ease,text-shadow .12s ease,filter .12s ease,transform .12s ease;background:transparent}
-    .word::before{content:'';position:absolute;z-index:-1;inset:-.09em -.12em;border-radius:999px;opacity:0;pointer-events:none}
-    .word.done{color:#176a43!important;-webkit-text-fill-color:#176a43!important;text-shadow:0 0 6px rgba(84,200,126,.72),0 0 15px rgba(108,219,148,.48),0 0 25px rgba(166,239,190,.4)}
-    .word.current,.word.start-here{color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;text-shadow:none!important;filter:none!important;transform:none!important}
-    .word.current::before,.word.start-here::before{opacity:1;background:rgba(222,205,252,.42);box-shadow:0 0 11px rgba(154,107,225,.5),0 0 24px rgba(187,151,239,.4);animation:startHereGlow .72s ease-in-out infinite alternate}
-    .word.retry{color:#8d4b00!important;-webkit-text-fill-color:#8d4b00!important;text-shadow:none;animation:retryGlow .52s ease-in-out 3}
-    .word.retry::before{opacity:1;background:rgba(255,225,165,.42);box-shadow:0 0 12px rgba(245,171,69,.68),0 0 25px rgba(255,201,116,.5)}
-    .word.helping{color:#4f3186!important;-webkit-text-fill-color:#4f3186!important;text-shadow:none;transform:scale(1.07)}
-    .word.helping::before{opacity:1;background:rgba(224,207,255,.48);box-shadow:0 0 14px rgba(142,91,220,.72),0 0 28px rgba(176,135,239,.54)}
-    .story.page-complete{background:linear-gradient(145deg,#fff7d6,#f0e5ff,#e4f8e9);animation:pageStep .9s ease-in-out 2}
-    .story.page-complete .word{color:#7447b0!important;-webkit-text-fill-color:#7447b0!important;text-shadow:0 0 8px rgba(239,186,67,.8),0 0 19px rgba(173,119,235,.58),0 0 30px rgba(255,224,137,.48);background:transparent;animation:finishGlow .85s ease-in-out infinite alternate}
-    .story.page-complete .word::before{opacity:0;animation:none}
-    @keyframes startHereGlow{from{opacity:.38;box-shadow:0 0 7px rgba(154,107,225,.34),0 0 16px rgba(187,151,239,.28)}to{opacity:.86;box-shadow:0 0 14px rgba(154,107,225,.62),0 0 30px rgba(187,151,239,.48)}}
-    @keyframes retryGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-    @keyframes finishGlow{from{filter:brightness(.98)}to{filter:brightness(1.1)}}
-    @keyframes pageStep{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-    .status{text-align:center;font-size:clamp(20px,4.5vw,30px);line-height:1.4;margin:16px 0 8px;color:var(--muted);min-height:42px}
-    .status.ok{color:var(--purple);font-weight:700}.status.fast{color:#1d7f57;font-weight:700}.status.retry-text{color:#af5d00;font-weight:700}
-    .celebration{text-align:center;font-size:clamp(27px,6vw,44px);font-weight:900;color:#7648be;display:none;margin:10px 0}.celebration.show{display:block}
-    .actions{display:grid;gap:13px;margin-top:15px}
-    .listen-btn{border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;cursor:pointer;background:#eba63c;color:#1f60d3;box-shadow:0 8px 0 #c87c1e}.listen-btn.stop{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae}
-    .help-btn{display:none;border:3px solid #8d63d5;border-radius:24px;padding:16px;font-size:clamp(21px,4.5vw,30px);font-weight:800;background:#eee6ff;color:#6545a7;cursor:pointer}.help-btn.show{display:block}
-    .next-btn{border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;background:var(--grey);color:#777;box-shadow:0 8px 0 #bfbfbf}.next-btn.ready{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae;cursor:pointer}.next-btn:disabled{cursor:not-allowed;opacity:1}
-    .reset-btn{border:0;border-radius:20px;background:#ededed;color:#4f585e;font-size:19px;padding:13px;font-weight:800;cursor:pointer}
-    .note{text-align:center;color:#777;font-size:15px;line-height:1.5;margin:13px 0 0}
-    .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}.confetti-piece{position:absolute;top:-24px;width:11px;height:17px;border-radius:3px;animation:fall 1500ms linear forwards}@keyframes fall{to{transform:translateY(120vh) rotate(720deg);opacity:.08}}
-
-    .survey-progress{text-align:center;color:#7655b8;font-weight:800;margin-bottom:14px}
-    .survey-actions{display:grid;gap:12px}
-    .thanks-icon{text-align:center;font-size:74px;margin:12px 0}
-    .saved{text-align:center;color:#247a4d;font-weight:800;font-size:20px;margin:13px 0}
-    .hidden{display:none!important}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#fff8e7">
+<title>קוראים עם בוקי — בדיקת ילדים</title>
+<style>
+:root{--bg:#fff8e7;--ink:#29343a;--muted:#747b80;--purple:#8d63d5;--green:#35a867;--amber:#ee9f31;--grey:#d9d9d9;--orange:#eba63c;--card:#fff}
+*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--ink);padding:16px;min-height:100vh}button{font:inherit}.shell{max-width:790px;margin:auto}.screen{display:none}.screen.active{display:block}.card{background:var(--card);border-radius:30px;padding:22px;box-shadow:0 14px 40px rgba(0,0,0,.07);overflow:hidden;position:relative;min-height:92vh}h1{text-align:center;font-size:clamp(31px,7vw,52px);margin:4px 0 8px}h2{text-align:center;font-size:clamp(27px,6vw,40px);margin:5px 0 15px}.sub{text-align:center;color:#626a70;font-size:clamp(17px,3.7vw,24px);line-height:1.45;margin:0 auto 16px;max-width:660px}.privacy{background:#f7f3fb;border-radius:18px;padding:13px 15px;color:#605a67;line-height:1.5;margin-top:16px;font-size:15px}.question{margin:22px 0}.question-title{font-size:clamp(22px,5vw,31px);font-weight:800;text-align:center;margin-bottom:12px}.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.choice{border:3px solid transparent;background:#f2eef8;color:#4d3c69;border-radius:20px;padding:15px 8px;font-size:clamp(17px,3.7vw,24px);font-weight:800;min-height:78px;cursor:pointer;transition:.14s}.choice.selected{background:#e7dcfb;border-color:var(--purple);transform:translateY(-2px);box-shadow:0 7px 18px rgba(113,70,175,.18)}.main-btn{width:100%;border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;cursor:pointer;background:var(--orange);color:#1f60d3;box-shadow:0 8px 0 #c87c1e}.main-btn:disabled{background:#ddd;color:#888;box-shadow:0 8px 0 #bbb;cursor:not-allowed}.purple{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae}.secondary-btn{width:100%;border:0;border-radius:20px;padding:14px;font-size:19px;font-weight:800;background:#ededed;color:#4f585e;cursor:pointer}.connection{min-height:24px;text-align:center;font-size:15px;margin:11px 0;color:#777}.connection.error{color:#a64029;font-weight:700}
+.page-count{width:max-content;margin:0 auto 12px;padding:7px 14px;border-radius:999px;background:#f3effa;color:#6849a9;font-weight:700}.listen-meter{height:42px;display:flex;justify-content:center;align-items:flex-end;gap:8px;margin-bottom:12px}.listen-meter i{display:block;width:10px;height:18px;border-radius:999px;background:linear-gradient(#c5aaff,var(--purple));transform-origin:center bottom;transition:transform .08s linear,opacity .08s linear;opacity:.55}.story{background:#fbfaf5;border-radius:25px;padding:24px 20px;min-height:360px;transition:background .3s ease,transform .3s ease}.sentence{font-size:clamp(28px,5.8vw,48px);line-height:1.85;margin:0 0 18px}.sentence:last-child{margin-bottom:0}.word{position:relative;display:inline-block;isolation:isolate;padding:.03em .08em;border-radius:50%;color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;opacity:1!important;visibility:visible!important;transition:color .12s ease,text-shadow .12s ease,filter .12s ease,transform .12s ease;background:transparent}.word::before{content:'';position:absolute;z-index:-1;inset:-.09em -.12em;border-radius:999px;opacity:0;pointer-events:none}.word.done{color:#176a43!important;-webkit-text-fill-color:#176a43!important;text-shadow:0 0 6px rgba(84,200,126,.72),0 0 15px rgba(108,219,148,.48),0 0 25px rgba(166,239,190,.4)}.word.current,.word.start-here{color:var(--ink)!important;-webkit-text-fill-color:var(--ink)!important;text-shadow:none!important;filter:none!important;transform:none!important}.word.current::before,.word.start-here::before{opacity:1;background:rgba(222,205,252,.42);box-shadow:0 0 11px rgba(154,107,225,.5),0 0 24px rgba(187,151,239,.4);animation:startHereGlow .72s ease-in-out infinite alternate}.word.retry{color:#8d4b00!important;-webkit-text-fill-color:#8d4b00!important;text-shadow:none;animation:retryGlow .52s ease-in-out 3}.word.retry::before{opacity:1;background:rgba(255,225,165,.42);box-shadow:0 0 12px rgba(245,171,69,.68),0 0 25px rgba(255,201,116,.5)}.word.helping{color:#4f3186!important;-webkit-text-fill-color:#4f3186!important;text-shadow:none;transform:scale(1.07)}.word.helping::before{opacity:1;background:rgba(224,207,255,.48);box-shadow:0 0 14px rgba(142,91,220,.72),0 0 28px rgba(176,135,239,.54)}.story.page-complete{background:linear-gradient(145deg,#fff7d6,#f0e5ff,#e4f8e9);animation:pageStep .9s ease-in-out 2}.story.page-complete .word{color:#7447b0!important;-webkit-text-fill-color:#7447b0!important;text-shadow:0 0 8px rgba(239,186,67,.8),0 0 19px rgba(173,119,235,.58),0 0 30px rgba(255,224,137,.48);background:transparent;animation:finishGlow .85s ease-in-out infinite alternate}.story.page-complete .word::before{opacity:0;animation:none}@keyframes startHereGlow{from{opacity:.38;box-shadow:0 0 7px rgba(154,107,225,.34),0 0 16px rgba(187,151,239,.28)}to{opacity:.86;box-shadow:0 0 14px rgba(154,107,225,.62),0 0 30px rgba(187,151,239,.48)}}@keyframes retryGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes finishGlow{from{filter:brightness(.98)}to{filter:brightness(1.1)}}@keyframes pageStep{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}.status{text-align:center;font-size:clamp(20px,4.5vw,30px);line-height:1.4;margin:16px 0 8px;color:var(--muted);min-height:42px}.status.ok{color:var(--purple);font-weight:700}.status.fast{color:#1d7f57;font-weight:700}.status.retry-text{color:#af5d00;font-weight:700}.celebration{text-align:center;font-size:clamp(27px,6vw,44px);font-weight:900;color:#7648be;display:none;margin:10px 0}.celebration.show{display:block}.actions{display:grid;gap:13px;margin-top:15px}.listen-btn{border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;cursor:pointer;background:#eba63c;color:#1f60d3;box-shadow:0 8px 0 #c87c1e}.listen-btn.listening{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae;cursor:default}.help-btn{display:none;border:3px solid #8d63d5;border-radius:24px;padding:16px;font-size:clamp(21px,4.5vw,30px);font-weight:800;background:#eee6ff;color:#6545a7;cursor:pointer}.help-btn.show{display:block}.next-btn{border:0;border-radius:24px;padding:18px;font-size:clamp(23px,5vw,34px);font-weight:800;background:var(--grey);color:#777;box-shadow:0 8px 0 #bfbfbf}.next-btn.ready{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae;cursor:pointer}.next-btn:disabled{cursor:not-allowed;opacity:1}.reset-btn{border:0;border-radius:20px;background:#ededed;color:#4f585e;font-size:19px;padding:13px;font-weight:800;cursor:pointer}.note{text-align:center;color:#777;font-size:15px;line-height:1.5;margin:13px 0 0}.survey-progress{text-align:center;color:#7655b8;font-weight:800;margin-bottom:14px}.survey-actions{display:grid;gap:12px}.answer{border:0;border-radius:24px;padding:20px;font-size:clamp(22px,5vw,34px);font-weight:800;background:#f2edfa;color:#593d88;cursor:pointer}.answer:active{transform:scale(.98)}.thanks-icon{text-align:center;font-size:74px;margin:12px 0}.saved{text-align:center;color:#247a4d;font-weight:800;font-size:20px;margin:13px 0}.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}.confetti-piece{position:absolute;top:-24px;width:11px;height:17px;border-radius:3px;animation:fall 1500ms linear forwards}@keyframes fall{to{transform:translateY(120vh) rotate(720deg);opacity:.08}}details{margin-top:20px;border-top:1px solid #eee;padding-top:12px;color:#676d71}summary{cursor:pointer;text-align:center;font-weight:700}.debug{font-size:14px;line-height:1.55;background:#f6f6f6;border-radius:14px;padding:12px;margin-top:10px;word-break:break-word}.copy-btn{margin-top:10px;width:100%;padding:11px;font-size:16px;background:#ece6f9;color:#6545a7;border:0;border-radius:14px;font-weight:800}.hidden{display:none!important}@media(max-width:430px){.card{padding:18px}.story{padding:20px 14px}}
+</style>
 </head>
 <body>
 <div class="shell">
-  <section id="introScreen" class="screen active">
-    <main class="card">
-      <h1>📚 קוראים עם בוקי</h1>
-      <p class="sub">בדיקה קצרה לילדים: קוראים שני עמודים ועונים בסוף על כמה שאלות בכפתורים.</p>
-
-      <div class="question" data-question="grade">
-        <div class="question-title">באיזו כיתה הילד/ה?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="גן חובה"><span class="emoji">🌱</span>גן חובה</button>
-          <button class="choice" data-value="א"><span class="emoji">1️⃣</span>כיתה א׳</button>
-          <button class="choice" data-value="ב ומעלה"><span class="emoji">📖</span>ב׳ ומעלה</button>
-        </div>
-      </div>
-
-      <div class="question" data-question="readingLevel">
-        <div class="question-title">איך הילד/ה קורא/ת היום?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="מתחיל"><span class="emoji">🐢</span>רק מתחיל/ה</button>
-          <button class="choice" data-value="בינוני"><span class="emoji">🦊</span>כבר קורא/ת</button>
-          <button class="choice" data-value="שוטף"><span class="emoji">🚀</span>קורא/ת שוטף</button>
-        </div>
-      </div>
-
-      <button id="beginTestBtn" class="main-btn" disabled>מתחילים את הבדיקה</button>
-      <div id="connectionMessage" class="connection"></div>
-      <div class="privacy"><strong>פרטיות:</strong> לא מבקשים שם ולא שומרים הקלטת קול. הדפדפן משתמש בשירות זיהוי הדיבור שלו; אצלנו נשמרים רק נתוני ההתקדמות ותשובות הסקר.</div>
-    </main>
-  </section>
-
-  <section id="readingScreen" class="screen">
-    <main class="card">
-      <div id="confetti" class="confetti"></div>
-      <h1>🎙️ בוקי קורא איתי</h1>
-      <p class="sub">בוקי עוקב מילה־מילה בזוהר עדין. קוראים טבעי — לא צריך לחכות לצבע.</p>
-      <div id="pageCount" class="page-count">עמוד 1 מתוך 2</div>
-      <div id="meter" class="listen-meter"><i></i><i></i><i></i><i></i><i></i></div>
-      <section id="story" class="story" aria-live="polite"></section>
-      <div id="celebration" class="celebration">איזה יופי! סיימת את העמוד 🎉</div>
-      <p id="status" class="status">מתחילים מהמילה המהבהבת</p>
-      <div class="actions">
-        <button id="listenBtn" class="listen-btn">מתחילים לקרוא</button>
-        <button id="helpBtn" class="help-btn">בוקי, תעזור לי</button>
-        <button id="nextBtn" class="next-btn" disabled>עמוד הבא</button>
-        <button id="resetBtn" class="reset-btn">איפוס העמוד</button>
-      </div>
-      <p class="note">אם מילה אחרת נאמרה, בוקי לא מאשר אותה. הוא נשאר עליה ומבקש לנסות שוב.</p>
-    </main>
-  </section>
-
-  <section id="childSurveyScreen" class="screen">
-    <main class="card">
-      <div class="survey-progress">סיימנו לקרוא — 4 שאלות קצרות</div>
-      <h2>איך היה לקרוא עם בוקי?</h2>
-
-      <div class="question child-q" data-question="difficulty">
-        <div class="question-title">איך הייתה הקריאה?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="קל"><span class="emoji">😎</span>קל</button>
-          <button class="choice" data-value="בדיוק"><span class="emoji">🙂</span>בדיוק בשבילי</button>
-          <button class="choice" data-value="קשה"><span class="emoji">😓</span>קשה</button>
-        </div>
-      </div>
-
-      <div class="question child-q" data-question="helped">
-        <div class="question-title">הסימון של בוקי עזר לך?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="כן מאוד"><span class="emoji">✨</span>כן מאוד</button>
-          <button class="choice" data-value="קצת"><span class="emoji">👌</span>קצת</button>
-          <button class="choice" data-value="לא"><span class="emoji">🤷</span>לא</button>
-        </div>
-      </div>
-
-      <div class="question child-q" data-question="stuckFeeling">
-        <div class="question-title">כשמילה לא נקלטה, איך הרגשת?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="ניסיתי שוב"><span class="emoji">💪</span>ניסיתי שוב</button>
-          <button class="choice" data-value="ביקשתי עזרה"><span class="emoji">🙋</span>ביקשתי עזרה</button>
-          <button class="choice" data-value="התבאסתי"><span class="emoji">😕</span>התבאסתי</button>
-        </div>
-      </div>
-
-      <div class="question child-q" data-question="again">
-        <div class="question-title">בא לך לקרוא ככה שוב?</div>
-        <div class="choice-grid">
-          <button class="choice" data-value="כן"><span class="emoji">😍</span>כן!</button>
-          <button class="choice" data-value="אולי"><span class="emoji">🤔</span>אולי</button>
-          <button class="choice" data-value="לא"><span class="emoji">🙅</span>לא</button>
-        </div>
-      </div>
-
-      <button id="sendChildSurveyBtn" class="main-btn" disabled>שליחת התשובות</button>
-      <div id="childSaveMessage" class="connection"></div>
-    </main>
-  </section>
-
-  <section id="adultScreen" class="screen">
-    <main class="card">
-      <h2>שאלה קטנה למבוגר/ת</h2>
-      <p class="sub">החלק הזה אופציונלי ועוזר לנו להבין אם הילד הסתדר לבד.</p>
-      <div class="survey-actions">
-        <button id="noAdultBtn" class="secondary-btn">הילד/ה קרא/ה לבד — לסיום</button>
-        <button id="showAdultQuestionsBtn" class="main-btn">הייתי ליד הילד/ה</button>
-      </div>
-
-      <div id="adultQuestions" class="hidden">
-        <div class="question adult-q" data-question="independence">
-          <div class="question-title">כמה עזרה נדרשה?</div>
-          <div class="choice-grid">
-            <button class="choice" data-value="ללא עזרה"><span class="emoji">🌟</span>ללא עזרה</button>
-            <button class="choice" data-value="מעט עזרה"><span class="emoji">🤏</span>מעט עזרה</button>
-            <button class="choice" data-value="הרבה עזרה"><span class="emoji">🤝</span>הרבה עזרה</button>
-          </div>
-        </div>
-        <div class="question adult-q" data-question="flow">
-          <div class="question-title">האם הקריאה זרמה?</div>
-          <div class="choice-grid">
-            <button class="choice" data-value="כן"><span class="emoji">🌊</span>כן</button>
-            <button class="choice" data-value="חלקית"><span class="emoji">➖</span>חלקית</button>
-            <button class="choice" data-value="לא"><span class="emoji">🛑</span>לא</button>
-          </div>
-        </div>
-        <div class="question adult-q" data-question="recommend">
-          <div class="question-title">היית נותנ/ת לילד לקרוא כך שוב?</div>
-          <div class="choice-grid">
-            <button class="choice" data-value="כן"><span class="emoji">👍</span>כן</button>
-            <button class="choice" data-value="אולי"><span class="emoji">🤔</span>אולי</button>
-            <button class="choice" data-value="לא"><span class="emoji">👎</span>לא</button>
-          </div>
-        </div>
-        <button id="sendAdultSurveyBtn" class="main-btn" disabled>שליחת תשובות המבוגר</button>
-        <div id="adultSaveMessage" class="connection"></div>
-      </div>
-    </main>
-  </section>
-
-  <section id="thanksScreen" class="screen">
-    <main class="card">
-      <div class="thanks-icon">🦉💜</div>
-      <h1>תודה רבה!</h1>
-      <p class="sub">עזרתם לנו ללמד את בוקי לקרוא טוב יותר עם ילדים.</p>
-      <div class="saved">התשובות נשמרו ✓</div>
-      <button id="restartBtn" class="secondary-btn">ילד נוסף רוצה לבדוק</button>
-    </main>
-  </section>
+<section id="introScreen" class="screen active"><main class="card">
+<h1>📚 קוראים עם בוקי</h1><p class="sub">קוראים שני עמודים קצרים ועונים בסוף על כמה שאלות בכפתורים.</p>
+<div class="question" data-question="grade"><div class="question-title">באיזו כיתה הילד/ה?</div><div id="gradeChoices" class="choice-grid"><button class="choice" data-value="א">כיתה א׳</button><button class="choice" data-value="ב">כיתה ב׳</button><button class="choice" data-value="ג">כיתה ג׳</button><button class="choice" data-value="אחר">אחר</button></div></div>
+<div class="question" data-question="readingLevel"><div class="question-title">איך הילד/ה קורא/ת היום?</div><div id="levelChoices" class="choice-grid"><button class="choice" data-value="מתחיל">רק מתחיל/ה</button><button class="choice" data-value="איטי">קורא/ת לאט</button><button class="choice" data-value="שוטף">קורא/ת שוטף</button><button class="choice" data-value="לא יודע">לא יודע/ת</button></div></div>
+<button id="beginTest" class="main-btn" disabled>מתחילים את הבדיקה</button><div id="connectionMessage" class="connection"></div>
+<div class="privacy"><strong>פרטיות:</strong> לא מבקשים שם ולא שומרים הקלטת קול. נשמרים רק נתוני ההתקדמות ותשובות הסקר.</div>
+</main></section>
+<section id="readerScreen" class="screen"><main class="card"><div id="confetti" class="confetti"></div>
+<h1>🎙️ בוקי קורא איתי</h1><p class="sub">לוחצים פעם אחת בתחילת הסיפור. אחר כך בוקי ממשיך להקשיב ברצף גם במעבר לעמוד הבא.</p>
+<div id="pageCount" class="page-count">עמוד 1 מתוך 2</div><div id="meter" class="listen-meter"><i></i><i></i><i></i><i></i><i></i></div>
+<section id="story" class="story" aria-live="polite"></section><div id="celebration" class="celebration">איזה יופי! סיימת את העמוד 🎉</div><p id="status" class="status">מתחילים מהמילה המהבהבת</p>
+<div class="actions"><button id="listenBtn" class="listen-btn">מתחילים לקרוא</button><button id="helpBtn" class="help-btn">בוקי, תעזור לי</button><button id="nextBtn" class="next-btn" disabled>עמוד הבא</button><button id="resetBtn" class="reset-btn">התחלה מחדש בעמוד</button></div>
+<p class="note">אין כפתור עצירה. אחרי שהתחלתם, ההאזנה ממשיכה ברצף עד סוף הסיפור.</p>
+<details><summary>פרטי טסט למבוגר</summary><div id="debug" class="debug">עדיין אין נתוני בדיקה.</div><button id="copyBtn" class="copy-btn" type="button">העתקת תוצאות הטסט</button></details>
+</main></section>
+<section id="surveyScreen" class="screen"><main class="card"><div id="surveyProgress" class="survey-progress"></div><h2 id="surveyQuestion"></h2><div id="surveyAnswers" class="survey-actions"></div></main></section>
+<section id="thanksScreen" class="screen"><main class="card"><div class="thanks-icon">💜</div><h2>תודה!</h2><p class="sub">עזרת לבוקי ללמוד לקרוא איתך טוב יותר.</p><p class="saved">התשובות נשמרו בלי שם ובלי הקלטה.</p><button id="adultSurveyBtn" class="main-btn purple">למבוגר שהיה איתי</button><button id="finishBtn" class="secondary-btn" style="margin-top:14px">סיום</button></main></section>
+<section id="adultSurveyScreen" class="screen"><main class="card"><div id="adultProgress" class="survey-progress"></div><h2 id="adultQuestion"></h2><div id="adultAnswers" class="survey-actions"></div></main></section>
+<section id="finalThanksScreen" class="screen"><main class="card"><div class="thanks-icon">🌟</div><h2>סיימנו!</h2><p class="sub">תודה שעזרתם לנו לשפר את בוקי.</p></main></section>
 </div>
-
 <script>
-(() => {
-  'use strict';
-
-  const API_URL = 'https://mwfvziqmbkrjrnbbzqsf.supabase.co/functions/v1/booki-reading-test';
-  const PAGES = [
-    'בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה. הוּא רָאָה פַּרְפַּר כָּחֹל עָף מֵעַל הַפְּרָחִים. נֹעַם עָמַד בְּשֶׁקֶט וְחִכָּה שֶׁהַפַּרְפַּר יִתְקָרֵב.',
-    'אַחַר כָּךְ נֹעַם חָזַר הַבַּיְתָה. הוּא סִפֵּר לְאִמָּא עַל הַפַּרְפַּר הַכָּחֹל. נֹעַם אָמַר שֶׁמָּחָר יֵצֵא שׁוּב לַגִּנָּה.'
-  ];
-  const HELP_CHUNKS = {
-    'יתקרב':'יִתְ • קָ • רֵב','פרפר':'פַּרְ • פַּר','הפרחים':'הַ • פְּרָ • חִים',
-    'בבוקר':'בַּ • בֹּ • קֶר','לגינה':'לַ • גִּ • נָּה','נועם':'נֹ • עַם'
-  };
-
-  const $ = id => document.getElementById(id);
-  const screens = [...document.querySelectorAll('.screen')];
-  const storyEl = $('story'), statusEl = $('status'), listenBtn = $('listenBtn'), helpBtn = $('helpBtn');
-  const nextBtn = $('nextBtn'), resetBtn = $('resetBtn'), celebrationEl = $('celebration');
-  const pageCountEl = $('pageCount'), meterBars = [...document.querySelectorAll('#meter i')], confettiEl = $('confetti');
-
-  const pre = { grade:'', readingLevel:'' };
-  const childSurvey = {};
-  const adultSurvey = {};
-  let session = null;
-  let sessionStartedAt = 0;
-  let pageIndex = 0, expected = [], done = 0, retryIndex = -1, retriesForWord = 0;
-  let recognition = null, running = false, lastAlternatives = [], lastHeard = '', retryTimer = null;
-  let lastProgressWords = 0, stream = null, audioContext = null, analyser = null, meterFrame = null;
-  let pageComplete = false, testCompleted = false, totalRetries = 0, totalHelp = 0;
-  const stuckWordCounts = new Map();
-  const recognitionErrors = [];
-  const events = [];
-  const lagSamples = [];
-  let lastSpeechAt = 0;
-
-  function showScreen(id) {
-    screens.forEach(screen => screen.classList.toggle('active', screen.id === id));
-    window.scrollTo({ top:0, behavior:'smooth' });
-  }
-
-  function selectChoice(button, target) {
-    const question = button.closest('[data-question]');
-    question.querySelectorAll('.choice').forEach(choice => choice.classList.remove('selected'));
-    button.classList.add('selected');
-    target[question.dataset.question] = button.dataset.value;
-  }
-
-  document.querySelectorAll('#introScreen .choice').forEach(button => {
-    button.addEventListener('click', () => {
-      selectChoice(button, pre);
-      $('beginTestBtn').disabled = !(pre.grade && pre.readingLevel);
-    });
-  });
-  document.querySelectorAll('.child-q .choice').forEach(button => {
-    button.addEventListener('click', () => {
-      selectChoice(button, childSurvey);
-      $('sendChildSurveyBtn').disabled = Object.keys(childSurvey).length < 4;
-    });
-  });
-  document.querySelectorAll('.adult-q .choice').forEach(button => {
-    button.addEventListener('click', () => {
-      selectChoice(button, adultSurvey);
-      $('sendAdultSurveyBtn').disabled = Object.keys(adultSurvey).length < 3;
-    });
-  });
-
-  function deviceType() {
-    const ua = navigator.userAgent;
-    if (/iPad|Tablet/i.test(ua)) return 'tablet';
-    if (/Android|iPhone|Mobile/i.test(ua)) return 'mobile';
-    return 'desktop';
-  }
-  function browserName() {
-    const ua = navigator.userAgent;
-    if (/Edg\//.test(ua)) return 'Edge';
-    if (/CriOS|Chrome\//.test(ua)) return 'Chrome';
-    if (/FxiOS|Firefox\//.test(ua)) return 'Firefox';
-    if (/Safari\//.test(ua)) return 'Safari';
-    return 'Other';
-  }
-  function totalWords() {
-    return PAGES.reduce((sum, page) => sum + page.split(/\s+/).filter(Boolean).length, 0);
-  }
-  function overallWordIndex() {
-    return PAGES.slice(0, pageIndex).reduce((sum, page) => sum + page.split(/\s+/).filter(Boolean).length, 0) + done;
-  }
-  function durationMs() {
-    return sessionStartedAt ? Math.max(0, Date.now() - sessionStartedAt) : 0;
-  }
-  function metrics() {
-    const words = overallWordIndex();
-    const minutes = Math.max(durationMs() / 60000, 1 / 60);
-    return {
-      pageIndex,
-      wordIndex: words,
-      totalWords: totalWords(),
-      durationMs: durationMs(),
-      estimatedWpm: Math.round(words / minutes),
-      averageLagMs: lagSamples.length ? Math.round(lagSamples.reduce((a,b)=>a+b,0) / lagSamples.length) : null,
-      retriesCount: totalRetries,
-      helpCount: totalHelp,
-      adultInterventions: 0,
-      stuckWords: [...stuckWordCounts.entries()].map(([word,count]) => ({ word, count })),
-      recognitionErrors: recognitionErrors.slice(-40),
-      events: events.slice(-240)
-    };
-  }
-
-  async function api(action, payload = {}, options = {}) {
-    const body = { action, ...payload };
-    if (session && action !== 'start') {
-      body.sessionId = session.id;
-      body.token = session.token;
-    }
-    const response = await fetch(API_URL, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify(body),
-      cache:'no-store',
-      keepalive:!!options.keepalive
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.error) throw new Error(result.error || `http_${response.status}`);
-    return result;
-  }
-
-  async function startSession() {
-    const source = new URLSearchParams(location.search).get('source') || 'public-reading-test-v1';
-    const result = await api('start', {
-      source,
-      grade:pre.grade,
-      readingLevel:pre.readingLevel,
-      deviceType:deviceType(),
-      browserName:browserName(),
-      userAgent:navigator.userAgent,
-      totalWords:totalWords()
-    });
-    session = { id:result.sessionId, token:result.token };
-    sessionStartedAt = Date.now();
-  }
-
-  let saveTimer = null;
-  function scheduleSave() {
-    if (!session || testCompleted) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => api('save', metrics()).catch(() => {}), 500);
-  }
-
-  $('beginTestBtn').addEventListener('click', async () => {
-    const button = $('beginTestBtn');
-    const message = $('connectionMessage');
-    button.disabled = true;
-    button.textContent = 'מחברים את בוקי...';
-    message.textContent = '';
-    message.className = 'connection';
-    try {
-      await startSession();
-      renderPage();
-      showScreen('readingScreen');
-    } catch (error) {
-      message.textContent = 'לא הצלחנו לשמור את הבדיקה. בדקו אינטרנט ולחצו שוב.';
-      message.className = 'connection error';
-      button.disabled = false;
-    } finally {
-      button.textContent = 'מתחילים את הבדיקה';
-    }
-  });
-
-  function norm(value) {
-    const finals = {ך:'כ',ם:'מ',ן:'נ',ף:'פ',ץ:'צ'};
-    return String(value || '').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'')
-      .replace(/[ךםןףץ]/g, c => finals[c]).replace(/["'׳״.,!?;:()\[\]{}־–—/\\]/g,' ')
-      .replace(/[^א-ת\s]/g,' ').replace(/\s+/g,' ').trim();
-  }
-  function phonetic(value) { return norm(value).replace(/ע/g,'א').replace(/[חכ]/g,'כ').replace(/[טת]/g,'ת'); }
-  function key(value) { return phonetic(value).replace(/[וי]/g,''); }
-  const PREFIXES = new Set('ובכלמשהאתינ'.split(''));
-  const SUFFIXES = ['יהם','יכן','יכם','יות','ים','ות','יו','יה','נו','כם','כן','ה','ת','ו','י','ך'];
-  function variants(value) {
-    const base = norm(value).replace(/\s/g,''), out = new Set([base]);
-    let layer = [base];
-    for (let depth = 0; depth < 2; depth++) {
-      const next = [];
-      for (const item of layer) {
-        if (item.length > 3 && PREFIXES.has(item[0])) {
-          const cut = item.slice(1);
-          if (cut.length >= 3 && !out.has(cut)) { out.add(cut); next.push(cut); }
-        }
-      }
-      layer = next;
-    }
-    for (const item of [...out]) for (const suffix of SUFFIXES) {
-      if (item.endsWith(suffix) && item.length - suffix.length >= 3) out.add(item.slice(0,-suffix.length));
-    }
-    return [...out];
-  }
-  function lev(a,b) {
-    const row = Array.from({length:b.length+1},(_,i)=>i);
-    for (let i=1;i<=a.length;i++) {
-      let diag=row[0]; row[0]=i;
-      for (let j=1;j<=b.length;j++) {
-        const prev=row[j];
-        row[j]=Math.min(row[j]+1,row[j-1]+1,diag+(a[i-1]===b[j-1]?0:1));
-        diag=prev;
-      }
-    }
-    return row[b.length];
-  }
-  function lcs(a,b) {
-    const dp=Array(b.length+1).fill(0);
-    for (const ca of a) {
-      let prev=0;
-      for (let j=1;j<=b.length;j++) {
-        const temp=dp[j];
-        dp[j]=ca===b[j-1]?prev+1:Math.max(dp[j],dp[j-1]);
-        prev=temp;
-      }
-    }
-    return dp[b.length];
-  }
-  function sameCore(spoken,written) {
-    for (const a0 of variants(spoken)) for (const b0 of variants(written)) {
-      const a=phonetic(a0), b=phonetic(b0), ak=key(a0), bk=key(b0);
-      if (a===b || (ak && ak===bk)) return true;
-      const min=Math.min(ak.length,bk.length), max=Math.max(ak.length,bk.length);
-      if (min<3) continue;
-      const common=lcs(ak,bk), distance=lev(ak,bk);
-      if (min===3) {
-        if (common>=2 && distance<=1 && (ak[0]===bk[0] || ak.at(-1)===bk.at(-1))) return true;
-      } else if (common>=3 && common/min>=.72 && distance<=Math.max(1,Math.floor(max*.34))) return true;
-    }
-    return false;
-  }
-
-  function sentenceHtml(text) {
-    const words = String(text).split(/\s+/).filter(Boolean);
-    return `<p class="sentence">${words.map((word,index)=>`<span class="word${index===0?' start-here':''}" data-index="${index}">${word}</span>`).join(' ')}</p>`;
-  }
-  function wordNodes() { return [...storyEl.querySelectorAll('.word')]; }
-  function paint() {
-    wordNodes().forEach((node,index) => {
-      node.classList.toggle('done',index<done&&!pageComplete);
-      node.classList.toggle('start-here',index===done&&!running&&!pageComplete&&retryIndex!==index);
-      node.classList.toggle('current',index===done&&running&&!pageComplete&&retryIndex!==index);
-      node.classList.toggle('retry',index===retryIndex&&!pageComplete);
-      node.classList.toggle('helping',index===retryIndex&&helpBtn.classList.contains('show')&&!pageComplete);
-      node.style.opacity='1'; node.style.visibility='visible';
-    });
-  }
-  function renderPage() {
-    expected=PAGES[pageIndex].split(/\s+/).filter(Boolean);
-    done=0; retryIndex=-1; retriesForWord=0; lastAlternatives=[]; lastHeard=''; lastProgressWords=0; pageComplete=false;
-    clearRetryTimer(); helpBtn.classList.remove('show'); celebrationEl.classList.remove('show'); storyEl.classList.remove('page-complete');
-    nextBtn.disabled=true; nextBtn.classList.remove('ready');
-    nextBtn.textContent=pageIndex<PAGES.length-1?'עמוד הבא':'לסקר הקצר';
-    pageCountEl.textContent=`עמוד ${pageIndex+1} מתוך ${PAGES.length}`;
-    storyEl.innerHTML=sentenceHtml(PAGES[pageIndex]);
-    statusEl.textContent='מתחילים מהמילה המהבהבת'; statusEl.className='status';
-    paint();
-    requestAnimationFrame(() => { const first=wordNodes()[0]; if(first){first.classList.add('start-here');first.style.opacity='1';first.style.visibility='visible';} });
-    scheduleSave();
-  }
-  function clearRetryTimer(){ if(retryTimer) clearTimeout(retryTimer); retryTimer=null; }
-  function onlyPastWords(value) {
-    const heard=norm(value).split(' ').filter(Boolean);
-    if(!heard.length||done===0) return false;
-    const from=Math.max(0,done-6);
-    return heard.every(token => {
-      for(let i=from;i<done;i++) if(sameCore(token,expected[i])) return true;
-      return false;
-    });
-  }
-  function flashRetry(heard) {
-    if(done>=expected.length||pageComplete) return;
-    retriesForWord++; totalRetries++; retryIndex=done; lastHeard=heard||'לא זוהתה מילה';
-    const word=norm(expected[done]);
-    stuckWordCounts.set(word,(stuckWordCounts.get(word)||0)+1);
-    statusEl.textContent=`נסה שוב: ${expected[done]}`; statusEl.className='status retry-text';
-    if(retriesForWord>=2) helpBtn.classList.add('show');
-    events.push({t:durationMs(),type:'retry',page:pageIndex,word,heard:norm(heard),position:done,attempt:retriesForWord});
-    paint(); scheduleSave();
-    setTimeout(()=>{if(retryIndex===done&&!helpBtn.classList.contains('show')){retryIndex=-1;paint();}},1800);
-  }
-  function scheduleRetry(heard) {
-    clearRetryTimer(); const position=done;
-    retryTimer=setTimeout(()=>{retryTimer=null;if(running&&done===position&&!onlyPastWords(heard))flashRetry(heard);},430);
-  }
-  function progressAlternative(value,start) {
-    const heard=norm(value).split(' ').filter(Boolean); let pointer=start; const matched=[],missed=[];
-    for(const token of heard) {
-      if(pointer>=expected.length) break;
-      if(sameCore(token,expected[pointer])) { matched.push({heard:token,expected:norm(expected[pointer]),position:pointer}); pointer++; }
-      else missed.push(token);
-    }
-    return {pointer,matched,missed,heard};
-  }
-  function bestProgress(alternatives) {
-    let best={pointer:done,matched:[],missed:[],heard:[],text:''};
-    for(const text of alternatives) {
-      const result=progressAlternative(text,done);
-      if(result.pointer>best.pointer||(result.pointer===best.pointer&&result.missed.length<best.missed.length)) best={...result,text};
-    }
-    return best;
-  }
-  function handleResult(alternatives,isFinal) {
-    if(pageComplete) return;
-    const before=done, best=bestProgress(alternatives);
-    lastAlternatives=alternatives.map(norm).filter(Boolean); lastHeard=norm(best.text||alternatives[0]||'');
-    if(best.pointer>before) {
-      clearRetryTimer(); done=best.pointer; lastProgressWords=done-before; retryIndex=-1; retriesForWord=0; helpBtn.classList.remove('show');
-      if(lastSpeechAt) lagSamples.push(Math.max(0,performance.now()-lastSpeechAt));
-      const fast=lastProgressWords>=3;
-      statusEl.textContent=done>=expected.length?'מושלם! סיימת את העמוד 🎉':fast?'בוקי רץ איתך!':'יופי, ממשיכים';
-      statusEl.className=fast?'status fast':'status ok';
-      events.push({t:durationMs(),type:isFinal?'final-progress':'live-progress',page:pageIndex,from:before,to:done,heard:lastHeard});
-      paint(); scheduleSave();
-      if(done>=expected.length) completePage();
-      return;
-    }
-    if(isFinal&&lastHeard&&!onlyPastWords(lastHeard)) scheduleRetry(lastHeard);
-    else if(!isFinal){statusEl.textContent='בוקי איתך בזמן אמת';statusEl.className='status ok';}
-  }
-  function makeRecognition() {
-    const R=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!R){statusEl.textContent='הדפדפן הזה לא תומך בזיהוי דיבור. פתחו ב־Chrome או Safari.';return null;}
-    const rec=new R(); rec.lang='he-IL'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=10;
-    rec.onstart=()=>{statusEl.textContent='בוקי מקשיב';statusEl.className='status ok';events.push({t:durationMs(),type:'listen-start',page:pageIndex});};
-    rec.onspeechstart=()=>{lastSpeechAt=performance.now();};
-    rec.onresult=event=>{
-      for(let i=event.resultIndex;i<event.results.length;i++){
-        const result=event.results[i],alternatives=[];
-        for(let a=0;a<Math.min(result.length,10);a++){
-          const value=String(result[a]?.transcript||'').trim(); if(value) alternatives.push(value);
-        }
-        if(alternatives.length) handleResult(alternatives,!!result.isFinal);
-      }
-    };
-    rec.onerror=event=>{
-      recognitionErrors.push({t:durationMs(),error:event.error,page:pageIndex,word:done});
-      if(event.error==='not-allowed'||event.error==='service-not-allowed') statusEl.textContent='צריך לאשר מיקרופון לדפדפן.';
-      else if(event.error!=='no-speech'&&event.error!=='aborted') statusEl.textContent='ההאזנה נעצרה. לחצו שוב והמשיכו.';
-      scheduleSave();
-    };
-    rec.onend=()=>{if(running&&!pageComplete)try{rec.start();}catch(_){}};
-    return rec;
-  }
-  async function startMeter() {
-    if(stream) return;
-    try {
-      stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-      audioContext=new(window.AudioContext||window.webkitAudioContext)();
-      const source=audioContext.createMediaStreamSource(stream); analyser=audioContext.createAnalyser(); analyser.fftSize=256; source.connect(analyser); meterLoop();
-    } catch(_) {}
-  }
-  function meterLoop() {
-    if(!analyser) return;
-    const data=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(data);
-    const average=data.reduce((sum,value)=>sum+value,0)/data.length,level=Math.max(.5,Math.min(2.5,average/42));
-    meterBars.forEach((bar,index)=>{const shape=[.8,1.05,1.3,1.05,.8][index];bar.style.transform=`scaleY(${Math.max(1,level*shape)})`;bar.style.opacity=String(Math.min(1,.45+level/2));});
-    meterFrame=requestAnimationFrame(meterLoop);
-  }
-  function stopMeter() {
-    if(meterFrame)cancelAnimationFrame(meterFrame); meterFrame=null;
-    meterBars.forEach(bar=>{bar.style.transform='scaleY(1)';bar.style.opacity='.55';});
-    if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
-    if(audioContext){audioContext.close().catch(()=>{});audioContext=null;} analyser=null;
-  }
-  async function startReading() {
-    if(running){stopReading();return;}
-    if(pageComplete) return;
-    clearRetryTimer(); if(!recognition)recognition=makeRecognition(); if(!recognition)return;
-    running=true; listenBtn.textContent='עוצרים הקשבה';listenBtn.classList.add('stop');statusEl.textContent='בוקי מקשיב';statusEl.className='status ok';paint();
-    await startMeter(); try{recognition.start();}catch(_){statusEl.textContent='לחצו שוב כדי להתחיל';}
-  }
-  function stopReading() {
-    running=false;clearRetryTimer();try{recognition?.stop();}catch(_){}stopMeter();
-    listenBtn.textContent=pageComplete?'העמוד הושלם':done?'ממשיכים לקרוא':'מתחילים לקרוא';listenBtn.classList.remove('stop');
-    if(!helpBtn.classList.contains('show'))retryIndex=-1;
-    if(!pageComplete&&retryIndex<0)statusEl.textContent=done?'ממשיכים מהמילה המהבהבת':'מתחילים מהמילה המהבהבת';
-    paint();scheduleSave();
-  }
-  function completePage() {
-    if(pageComplete)return;
-    pageComplete=true;done=expected.length;retryIndex=-1;helpBtn.classList.remove('show');stopReading();storyEl.classList.add('page-complete');celebrationEl.classList.add('show');
-    statusEl.textContent='כל העמוד נקרא!';statusEl.className='status ok';nextBtn.disabled=false;nextBtn.classList.add('ready');burstConfetti();paint();
-    events.push({t:durationMs(),type:'page-complete',page:pageIndex});scheduleSave();
-  }
-  function burstConfetti() {
-    confettiEl.innerHTML='';const colors=['#8d63d5','#58c783','#f1c36d','#ff7da6','#6ca9ff','#ffb347'];
-    for(let i=0;i<36;i++){const piece=document.createElement('span');piece.className='confetti-piece';piece.style.left=`${Math.random()*100}%`;piece.style.background=colors[i%colors.length];piece.style.animationDelay=`${Math.random()*220}ms`;piece.style.width=`${8+Math.random()*8}px`;piece.style.height=`${12+Math.random()*12}px`;confettiEl.appendChild(piece);}
-    setTimeout(()=>confettiEl.innerHTML='',1800);
-  }
-  function helpCurrentWord() {
-    if(done>=expected.length)return;
-    retryIndex=done;helpBtn.classList.add('show');paint();totalHelp++;
-    const plain=norm(expected[done]),chunks=HELP_CHUNKS[plain]||expected[done];statusEl.textContent=chunks;statusEl.className='status ok';
-    events.push({t:durationMs(),type:'help',page:pageIndex,word:plain,position:done});scheduleSave();
-    if('speechSynthesis'in window){speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(plain);utterance.lang='he-IL';utterance.rate=.72;speechSynthesis.speak(utterance);}
-  }
-  async function finishReadingTest() {
-    if(testCompleted)return;
-    testCompleted=true;
-    try{await api('complete',metrics());}catch(_){testCompleted=false;}
-    showScreen('childSurveyScreen');
-  }
-  function nextPage() {
-    if(nextBtn.disabled)return;
-    if(pageIndex<PAGES.length-1){pageIndex++;stopReading();renderPage();}
-    else{finishReadingTest();}
-  }
-
-  listenBtn.addEventListener('click',startReading);
-  helpBtn.addEventListener('click',helpCurrentWord);
-  nextBtn.addEventListener('click',nextPage);
-  resetBtn.addEventListener('click',()=>{events.push({t:durationMs(),type:'page-reset',page:pageIndex,position:done});stopReading();renderPage();});
-
-  $('sendChildSurveyBtn').addEventListener('click',async()=>{
-    const button=$('sendChildSurveyBtn'),message=$('childSaveMessage');button.disabled=true;button.textContent='שומרים...';
-    try{await api('child_survey',{survey:childSurvey});showScreen('adultScreen');}
-    catch(_){message.textContent='לא הצלחנו לשמור. בדקו אינטרנט ולחצו שוב.';message.className='connection error';button.disabled=false;}
-    finally{button.textContent='שליחת התשובות';}
-  });
-  $('showAdultQuestionsBtn').addEventListener('click',()=>{$('adultQuestions').classList.remove('hidden');$('showAdultQuestionsBtn').classList.add('hidden');$('noAdultBtn').classList.add('hidden');});
-  $('noAdultBtn').addEventListener('click',()=>showScreen('thanksScreen'));
-  $('sendAdultSurveyBtn').addEventListener('click',async()=>{
-    const button=$('sendAdultSurveyBtn'),message=$('adultSaveMessage');button.disabled=true;button.textContent='שומרים...';
-    try{await api('adult_survey',{survey:adultSurvey});showScreen('thanksScreen');}
-    catch(_){message.textContent='לא הצלחנו לשמור. בדקו אינטרנט ולחצו שוב.';message.className='connection error';button.disabled=false;}
-    finally{button.textContent='שליחת תשובות המבוגר';}
-  });
-  $('restartBtn').addEventListener('click',()=>location.href=location.pathname+location.search);
-
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='hidden'&&session&&!testCompleted){api('save',metrics(),{keepalive:true}).catch(()=>{});}
-  });
-  window.addEventListener('pagehide',()=>{
-    if(session&&!testCompleted){api('abandon',metrics(),{keepalive:true}).catch(()=>{});}
-  });
-})();
+const API='https://mwfvziqmbkrjrnbbzqsf.supabase.co/functions/v1/booki-reading-test';
+const PAGES=['בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה. הוּא רָאָה פַּרְפַּר כָּחֹל עָף מֵעַל הַפְּרָחִים. נֹעַם עָמַד בְּשֶׁקֶט וְחִכָּה שֶׁהַפַּרְפַּר יִתְקָרֵב.','אַחַר כָּךְ נֹעַם חָזַר הַבַּיְתָה. הוּא סִפֵּר לְאִמָּא עַל הַפַּרְפַּר הַכָּחֹל. נֹעַם אָמַר שֶׁמָּחָר יֵצֵא שׁוּב לַגִּנָּה.'];
+const HELP_CHUNKS={'יתקרב':'יִתְ • קָ • רֵב','פרפר':'פַּרְ • פַּר','הפרחים':'הַ • פְּרָ • חִים','בבוקר':'בַּ • בֹּ • קֶר','לגינה':'לַ • גִּ • נָּה','אחר':'אַ • חַר'};
+const CHILD_QUESTIONS=[{key:'pace',q:'בוקי היה בקצב שלי',a:[['🐢 איטי מדי','איטי מדי'],['👍 בדיוק','בדיוק'],['🚀 מהיר מדי','מהיר מדי']]},{key:'glow',q:'הזוהר עזר לי לדעת איפה אני?',a:[['מאוד','מאוד'],['קצת','קצת'],['לא','לא']]},{key:'stuck',q:'כשמילה לא נקלטה...',a:[['הסתדרתי לבד','לבד'],['הייתי צריך קצת עזרה','קצת עזרה'],['זה עצבן או תקע אותי','תקע אותי']]},{key:'again',q:'בא לי לקרוא ככה שוב',a:[['כן! 😍','כן'],['אולי 🙂','אולי'],['לא כל כך','לא']]}];
+const ADULT_QUESTIONS=[{key:'false_positive',q:'האם בוקי צבע מילה שהילד בכלל לא אמר?',a:[['לא','לא'],['פעם אחת','פעם אחת'],['כמה פעמים','כמה פעמים']]},{key:'false_negative',q:'האם הילד אמר מילה נכונה ובוקי לא קיבל אותה?',a:[['לא','לא'],['פעם אחת','פעם אחת'],['כמה פעמים','כמה פעמים']]},{key:'intervention',q:'כמה פעמים היית צריך להתערב?',a:[['בכלל לא','0'],['פעם אחת','1'],['כמה פעמים','כמה']]},{key:'independent',q:'האם הילד יכול להשתמש בבוקי לבד?',a:[['כן','כן'],['עם מעט עזרה','מעט עזרה'],['עדיין לא','לא']]}];
+const $=id=>document.getElementById(id),screens=[...document.querySelectorAll('.screen')];
+const storyEl=$('story'),statusEl=$('status'),listenBtn=$('listenBtn'),helpBtn=$('helpBtn'),nextBtn=$('nextBtn'),resetBtn=$('resetBtn'),celebrationEl=$('celebration'),pageCountEl=$('pageCount'),debugEl=$('debug'),copyBtn=$('copyBtn'),meterBars=[...document.querySelectorAll('#meter i')],confettiEl=$('confetti');
+let profile={grade:'',readingLevel:''},remote={sessionId:null,token:null},source=new URLSearchParams(location.search).get('source')||'public';
+let pageIndex=0,expected=[],done=0,retryIndex=-1,retriesOnWord=0,recognition=null,listeningActive=false,leavingReading=false,lastAlternatives=[],lastHeard='',retryTimer=null,lastProgressWords=0,stream=null,audioContext=null,analyser=null,meterFrame=null,pageComplete=false,sessionStartedAt=0,pageStartedAt=0,lastVoiceAt=0,autosaveTimer=null,restartTimer=null,ignoreResultsUntil=0,freshSpeechSeen=false;
+let metrics={events:[],stuck:{},errors:[],retries:0,help:0,lags:[]},childSurvey={},adultSurvey={},surveyIndex=0,adultIndex=0;
+function show(id){screens.forEach(s=>s.classList.toggle('active',s.id===id));scrollTo(0,0)}
+function deviceType(){return /Android/i.test(navigator.userAgent)?'Android':/iPhone|iPad|iPod/i.test(navigator.userAgent)?'iOS':/Mobi/i.test(navigator.userAgent)?'Mobile':'Desktop'}
+function browserName(){const u=navigator.userAgent;return /Edg/i.test(u)?'Edge':/CriOS/i.test(u)?'Chrome iOS':/Chrome/i.test(u)?'Chrome':/Safari/i.test(u)?'Safari':'Other'}
+function totalWords(){return PAGES.reduce((n,p)=>n+p.split(/\s+/).filter(Boolean).length,0)}
+function currentTotalIndex(){return PAGES.slice(0,pageIndex).reduce((n,p)=>n+p.split(/\s+/).filter(Boolean).length,0)+done}
+function snapshot(){const duration=Math.max(0,Date.now()-sessionStartedAt),mins=duration/60000,lag=metrics.lags.length?Math.round(metrics.lags.reduce((a,b)=>a+b,0)/metrics.lags.length):null;return{pageIndex,wordIndex:currentTotalIndex(),totalWords:totalWords(),durationMs:duration,estimatedWpm:mins?Math.round(currentTotalIndex()/mins):0,averageLagMs:lag,retriesCount:metrics.retries,helpCount:metrics.help,adultInterventions:Number(adultSurvey.intervention)||0,stuckWords:Object.entries(metrics.stuck).map(([word,data])=>({word,...data})).slice(-100),recognitionErrors:metrics.errors.slice(-50),events:metrics.events.slice(-250)}}
+async function ensureSession(){if(remote.sessionId&&remote.token)return true;try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start',source,grade:profile.grade,readingLevel:profile.readingLevel,deviceType:deviceType(),browserName:browserName(),userAgent:navigator.userAgent,totalWords:totalWords()})});if(!response.ok)throw new Error('start_'+response.status);const data=await response.json();remote={sessionId:data.sessionId,token:data.token};return !!remote.sessionId}catch(error){localStorage.setItem('booki_pilot_unsent',JSON.stringify({profile,source,snapshot:snapshot()}));return false}}
+async function saveRemote(action='save',extra={}){if(!sessionStartedAt)return false;if(!(await ensureSession()))return false;try{const response=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},keepalive:action==='save',body:JSON.stringify({action,sessionId:remote.sessionId,token:remote.token,...snapshot(),...extra})});if(!response.ok)throw new Error('save_'+response.status);localStorage.removeItem('booki_pilot_unsent');return true}catch(error){localStorage.setItem('booki_pilot_unsent',JSON.stringify({profile,source,remote,snapshot:snapshot(),extra}));return false}}
+function queueSave(){clearTimeout(queueSave.t);queueSave.t=setTimeout(()=>saveRemote('save'),240)}
+function selectGroup(container,key){$(container).onclick=e=>{const b=e.target.closest('.choice');if(!b)return;[...$(container).querySelectorAll('.choice')].forEach(x=>x.classList.toggle('selected',x===b));profile[key]=b.dataset.value;$('beginTest').disabled=!(profile.grade&&profile.readingLevel)}}
+selectGroup('gradeChoices','grade');selectGroup('levelChoices','readingLevel');
+$('beginTest').onclick=()=>{sessionStartedAt=Date.now();show('readerScreen');renderPage();ensureSession();autosaveTimer=setInterval(()=>saveRemote('save'),5000)};
+function norm(value){const finals={ך:'כ',ם:'מ',ן:'נ',ף:'פ',ץ:'צ'};return String(value||'').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'').replace(/[ךםןףץ]/g,c=>finals[c]).replace(/["'׳״.,!?;:()\[\]{}־–—/\\]/g,' ').replace(/[^א-ת\s]/g,' ').replace(/\s+/g,' ').trim()}
+function phonetic(value){return norm(value).replace(/ע/g,'א').replace(/[חכ]/g,'כ').replace(/[טת]/g,'ת')}
+function key(value){return phonetic(value).replace(/[וי]/g,'')}
+const PREFIXES=new Set('ובכלמשהאתינ'.split('')),SUFFIXES=['יהם','יכן','יכם','יות','ים','ות','יו','יה','נו','כם','כן','ה','ת','ו','י','ך'];
+function variants(value){const base=norm(value).replace(/\s/g,''),out=new Set([base]);let layer=[base];for(let depth=0;depth<2;depth++){const next=[];for(const item of layer){if(item.length>3&&PREFIXES.has(item[0])){const cut=item.slice(1);if(cut.length>=3&&!out.has(cut)){out.add(cut);next.push(cut)}}}layer=next}for(const item of [...out])for(const suffix of SUFFIXES)if(item.endsWith(suffix)&&item.length-suffix.length>=3)out.add(item.slice(0,-suffix.length));return [...out]}
+function lev(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diag=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const prev=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,diag+(a[i-1]===b[j-1]?0:1));diag=prev}}return row[b.length]}
+function lcs(a,b){const dp=Array(b.length+1).fill(0);for(const ca of a){let prev=0;for(let j=1;j<=b.length;j++){const temp=dp[j];dp[j]=ca===b[j-1]?prev+1:Math.max(dp[j],dp[j-1]);prev=temp}}return dp[b.length]}
+function sameCore(spoken,written){for(const a0 of variants(spoken))for(const b0 of variants(written)){const a=phonetic(a0),b=phonetic(b0),ak=key(a0),bk=key(b0);if(a===b||(ak&&ak===bk))return true;const min=Math.min(ak.length,bk.length),max=Math.max(ak.length,bk.length);if(min<3)continue;const common=lcs(ak,bk),distance=lev(ak,bk);if(min===3){if(common>=2&&distance<=1&&(ak[0]===bk[0]||ak.at(-1)===bk.at(-1)))return true}else if(common>=3&&common/min>=.72&&distance<=Math.max(1,Math.floor(max*.34)))return true}return false}
+function sentenceHtml(text){const words=String(text).split(/\s+/).filter(Boolean);return `<p class="sentence">${words.map((word,index)=>`<span class="word" data-index="${index}">${word}</span>`).join(' ')}</p>`}
+function renderPage(){expected=PAGES[pageIndex].split(/\s+/).filter(Boolean);done=0;retryIndex=-1;retriesOnWord=0;lastAlternatives=[];lastHeard='';lastProgressWords=0;pageComplete=false;pageStartedAt=Date.now();ignoreResultsUntil=Date.now()+(listeningActive?700:0);freshSpeechSeen=!listeningActive;clearRetryTimer();helpBtn.classList.remove('show');celebrationEl.classList.remove('show');storyEl.classList.remove('page-complete');nextBtn.disabled=true;nextBtn.classList.remove('ready');nextBtn.textContent=pageIndex<PAGES.length-1?'עמוד הבא':'לסקר הקצר';pageCountEl.textContent=`עמוד ${pageIndex+1} מתוך ${PAGES.length}`;storyEl.innerHTML=sentenceHtml(PAGES[pageIndex]);statusEl.textContent=listeningActive?'בוקי ממשיך להקשיב — מתחילים מהמילה המהבהבת':'מתחילים מהמילה המהבהבת';statusEl.className='status';listenBtn.textContent=listeningActive?'בוקי מקשיב ברצף':'מתחילים לקרוא';listenBtn.disabled=listeningActive;listenBtn.classList.toggle('listening',listeningActive);paint();updateDebug();queueSave()}
+function wordNodes(){return [...storyEl.querySelectorAll('.word')]}
+function paint(){wordNodes().forEach((node,index)=>{node.classList.toggle('done',index<done&&!pageComplete);node.classList.toggle('start-here',index===done&&!listeningActive&&!pageComplete&&retryIndex!==index);node.classList.toggle('current',index===done&&listeningActive&&!pageComplete&&retryIndex!==index);node.classList.toggle('retry',index===retryIndex&&!pageComplete);node.classList.toggle('helping',index===retryIndex&&helpBtn.classList.contains('show')&&!pageComplete)})}
+function updateDebug(){const current=done<expected.length?expected[done]:'סיום';debugEl.innerHTML=`<strong>המילה הנוכחית:</strong> ${current}<br><strong>שמעתי לאחרונה:</strong> ${lastHeard||'—'}<br><strong>חלופות:</strong> ${lastAlternatives.join(' | ')||'—'}<br><strong>ניסיונות חוזרים:</strong> ${retriesOnWord}<br><strong>מילים בקפיצה האחרונה:</strong> ${lastProgressWords}<br><strong>התקדמות:</strong> ${done}/${expected.length}<br><strong>האזנה רציפה:</strong> ${listeningActive?'פעילה':'טרם התחילה'}`}
+function clearRetryTimer(){if(retryTimer)clearTimeout(retryTimer);retryTimer=null}
+function onlyPastWords(value){const heard=norm(value).split(' ').filter(Boolean);if(!heard.length||done===0)return false;const from=Math.max(0,done-6);return heard.every(token=>{for(let i=from;i<done;i++)if(sameCore(token,expected[i]))return true;return false})}
+function flashRetry(heard){if(done>=expected.length||pageComplete)return;retriesOnWord++;metrics.retries++;retryIndex=done;lastHeard=heard||'לא זוהתה מילה';const word=norm(expected[done]);metrics.stuck[word]??={attempts:0,page:pageIndex+1,position:done+1,firstAt:Date.now()-sessionStartedAt};metrics.stuck[word].attempts++;metrics.stuck[word].lastHeard=norm(heard);statusEl.textContent=`נסה שוב: ${expected[done]}`;statusEl.className='status retry-text';if(retriesOnWord>=2)helpBtn.classList.add('show');metrics.events.push({t:Date.now()-sessionStartedAt,type:'retry',page:pageIndex+1,word,heard:norm(heard),attempt:retriesOnWord});paint();updateDebug();queueSave();setTimeout(()=>{if(retryIndex===done&&!helpBtn.classList.contains('show')){retryIndex=-1;paint()}},1800)}
+function scheduleRetry(heard){clearRetryTimer();const position=done;retryTimer=setTimeout(()=>{retryTimer=null;if(listeningActive&&done===position&&!onlyPastWords(heard))flashRetry(heard)},430)}
+function progressAlternative(value,start){const heard=norm(value).split(' ').filter(Boolean);let pointer=start;const matched=[],missed=[];for(const token of heard){if(pointer>=expected.length)break;if(sameCore(token,expected[pointer])){matched.push({heard:token,expected:norm(expected[pointer]),position:pointer});pointer++}else missed.push(token)}return{pointer,matched,missed,heard}}
+function bestProgress(alternatives){let best={pointer:done,matched:[],missed:[],heard:[],text:''};for(const text of alternatives){const result=progressAlternative(text,done);if(result.pointer>best.pointer||(result.pointer===best.pointer&&result.missed.length<best.missed.length))best={...result,text}}return best}
+function handleResult(alternatives,isFinal){if(pageComplete||Date.now()<ignoreResultsUntil)return;if(!freshSpeechSeen&&Date.now()-pageStartedAt<1500)return;freshSpeechSeen=true;const before=done,best=bestProgress(alternatives);lastAlternatives=alternatives.map(norm).filter(Boolean);lastHeard=norm(best.text||alternatives[0]||'');if(best.pointer>before){clearRetryTimer();done=best.pointer;lastProgressWords=done-before;if(lastVoiceAt&&Date.now()-lastVoiceAt<5000)metrics.lags.push(Date.now()-lastVoiceAt);retryIndex=-1;retriesOnWord=0;helpBtn.classList.remove('show');const fast=lastProgressWords>=3;statusEl.textContent=done>=expected.length?'מושלם! סיימת את העמוד 🎉':fast?'בוקי רץ איתך!':'יופי, ממשיכים';statusEl.className=fast?'status fast':'status ok';metrics.events.push({t:Date.now()-sessionStartedAt,type:isFinal?'final-progress':'live-progress',page:pageIndex+1,from:before,to:done,heard:lastHeard});paint();updateDebug();queueSave();if(done>=expected.length)completePage();return}updateDebug();if(isFinal&&lastHeard&&!onlyPastWords(lastHeard))scheduleRetry(lastHeard);else if(!isFinal){statusEl.textContent='בוקי איתך בזמן אמת';statusEl.className='status ok'}}
+function makeRecognition(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){statusEl.textContent='לא נמצאה תמיכה. פתחו ב־Chrome או Safari מעודכן.';metrics.errors.push({t:Date.now()-sessionStartedAt,error:'unsupported'});queueSave();return null}const r=new R();r.lang='he-IL';r.continuous=true;r.interimResults=true;r.maxAlternatives=10;r.onstart=()=>{statusEl.textContent='בוקי מקשיב ברצף';statusEl.className='status ok';updateDebug()};r.onspeechstart=()=>{lastVoiceAt=Date.now();freshSpeechSeen=true};r.onresult=event=>{for(let i=event.resultIndex;i<event.results.length;i++){const result=event.results[i],alternatives=[];for(let a=0;a<Math.min(result.length,10);a++){const value=String(result[a]?.transcript||'').trim();if(value)alternatives.push(value)}if(alternatives.length)handleResult(alternatives,!!result.isFinal)}};r.onerror=event=>{metrics.errors.push({t:Date.now()-sessionStartedAt,error:event.error});queueSave();if(event.error==='not-allowed'||event.error==='service-not-allowed'){listeningActive=false;listenBtn.disabled=false;listenBtn.classList.remove('listening');listenBtn.textContent='נסו שוב';statusEl.textContent='צריך לאשר מיקרופון לדפדפן.'}else if(event.error!=='no-speech'&&event.error!=='aborted')statusEl.textContent='בוקי מתחבר מחדש וממשיך להקשיב'};r.onend=()=>{if(listeningActive&&!leavingReading){clearTimeout(restartTimer);restartTimer=setTimeout(()=>{try{r.start()}catch(_){}},180)}};return r}
+async function startMeter(){if(stream)return;try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});audioContext=new(window.AudioContext||window.webkitAudioContext)();const sourceNode=audioContext.createMediaStreamSource(stream);analyser=audioContext.createAnalyser();analyser.fftSize=256;sourceNode.connect(analyser);meterLoop()}catch(_){} }
+function meterLoop(){if(!analyser)return;const data=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(data);const average=data.reduce((sum,value)=>sum+value,0)/data.length,level=Math.max(.5,Math.min(2.5,average/42));if(average>18){lastVoiceAt=Date.now();freshSpeechSeen=true}meterBars.forEach((bar,index)=>{const shape=[.8,1.05,1.3,1.05,.8][index];bar.style.transform=`scaleY(${Math.max(1,level*shape)})`;bar.style.opacity=String(Math.min(1,.45+level/2))});meterFrame=requestAnimationFrame(meterLoop)}
+function stopMeter(){if(meterFrame)cancelAnimationFrame(meterFrame);meterFrame=null;meterBars.forEach(bar=>{bar.style.transform='scaleY(1)';bar.style.opacity='.55'});if(stream){stream.getTracks().forEach(track=>track.stop());stream=null}if(audioContext){audioContext.close().catch(()=>{});audioContext=null}analyser=null}
+async function startListening(){if(listeningActive||pageComplete)return;clearRetryTimer();if(!recognition)recognition=makeRecognition();if(!recognition)return;listeningActive=true;leavingReading=false;listenBtn.textContent='בוקי מקשיב ברצף';listenBtn.classList.add('listening');listenBtn.disabled=true;statusEl.textContent='בוקי מקשיב ברצף';statusEl.className='status ok';paint();updateDebug();await startMeter();try{recognition.start()}catch(_){statusEl.textContent='בוקי מתחבר — מתחילים לקרוא'}}
+function stopListeningAtEnd(){leavingReading=true;listeningActive=false;clearRetryTimer();clearTimeout(restartTimer);try{recognition?.abort()}catch(_){}recognition=null;stopMeter();listenBtn.disabled=false;listenBtn.classList.remove('listening')}
+function completePage(){if(pageComplete)return;pageComplete=true;done=expected.length;retryIndex=-1;helpBtn.classList.remove('show');storyEl.classList.add('page-complete');celebrationEl.classList.add('show');statusEl.textContent=pageIndex<PAGES.length-1?'כל העמוד נקרא — בוקי ממשיך להקשיב':'כל הסיפור נקרא!';statusEl.className='status ok';nextBtn.disabled=false;nextBtn.classList.add('ready');metrics.events.push({t:Date.now()-sessionStartedAt,type:'page_complete',page:pageIndex+1,durationMs:Date.now()-pageStartedAt});burstConfetti();paint();queueSave();if(pageIndex===PAGES.length-1){saveRemote('complete');setTimeout(startChildSurvey,1800)}}
+function burstConfetti(){confettiEl.innerHTML='';const colors=['#8d63d5','#58c783','#f1c36d','#ff7da6','#6ca9ff','#ffb347'];for(let i=0;i<36;i++){const piece=document.createElement('span');piece.className='confetti-piece';piece.style.left=`${Math.random()*100}%`;piece.style.background=colors[i%colors.length];piece.style.animationDelay=`${Math.random()*220}ms`;piece.style.width=`${8+Math.random()*8}px`;piece.style.height=`${12+Math.random()*12}px`;confettiEl.appendChild(piece)}setTimeout(()=>confettiEl.innerHTML='',1800)}
+function helpCurrentWord(){if(done>=expected.length)return;retryIndex=done;helpBtn.classList.add('show');metrics.help++;const word=norm(expected[done]);metrics.events.push({t:Date.now()-sessionStartedAt,type:'help',page:pageIndex+1,word,position:done});paint();const chunks=HELP_CHUNKS[word]||expected[done];statusEl.textContent=chunks;statusEl.className='status ok';if('speechSynthesis'in window){speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(word);utterance.lang='he-IL';utterance.rate=.72;speechSynthesis.speak(utterance)}queueSave()}
+function nextPage(){if(nextBtn.disabled)return;if(pageIndex<PAGES.length-1){pageIndex++;metrics.events.push({t:Date.now()-sessionStartedAt,type:'page_transition_continuous',toPage:pageIndex+1});renderPage()}else startChildSurvey()}
+listenBtn.onclick=startListening;helpBtn.onclick=helpCurrentWord;nextBtn.onclick=nextPage;resetBtn.onclick=()=>{metrics.events.push({t:Date.now()-sessionStartedAt,type:'page_reset',page:pageIndex+1,atWord:done});renderPage()};
+copyBtn.onclick=async()=>{const report={createdAt:new Date().toISOString(),profile,device:navigator.userAgent,...snapshot()},value=JSON.stringify(report,null,2);try{await navigator.clipboard.writeText(value);copyBtn.textContent='הועתק ✓'}catch(_){copyBtn.textContent='לא הצלחתי להעתיק — שלחו צילום'}setTimeout(()=>copyBtn.textContent='העתקת תוצאות הטסט',1800)};
+function renderSurvey(questionSet,index,progressId,questionId,answersId,onAnswer){const item=questionSet[index];$(progressId).textContent=`שאלה ${index+1} מתוך ${questionSet.length}`;$(questionId).textContent=item.q;$(answersId).innerHTML='';item.a.forEach(([label,value])=>{const button=document.createElement('button');button.className='answer';button.textContent=label;button.onclick=()=>onAnswer(item.key,value);$(answersId).appendChild(button)})}
+function startChildSurvey(){if(autosaveTimer){clearInterval(autosaveTimer);autosaveTimer=null}stopListeningAtEnd();surveyIndex=0;show('surveyScreen');renderSurvey(CHILD_QUESTIONS,surveyIndex,'surveyProgress','surveyQuestion','surveyAnswers',answerChild)}
+function answerChild(key,value){childSurvey[key]=value;surveyIndex++;if(surveyIndex<CHILD_QUESTIONS.length)renderSurvey(CHILD_QUESTIONS,surveyIndex,'surveyProgress','surveyQuestion','surveyAnswers',answerChild);else{saveRemote('child_survey',{survey:childSurvey});show('thanksScreen')}}
+$('adultSurveyBtn').onclick=()=>{adultIndex=0;show('adultSurveyScreen');renderSurvey(ADULT_QUESTIONS,adultIndex,'adultProgress','adultQuestion','adultAnswers',answerAdult)};
+function answerAdult(key,value){adultSurvey[key]=value;adultIndex++;if(adultIndex<ADULT_QUESTIONS.length)renderSurvey(ADULT_QUESTIONS,adultIndex,'adultProgress','adultQuestion','adultAnswers',answerAdult);else{saveRemote('adult_survey',{survey:adultSurvey});show('finalThanksScreen')}}
+$('finishBtn').onclick=()=>show('finalThanksScreen');
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&sessionStartedAt)saveRemote('save')});window.addEventListener('pagehide',()=>{if(sessionStartedAt)saveRemote('save')});
 </script>
 </body>
 </html>
