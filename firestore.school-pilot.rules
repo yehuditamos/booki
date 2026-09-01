@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// ISOLATED SCHOOL-PILOT RULESET.
+// IMPORTANT: This file is NOT the production firestore.rules file.
+// It must not be deployed over the live Omri/Mitarim class.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'owner';
+    }
+    function pilotMember(clubId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/clubMembers/$(clubId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/clubMembers/$(clubId)/members/$(request.auth.uid)).data.active == true;
+    }
+    function pilotTeacher(clubId) {
+      return pilotMember(clubId)
+        && get(/databases/$(database)/documents/clubMembers/$(clubId)/members/$(request.auth.uid)).data.role == 'teacher';
+    }
+    function canReadPilotClub(clubId) { return owner() || pilotMember(clubId); }
+    function canManagePilotClub(clubId) { return owner() || pilotTeacher(clubId); }
+
+    // UID-keyed membership index for NEW pilot classes only.
+    match /clubMembers/{clubId}/members/{uid} {
+      allow read: if owner() || (signedIn() && request.auth.uid == uid) || pilotTeacher(clubId);
+      allow create, update, delete: if owner() || pilotTeacher(clubId);
+    }
+
+    // New school-pilot namespace. Legacy production /classes and /clubs are deliberately untouched.
+    match /schoolPilotClubs/{clubId} {
+      allow read: if canReadPilotClub(clubId);
+      allow create: if owner();
+      allow update, delete: if canManagePilotClub(clubId);
+
+      match /memberships/{cardId} {
+        allow read: if canManagePilotClub(clubId)
+          || (signedIn() && resource.data.claimedByUid == request.auth.uid);
+        allow create, delete: if canManagePilotClub(clubId);
+        allow update: if canManagePilotClub(clubId)
+          || (signedIn()
+              && resource.data.claimedByUid == request.auth.uid
+              && request.resource.data.claimedByUid == resource.data.claimedByUid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['cachedStats','seenMessageIds','emoji','avatar','updatedAt']));
+      }
+
+      match /rewards/{id} {
+        allow read: if canReadPilotClub(clubId);
+        allow write: if canManagePilotClub(clubId);
+      }
+      match /economy/{id} {
+        allow read: if canReadPilotClub(clubId);
+        allow write: if canManagePilotClub(clubId);
+      }
+      match /goalCycles/{id} {
+        allow read: if canReadPilotClub(clubId);
+        allow write: if canManagePilotClub(clubId);
+      }
+      match /shop/{id} {
+        allow read: if canReadPilotClub(clubId);
+        allow write: if canManagePilotClub(clubId);
+      }
+      match /votes/{voteId} {
+        allow read: if canReadPilotClub(clubId);
+        allow write: if canManagePilotClub(clubId);
+        match /ballots/{uid} {
+          allow read: if owner() || pilotTeacher(clubId) || (signedIn() && request.auth.uid == uid);
+          allow create, update: if signedIn() && request.auth.uid == uid && pilotMember(clubId);
+          allow delete: if canManagePilotClub(clubId);
+        }
+      }
+      match /purchases/{id} {
+        allow read, write: if canManagePilotClub(clubId);
+      }
+      match /messages/{messageId} {
+        allow read: if canManagePilotClub(clubId)
+          || (signedIn() && resource.data.toUid == request.auth.uid);
+        allow create, update, delete: if canManagePilotClub(clubId);
+      }
+    }
+
+    // No catch-all allow. Anything not explicitly permitted here is denied.
+  }
+}
