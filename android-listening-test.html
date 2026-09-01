@@ -4,319 +4,92 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <title>בדיקת בוקי לאנדרואיד</title>
+  <title>בוקי קורא איתי — בדיקת זרימה</title>
   <style>
+    :root{--bg:#fff8e7;--ink:#29343a;--muted:#747b80;--purple:#8d63d5;--purple-soft:#eee5ff;--green:#bfe9c9;--green-deep:#187044;--amber:#f2a846;--amber-soft:#fff0c9;--grey:#d9d9d9}
     *{box-sizing:border-box}
-    body{margin:0;background:#fff8e7;font-family:Arial,sans-serif;color:#26343c;padding:18px}
-    .card{max-width:760px;margin:auto;background:#fff;border-radius:28px;padding:22px;box-shadow:0 12px 35px #0001}
-    h1{text-align:center;font-size:34px;margin:8px 0 12px}
-    .sub,.status{text-align:center;font-size:20px;line-height:1.45}
-    .words{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;background:#faf8f1;border-radius:24px;padding:18px;margin:18px 0}
-    .word{font-size:32px;line-height:1.3;padding:8px 11px;border-radius:14px;transition:background .09s,color .09s,transform .09s,outline .09s}
-    .word.done{background:#ccefd5;color:#12643b}
-    .word.live{background:#eadcff;outline:3px solid #eba63c}
-    .word.retry{background:#fff0c7;outline:4px solid #f2994a;animation:retryFlash .55s ease-in-out 3}
-    @keyframes retryFlash{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.09);filter:brightness(1.08)}}
-    button{width:100%;border:0;border-radius:24px;padding:18px;font-size:27px;font-weight:700;background:#eba63c;color:#225ed2;box-shadow:0 8px 0 #c87d1e}
-    button.stop{background:#8f62d6;color:white;box-shadow:0 8px 0 #6b46b0}
-    .ok{color:#7c55d0;font-weight:700}
-    .fast{color:#1d7f57;font-weight:700}
-    .retry-text{color:#b35b00;font-weight:700}
-    .note{font-size:16px;color:#70777d;text-align:center;line-height:1.4}
-    details{margin-top:20px;border-top:1px solid #eee;padding-top:12px;color:#6b7175}
-    summary{cursor:pointer;text-align:center;font-weight:700}
-    .debug{font-size:15px;line-height:1.55;background:#f7f7f7;border-radius:14px;padding:12px;margin-top:10px;word-break:break-word}
-    .copy{margin-top:10px;padding:11px;font-size:16px;border-radius:14px;background:#ece6f9;color:#6545a7;box-shadow:none}
+    body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:var(--ink);padding:16px}
+    .card{max-width:780px;margin:auto;background:#fff;border-radius:30px;padding:22px;box-shadow:0 14px 40px rgba(0,0,0,.07);overflow:hidden;position:relative}
+    h1{text-align:center;font-size:clamp(31px,7vw,52px);margin:4px 0 8px}
+    .sub{text-align:center;color:#626a70;font-size:clamp(17px,3.7vw,24px);line-height:1.45;margin:0 auto 16px;max-width:650px}
+    .page-count{width:max-content;margin:0 auto 14px;padding:7px 14px;border-radius:999px;background:#f3effa;color:#6849a9;font-weight:700}
+    .listen-meter{height:42px;display:flex;justify-content:center;align-items:flex-end;gap:8px;margin-bottom:12px}
+    .listen-meter i{display:block;width:10px;height:18px;border-radius:999px;background:linear-gradient(#c5aaff,var(--purple));transform-origin:center bottom;transition:transform .08s linear,opacity .08s linear;opacity:.55}
+    .story{background:#fbfaf5;border-radius:25px;padding:22px 18px;min-height:360px;transition:background .25s ease,transform .25s ease}
+    .sentence{font-size:clamp(28px,5.8vw,48px);line-height:1.8;margin:0 0 18px;position:relative;border-radius:18px;padding:3px 5px;transition:background .22s ease,color .22s ease,transform .22s ease}
+    .sentence:last-child{margin-bottom:0}.sentence.current{background:rgba(238,229,255,.26)}
+    .sentence.complete{background:rgba(191,233,201,.38);color:#174f37;animation:sentenceGlow .85s ease}.sentence.complete::after{content:' ✨';font-size:.7em}
+    .word{position:relative;border-radius:9px;padding:0 2px;transition:background .12s ease,color .12s ease,box-shadow .12s ease,transform .12s ease}
+    .word.flow::after{content:'';position:absolute;right:0;left:0;bottom:-2px;height:5px;border-radius:999px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:.7;animation:flowPulse .55s ease-in-out infinite alternate}
+    .story.fast .word.flow::after{height:3px;opacity:.38;animation-duration:.35s}.story.support .word.flow{background:var(--purple-soft)}
+    .word.retry{background:var(--amber-soft);box-shadow:0 0 0 4px var(--amber);animation:retryFlash .55s ease-in-out 3}.word.helping{background:#e7dcff;box-shadow:0 0 0 4px var(--purple);transform:scale(1.06)}
+    .story.page-complete{background:linear-gradient(145deg,#fff8da,#f2e8ff,#e2f7e8);animation:pageStep .9s ease-in-out 2}.story.page-complete .sentence{color:#7447b0;background:transparent}
+    @keyframes flowPulse{from{transform:scaleX(.78)}to{transform:scaleX(1)}}@keyframes retryFlash{0%,100%{transform:scale(1)}50%{transform:scale(1.09)}}@keyframes sentenceGlow{0%{transform:scale(.99)}55%{transform:scale(1.02)}100%{transform:scale(1)}}@keyframes pageStep{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+    .status{text-align:center;font-size:clamp(20px,4.5vw,30px);line-height:1.4;margin:16px 0 8px;color:var(--muted);min-height:42px}.status.ok{color:var(--purple);font-weight:700}.status.retry-text{color:#af5d00;font-weight:700}
+    .celebration{text-align:center;font-size:clamp(27px,6vw,44px);font-weight:900;color:#7648be;display:none;margin:10px 0}.celebration.show{display:block;animation:sentenceGlow .8s ease}
+    .actions{display:grid;gap:13px;margin-top:15px}button{border:0;border-radius:24px;padding:18px;font-family:inherit;font-size:clamp(23px,5vw,34px);font-weight:800;cursor:pointer}
+    .listen-btn{background:#eba63c;color:#1f60d3;box-shadow:0 8px 0 #c87c1e}.listen-btn.stop{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae}
+    .help-btn{display:none;background:#eee6ff;color:#6545a7;border:3px solid #8d63d5;box-shadow:none}.help-btn.show{display:block}
+    .next-btn{background:var(--grey);color:#777;box-shadow:0 8px 0 #bfbfbf}.next-btn.ready{background:var(--purple);color:#fff;box-shadow:0 8px 0 #6742ae}.next-btn:disabled{cursor:not-allowed;opacity:1}
+    .reset-btn{background:#ededed;color:#4f585e;font-size:20px;padding:13px;box-shadow:none}.note{text-align:center;color:#777;font-size:16px;line-height:1.5;margin:13px 0 0}
+    details{margin-top:20px;border-top:1px solid #eee;padding-top:12px;color:#676d71}summary{cursor:pointer;text-align:center;font-weight:700}.debug{font-size:14px;line-height:1.55;background:#f6f6f6;border-radius:14px;padding:12px;margin-top:10px;word-break:break-word}.copy-btn{margin-top:10px;width:100%;padding:11px;font-size:16px;background:#ece6f9;color:#6545a7;box-shadow:none}
+    .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5}.confetti-piece{position:absolute;top:-24px;width:11px;height:17px;border-radius:3px;animation:fall 1500ms linear forwards}@keyframes fall{to{transform:translateY(120vh) rotate(720deg);opacity:.08}}
   </style>
 </head>
 <body>
 <main class="card">
-  <h1>🎙️ בדיקת בוקי באנדרואיד</h1>
-  <p class="sub">בוקי מתאים את עצמו לקצב: מילה־מילה לקורא מתחיל, וברצף מהיר לקורא שטס.</p>
-  <div id="words" class="words"></div>
-  <button id="btn">מתחילים לקרוא</button>
+  <div id="confetti" class="confetti"></div>
+  <h1>🎙️ בוקי קורא איתי</h1>
+  <p class="sub">קוראים סיפור, לא עוברים מבחן. בוקי עוקב בשקט, וחוזר רק למילים שבאמת חסרות.</p>
+  <div id="pageCount" class="page-count">עמוד 1 מתוך 2</div>
+  <div id="meter" class="listen-meter"><i></i><i></i><i></i><i></i><i></i></div>
+  <section id="story" class="story" aria-live="polite"></section>
+  <div id="celebration" class="celebration">איזה יופי! סיימת את העמוד 🎉</div>
   <p id="status" class="status">מחכים להתחלה</p>
-  <p class="note">בוקי מתקדם כבר מתוצאות הביניים, בלי לחכות לסוף המשפט. אם המילה הנוכחית לא זוהתה — הוא נעצר עליה ולא מדלג קדימה.</p>
-
-  <details>
-    <summary>פרטי טסט למבוגר</summary>
-    <div id="debug" class="debug">עדיין אין נתוני בדיקה.</div>
-    <button id="copy" class="copy" type="button">העתקת תוצאות הטסט</button>
-  </details>
+  <div class="actions">
+    <button id="listenBtn" class="listen-btn">מתחילים לקרוא</button>
+    <button id="helpBtn" class="help-btn">בוקי, תעזור לי</button>
+    <button id="nextBtn" class="next-btn" disabled>עמוד הבא</button>
+    <button id="resetBtn" class="reset-btn">איפוס העמוד</button>
+  </div>
+  <p class="note">במהלך הקריאה רואים רק פס זרימה עדין. מילה חסרה תופיע רק בסוף המשפט ותבקש ניסיון נוסף.</p>
+  <details><summary>פרטי טסט למבוגר</summary><div id="debug" class="debug">עדיין אין נתוני בדיקה.</div><button id="copyBtn" class="copy-btn" type="button">העתקת תוצאות הטסט</button></details>
 </main>
 <script>
-const TEXT='בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה. הוּא רָאָה פַּרְפַּר כָּחֹל עָף מֵעַל הַפְּרָחִים. נֹעַם עָמַד בְּשֶׁקֶט וְחִכָּה שֶׁהַפַּרְפַּר יִתְקָרֵב.';
-const expected=TEXT.split(/\s+/).filter(Boolean);
-const box=document.getElementById('words');
-const btn=document.getElementById('btn');
-const status=document.getElementById('status');
-const debug=document.getElementById('debug');
-const copyBtn=document.getElementById('copy');
-let rec=null,running=false,done=0,retryIndex=-1,retries=0;
-let lastExpected='',lastHeard='',lastAlternatives=[];
-let retryTimer=null,lastProgressAt=0,lastProgressWords=0;
-const events=[];
-
-function norm(t){
-  const finals={ך:'כ',ם:'מ',ן:'נ',ף:'פ',ץ:'צ'};
-  return String(t||'')
-    .normalize('NFKD')
-    .replace(/[\u0591-\u05C7]/g,'')
-    .replace(/[ךםןףץ]/g,c=>finals[c])
-    .replace(/["'׳״.,!?;:()\[\]{}־–—/\\]/g,' ')
-    .replace(/[^א-ת\s]/g,' ')
-    .replace(/\s+/g,' ')
-    .trim();
-}
-function phonetic(t){
-  return norm(t).replace(/ע/g,'א').replace(/[חכ]/g,'כ').replace(/[טת]/g,'ת');
-}
-function spellingKey(t){
-  return phonetic(t).replace(/[וי]/g,'');
-}
-const PREFIXES=new Set('ובכלמשהאתינ'.split(''));
-const SUFFIXES=['יהם','יכן','יכם','יות','ים','ות','יו','יה','נו','כם','כן','ה','ת','ו','י','ך'];
-
-function variants(t){
-  const base=norm(t).replace(/\s/g,'');
-  const out=new Set([base]);
-  let layer=[base];
-  for(let depth=0;depth<2;depth++){
-    const next=[];
-    for(const value of layer){
-      if(value.length>3&&PREFIXES.has(value[0])){
-        const cut=value.slice(1);
-        if(cut.length>=3&&!out.has(cut)){out.add(cut);next.push(cut)}
-      }
-    }
-    layer=next;
-  }
-  for(const value of [...out]){
-    for(const suffix of SUFFIXES){
-      if(value.endsWith(suffix)&&value.length-suffix.length>=3){
-        out.add(value.slice(0,-suffix.length));
-      }
-    }
-  }
-  return [...out];
-}
-function lev(a,b){
-  const r=Array.from({length:b.length+1},(_,i)=>i);
-  for(let i=1;i<=a.length;i++){
-    let d=r[0];r[0]=i;
-    for(let j=1;j<=b.length;j++){
-      const u=r[j];
-      r[j]=Math.min(r[j]+1,r[j-1]+1,d+(a[i-1]===b[j-1]?0:1));
-      d=u;
-    }
-  }
-  return r[b.length];
-}
-function lcs(a,b){
-  const dp=Array(b.length+1).fill(0);
-  for(const ca of a){
-    let prev=0;
-    for(let j=1;j<=b.length;j++){
-      const temp=dp[j];
-      dp[j]=ca===b[j-1]?prev+1:Math.max(dp[j],dp[j-1]);
-      prev=temp;
-    }
-  }
-  return dp[b.length];
-}
-function sameCore(spoken,written){
-  for(const a0 of variants(spoken)){
-    for(const b0 of variants(written)){
-      const a=phonetic(a0),b=phonetic(b0);
-      const ak=spellingKey(a0),bk=spellingKey(b0);
-      if(a===b||(ak&&ak===bk))return true;
-      const min=Math.min(ak.length,bk.length);
-      const max=Math.max(ak.length,bk.length);
-      if(min<3)continue;
-      const common=lcs(ak,bk);
-      const distance=lev(ak,bk);
-      if(min===3){
-        if(common>=2&&distance<=1&&(ak[0]===bk[0]||ak.at(-1)===bk.at(-1)))return true;
-      }else if(common>=3&&common/min>=.72&&distance<=Math.max(1,Math.floor(max*.34))){
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function paint(){
-  box.innerHTML='';
-  expected.forEach((w,i)=>{
-    const s=document.createElement('span');
-    const classes=['word'];
-    if(i<done)classes.push('done');
-    else if(i===retryIndex)classes.push('retry');
-    else if(i===done&&running)classes.push('live');
-    s.className=classes.join(' ');
-    s.textContent=w;
-    box.appendChild(s);
-  });
-}
-function updateDebug(){
-  const current=done<expected.length?expected[done]:'סיום';
-  debug.innerHTML=`<strong>המילה הנוכחית:</strong> ${current}<br><strong>שמעתי לאחרונה:</strong> ${lastHeard||'—'}<br><strong>חלופות:</strong> ${lastAlternatives.join(' | ')||'—'}<br><strong>ניסיונות חוזרים במילה:</strong> ${retries}<br><strong>מילים בקפיצה האחרונה:</strong> ${lastProgressWords}<br><strong>התקדמות:</strong> ${done}/${expected.length}`;
-}
-function clearRetryTimer(){
-  if(retryTimer)clearTimeout(retryTimer);
-  retryTimer=null;
-}
-function onlyPastWords(text){
-  const heard=norm(text).split(' ').filter(Boolean);
-  if(!heard.length||done===0)return false;
-  const from=Math.max(0,done-6);
-  return heard.every(token=>{
-    for(let i=from;i<done;i++)if(sameCore(token,expected[i]))return true;
-    return false;
-  });
-}
-function flashRetry(heard){
-  if(done>=expected.length)return;
-  retries++;
-  retryIndex=done;
-  lastExpected=expected[done];
-  lastHeard=heard||'לא זוהתה מילה';
-  status.textContent=`נסה שוב: ${expected[done]}`;
-  status.className='status retry-text';
-  events.push({time:new Date().toISOString(),type:'retry',expected:norm(expected[done]),heard:norm(heard),position:done,retries});
-  paint();
-  updateDebug();
-  setTimeout(()=>{
-    if(retryIndex===done){retryIndex=-1;paint()}
-  },1800);
-}
-function scheduleRetry(heard){
-  clearRetryTimer();
-  const position=done;
-  retryTimer=setTimeout(()=>{
-    retryTimer=null;
-    if(running&&done===position&&!onlyPastWords(heard))flashRetry(heard);
-  },420);
-}
-function progressAlternative(text,start){
-  const heard=norm(text).split(' ').filter(Boolean);
-  let p=start;
-  const matched=[];
-  const missed=[];
-  for(const token of heard){
-    if(p>=expected.length)break;
-    if(sameCore(token,expected[p])){
-      matched.push({heard:token,expected:norm(expected[p]),position:p});
-      p++;
-    }else{
-      missed.push(token);
-    }
-  }
-  return {p,matched,missed,heard};
-}
-function bestProgress(alternatives){
-  let best={p:done,matched:[],missed:[],heard:[],text:''};
-  for(const text of alternatives){
-    const result=progressAlternative(text,done);
-    if(result.p>best.p||(result.p===best.p&&result.missed.length<best.missed.length)){
-      best={...result,text};
-    }
-  }
-  return best;
-}
-function handleResult(alternatives,isFinal){
-  const before=done;
-  const best=bestProgress(alternatives);
-  lastAlternatives=alternatives.map(norm).filter(Boolean);
-  lastHeard=norm(best.text||alternatives[0]||'');
-
-  if(best.p>before){
-    clearRetryTimer();
-    done=best.p;
-    lastProgressWords=done-before;
-    lastProgressAt=performance.now();
-    retryIndex=-1;
-    retries=0;
-    const fast=lastProgressWords>=3;
-    status.textContent=done>=expected.length?'מושלם! בוקי עקב עד סוף הקטע 🎉':fast?'בוקי רץ איתך!':'יופי, ממשיכים';
-    status.className=fast?'status fast':'status ok';
-    events.push({time:new Date().toISOString(),type:isFinal?'final-progress':'live-progress',from:before,to:done,heard:lastHeard,matches:best.matched});
-    paint();
-    updateDebug();
-    if(done>=expected.length)stop();
-    return;
-  }
-
-  updateDebug();
-  if(isFinal&&lastHeard&&!onlyPastWords(lastHeard))scheduleRetry(lastHeard);
-  else if(!isFinal){
-    status.textContent='בוקי מקשיב בזמן אמת';
-    status.className='status ok';
-  }
-}
-function makeRec(){
-  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!R){status.textContent='לא נמצאה תמיכה. ודאו שנפתח ב־Chrome מעודכן.';return null}
-  const x=new R();
-  x.lang='he-IL';
-  x.continuous=true;
-  x.interimResults=true;
-  x.maxAlternatives=10;
-  x.onstart=()=>{status.textContent='בוקי מקשיב';status.className='status ok';updateDebug()};
-  x.onresult=e=>{
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      const result=e.results[i];
-      const alternatives=[];
-      for(let a=0;a<Math.min(result.length,10);a++){
-        const value=String(result[a]?.transcript||'').trim();
-        if(value)alternatives.push(value);
-      }
-      if(!alternatives.length)continue;
-      handleResult(alternatives,!!result.isFinal);
-    }
-  };
-  x.onerror=e=>{
-    if(e.error==='not-allowed'||e.error==='service-not-allowed')status.textContent='צריך לאשר מיקרופון ל־Chrome.';
-    else if(e.error!=='no-speech'&&e.error!=='aborted')status.textContent='הזיהוי נעצר. לחצו שוב והמשיכו.';
-  };
-  x.onend=()=>{if(running)try{x.start()}catch(_){}};
-  return x;
-}
-function start(){
-  if(running){stop();return}
-  if(done>=expected.length){done=0;retries=0;retryIndex=-1;events.length=0}
-  clearRetryTimer();
-  if(!rec)rec=makeRec();
-  if(!rec)return;
-  running=true;
-  btn.textContent='עוצרים הקשבה';
-  btn.classList.add('stop');
-  status.textContent='בוקי מקשיב';
-  status.className='status ok';
-  paint();
-  updateDebug();
-  try{rec.start()}catch(_){status.textContent='לחצו שוב כדי להתחיל'}
-}
-function stop(){
-  running=false;
-  clearRetryTimer();
-  try{rec?.stop()}catch(_){}
-  btn.textContent=done>=expected.length?'לקרוא שוב':'ממשיכים לקרוא';
-  btn.classList.remove('stop');
-  retryIndex=-1;
-  paint();
-  updateDebug();
-}
-copyBtn.onclick=async()=>{
-  const report={createdAt:new Date().toISOString(),device:navigator.userAgent,progress:`${done}/${expected.length}`,current:done<expected.length?norm(expected[done]):'complete',events};
-  const value=JSON.stringify(report,null,2);
-  try{await navigator.clipboard.writeText(value);copyBtn.textContent='הועתק ✓'}
-  catch(_){copyBtn.textContent='לא הצלחתי להעתיק — שלחו צילום'}
-  setTimeout(()=>copyBtn.textContent='העתקת תוצאות הטסט',1800);
-};
-btn.onclick=start;
-paint();
-updateDebug();
+const PAGES=[['בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה.','הוּא רָאָה פַּרְפַּר כָּחֹל עָף מֵעַל הַפְּרָחִים.','נֹעַם עָמַד בְּשֶׁקֶט וְחִכָּה שֶׁהַפַּרְפַּר יִתְקָרֵב.'],['אַחַר כָּךְ נֹעַם חָזַר הַבַּיְתָה.','הוּא סִפֵּר לְאִמָּא עַל הַפַּרְפַּר הַכָּחֹל.','נֹעַם אָמַר שֶׁמָּחָר יֵצֵא שׁוּב לַגִּנָּה.']];
+const HELP_CHUNKS={'יתקרב':'יִתְ • קָ • רֵב','פרפר':'פַּרְ • פַּר','הפרחים':'הַ • פְּרָ • חִים','בבוקר':'בַּ • בֹּ • קֶר','לגינה':'לַ • גִּ • נָּה'};
+const storyEl=document.getElementById('story'),statusEl=document.getElementById('status'),listenBtn=document.getElementById('listenBtn'),helpBtn=document.getElementById('helpBtn'),nextBtn=document.getElementById('nextBtn'),resetBtn=document.getElementById('resetBtn'),celebrationEl=document.getElementById('celebration'),pageCountEl=document.getElementById('pageCount'),debugEl=document.getElementById('debug'),copyBtn=document.getElementById('copyBtn'),meterBars=[...document.querySelectorAll('#meter i')],confettiEl=document.getElementById('confetti');
+let pageIndex=0,sentenceIndex=0,rec=null,running=false,resultText='',reviewMode=false,reviewTarget=-1,reviewAttempts=0,lastAlternatives=[],lastHeard='',pace='normal',lastProgressAt=0,stream=null,audioContext=null,analyser=null,meterFrame=null,sentenceStates=[];const events=[];
+function norm(value){const finals={ך:'כ',ם:'מ',ן:'נ',ף:'פ',ץ:'צ'};return String(value||'').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'').replace(/[ךםןףץ]/g,c=>finals[c]).replace(/["'׳״.,!?;:()\[\]{}־–—/\\]/g,' ').replace(/[^א-ת\s]/g,' ').replace(/\s+/g,' ').trim()}
+function phonetic(value){return norm(value).replace(/ע/g,'א').replace(/[חכ]/g,'כ').replace(/[טת]/g,'ת')}function key(value){return phonetic(value).replace(/[וי]/g,'')}
+const PREFIXES=new Set('ובכלמשהאתינ'.split('')),SUFFIXES=['יהם','יכן','יכם','יות','ים','ות','יו','יה','נו','כם','כן','ה','ת','ו','י','ך'];
+function variants(value){const base=norm(value).replace(/\s/g,''),out=new Set([base]);let layer=[base];for(let depth=0;depth<2;depth++){const next=[];for(const item of layer){if(item.length>3&&PREFIXES.has(item[0])){const cut=item.slice(1);if(cut.length>=3&&!out.has(cut)){out.add(cut);next.push(cut)}}}layer=next}for(const item of [...out])for(const suffix of SUFFIXES)if(item.endsWith(suffix)&&item.length-suffix.length>=3)out.add(item.slice(0,-suffix.length));return [...out]}
+function lev(a,b){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diag=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const prev=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,diag+(a[i-1]===b[j-1]?0:1));diag=prev}}return row[b.length]}
+function lcs(a,b){const dp=Array(b.length+1).fill(0);for(const ca of a){let prev=0;for(let j=1;j<=b.length;j++){const temp=dp[j];dp[j]=ca===b[j-1]?prev+1:Math.max(dp[j],dp[j-1]);prev=temp}}return dp[b.length]}
+function sameCore(spoken,written){for(const a0 of variants(spoken))for(const b0 of variants(written)){const a=phonetic(a0),b=phonetic(b0),ak=key(a0),bk=key(b0);if(a===b||(ak&&ak===bk))return true;const min=Math.min(ak.length,bk.length),max=Math.max(ak.length,bk.length);if(min<3)continue;const common=lcs(ak,bk),distance=lev(ak,bk);if(min===3){if(common>=2&&distance<=1&&(ak[0]===bk[0]||ak.at(-1)===bk.at(-1)))return true}else if(common>=3&&common/min>=.72&&distance<=Math.max(1,Math.floor(max*.34)))return true}return false}
+function wordsOf(sentence){return String(sentence).split(/\s+/).filter(Boolean)}function makeState(sentence){const words=wordsOf(sentence);return{words,confirmed:new Set(),pending:new Set(),cursor:0,complete:false}}
+function resetState(){sentenceIndex=0;reviewMode=false;reviewTarget=-1;reviewAttempts=0;resultText='';lastAlternatives=[];lastHeard='';pace='normal';lastProgressAt=performance.now();sentenceStates=PAGES[pageIndex].map(makeState);events.length=0;helpBtn.classList.remove('show');storyEl.className='story';celebrationEl.classList.remove('show');nextBtn.disabled=true;nextBtn.classList.remove('ready');nextBtn.textContent=pageIndex<PAGES.length-1?'עמוד הבא':'סיימנו';pageCountEl.textContent=`עמוד ${pageIndex+1} מתוך ${PAGES.length}`;render();statusEl.textContent='מחכים להתחלה';statusEl.className='status';updateDebug()}
+function render(){storyEl.innerHTML='';sentenceStates.forEach((state,sIndex)=>{const p=document.createElement('p');p.className='sentence';if(sIndex===sentenceIndex&&!state.complete)p.classList.add('current');if(state.complete)p.classList.add('complete');state.words.forEach((word,wIndex)=>{const span=document.createElement('span');span.className='word';if(!state.complete&&sIndex===sentenceIndex&&!reviewMode){const from=Math.max(0,state.cursor-1),to=Math.min(state.words.length-1,state.cursor+2);if(wIndex>=from&&wIndex<=to)span.classList.add('flow')}if(reviewMode&&sIndex===sentenceIndex&&wIndex===reviewTarget)span.classList.add('retry');span.textContent=word;p.appendChild(span);p.appendChild(document.createTextNode(' '))});storyEl.appendChild(p)})}
+function setPace(newPace){pace=newPace;storyEl.classList.toggle('fast',pace==='fast');storyEl.classList.toggle('support',pace==='support')}
+function updatePace(progressDelta){const now=performance.now(),elapsed=Math.max(200,now-lastProgressAt),rate=progressDelta/(elapsed/1000);if(progressDelta>=3||rate>2.1)setPace('fast');else if(rate<.65)setPace('support');else setPace('normal');lastProgressAt=now}
+function bestAlignment(alternatives){const state=sentenceStates[sentenceIndex];let best={confirmed:new Set(),pending:new Set(),cursor:0,score:-1,heard:[],consumed:0,traversed:false};for(const alt of alternatives){const heard=norm(alt).split(' ').filter(Boolean),confirmed=new Set(),pending=new Set();let p=0,matched=0,consumed=0;for(let h=0;h<heard.length&&p<state.words.length;h++){const token=heard[h];if(sameCore(token,state.words[p])){confirmed.add(p);p++;matched++;consumed=h+1;continue}let ahead=-1;for(let j=p+1;j<=Math.min(state.words.length-1,p+3);j++)if(sameCore(token,state.words[j])){ahead=j;break}if(ahead>=0){for(let j=p;j<ahead;j++)pending.add(j);confirmed.add(ahead);p=ahead+1;matched++;consumed=h+1}}const traversed=p>=state.words.length,score=matched*10-pending.size*2+(traversed?5:0);if(score>best.score)best={confirmed,pending,cursor:p,score,heard,consumed,traversed}}return best}
+function applyNormal(alternatives,isFinal){if(sentenceIndex>=sentenceStates.length)return;const state=sentenceStates[sentenceIndex],previousCursor=state.cursor,best=bestAlignment(alternatives);if(best.score<0)return;state.confirmed=best.confirmed;state.pending=best.pending;state.cursor=Math.max(state.cursor,best.cursor);const delta=Math.max(0,state.cursor-previousCursor);if(delta){updatePace(delta);statusEl.textContent=pace==='fast'?'בוקי זורם איתך':'בוקי איתך';statusEl.className='status ok';events.push({type:'flow',time:new Date().toISOString(),sentence:sentenceIndex,from:previousCursor,to:state.cursor,pending:[...state.pending],heard:norm(alternatives[0]||'')})}render();if(best.traversed){if(state.pending.size){if(isFinal)enterReview()}else finishSentence()}updateDebug()}
+function enterReview(){const state=sentenceStates[sentenceIndex];reviewMode=true;reviewTarget=[...state.pending].sort((a,b)=>a-b)[0];reviewAttempts=0;setPace('support');statusEl.textContent='נשארה לנו מילה קטנה';statusEl.className='status retry-text';helpBtn.classList.remove('show');events.push({type:'review-start',time:new Date().toISOString(),sentence:sentenceIndex,target:norm(state.words[reviewTarget])});render();updateDebug()}
+function applyReview(alternatives,isFinal){const state=sentenceStates[sentenceIndex],target=state.words[reviewTarget];let matched=false;for(const alt of alternatives){const tokens=norm(alt).split(' ').filter(Boolean);if(tokens.some(token=>sameCore(token,target))){matched=true;break}}if(matched){state.pending.delete(reviewTarget);state.confirmed.add(reviewTarget);reviewAttempts=0;helpBtn.classList.remove('show');events.push({type:'review-pass',time:new Date().toISOString(),sentence:sentenceIndex,target:norm(target),heard:norm(alternatives[0]||'')});if(state.pending.size){reviewTarget=[...state.pending].sort((a,b)=>a-b)[0];statusEl.textContent='מעולה, נשארה עוד מילה אחת';statusEl.className='status retry-text';render()}else{reviewMode=false;reviewTarget=-1;finishSentence()}}else if(isFinal){reviewAttempts++;statusEl.textContent=`נסה שוב: ${target}`;statusEl.className='status retry-text';events.push({type:'review-retry',time:new Date().toISOString(),sentence:sentenceIndex,target:norm(target),heard:norm(alternatives[0]||''),attempt:reviewAttempts});if(reviewAttempts>=2)helpBtn.classList.add('show');render()}updateDebug()}
+function finishSentence(){const state=sentenceStates[sentenceIndex];state.complete=true;state.cursor=state.words.length;state.pending.clear();reviewMode=false;reviewTarget=-1;helpBtn.classList.remove('show');events.push({type:'sentence-complete',time:new Date().toISOString(),sentence:sentenceIndex});render();if(sentenceIndex>=sentenceStates.length-1){completePage();return}statusEl.textContent='יופי! ממשיכים בסיפור';statusEl.className='status ok';sentenceIndex++;resultText='';setPace('normal');setTimeout(()=>render(),500)}
+function completePage(){running=false;try{rec?.stop()}catch(_){}stopMeter();storyEl.classList.add('page-complete');celebrationEl.classList.add('show');statusEl.textContent='כל העמוד נקרא!';statusEl.className='status ok';listenBtn.textContent='העמוד הושלם';listenBtn.classList.remove('stop');nextBtn.disabled=false;nextBtn.classList.add('ready');burstConfetti();events.push({type:'page-complete',time:new Date().toISOString(),page:pageIndex});updateDebug()}
+function burstConfetti(){const colors=['#8d63d5','#66c88f','#f2a846','#ff7da6','#6ca9ff','#ffd166'];confettiEl.innerHTML='';for(let i=0;i<38;i++){const piece=document.createElement('i');piece.className='confetti-piece';piece.style.left=`${Math.random()*100}%`;piece.style.background=colors[i%colors.length];piece.style.animationDelay=`${Math.random()*260}ms`;piece.style.transform=`rotate(${Math.random()*180}deg)`;confettiEl.appendChild(piece)}setTimeout(()=>confettiEl.innerHTML='',1900)}
+function currentFullText(event){const parts=[];for(let i=0;i<event.results.length;i++)parts.push(String(event.results[i][0]?.transcript||''));return parts.join(' ')}function alternativesFor(result){const list=[];for(let i=0;i<Math.min(result.length,10);i++){const value=String(result[i]?.transcript||'').trim();if(value)list.push(value)}return list}
+function makeRecognition(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){statusEl.textContent='לא נמצאה תמיכה. נסו לפתוח ב־Chrome מעודכן.';return null}const recognition=new R();recognition.lang='he-IL';recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=10;recognition.onstart=()=>{statusEl.textContent='בוקי מקשיב';statusEl.className='status ok'};recognition.onspeechstart=()=>meterKick();recognition.onresult=event=>{resultText=currentFullText(event);for(let i=event.resultIndex;i<event.results.length;i++){const result=event.results[i],alternatives=alternativesFor(result);if(!alternatives.length)continue;lastAlternatives=alternatives.map(norm);lastHeard=norm(alternatives[0]);if(reviewMode)applyReview(alternatives,!!result.isFinal);else applyNormal(alternatives,!!result.isFinal)}};recognition.onerror=event=>{if(event.error==='not-allowed'||event.error==='service-not-allowed')statusEl.textContent='צריך לאשר מיקרופון ל־Chrome.';else if(event.error!=='no-speech'&&event.error!=='aborted')statusEl.textContent='ההאזנה נעצרה. לחצו שוב והמשיכו.'};recognition.onend=()=>{if(running)try{recognition.start()}catch(_){}};return recognition}
+async function startMeter(){if(stream)return;try{stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});audioContext=new(window.AudioContext||window.webkitAudioContext)();const src=audioContext.createMediaStreamSource(stream);analyser=audioContext.createAnalyser();analyser.fftSize=256;src.connect(analyser);meterLoop()}catch(_){}}
+function meterLoop(){if(!analyser)return;const data=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(data);const avg=data.reduce((a,b)=>a+b,0)/data.length,level=Math.max(1,Math.min(2.8,avg/36));meterBars.forEach((bar,index)=>{const shape=[.8,1.1,1.4,1.1,.8][index];bar.style.transform=`scaleY(${Math.max(1,level*shape)})`;bar.style.opacity=String(Math.min(1,.45+level/2))});meterFrame=requestAnimationFrame(meterLoop)}function meterKick(){meterBars.forEach((bar,index)=>bar.style.transform=`scaleY(${index===2?2.4:1.7})`)}function stopMeter(){if(meterFrame)cancelAnimationFrame(meterFrame);meterFrame=null;meterBars.forEach(bar=>{bar.style.transform='scaleY(1)';bar.style.opacity='.55'});stream?.getTracks().forEach(track=>track.stop());audioContext?.close().catch(()=>{});stream=audioContext=analyser=null}
+async function toggleListening(){if(running){stopListening();return}if(sentenceStates.every(state=>state.complete))return;if(!rec)rec=makeRecognition();if(!rec)return;await startMeter();running=true;listenBtn.textContent='עוצרים הקשבה';listenBtn.classList.add('stop');statusEl.textContent='בוקי מקשיב';statusEl.className='status ok';render();try{rec.start()}catch(_){statusEl.textContent='לחצו שוב כדי להתחיל'}}
+function stopListening(){running=false;try{rec?.stop()}catch(_){}stopMeter();listenBtn.textContent='ממשיכים לקרוא';listenBtn.classList.remove('stop');statusEl.textContent='עצרנו. אפשר להמשיך מאותו מקום';statusEl.className='status';render()}
+function helpCurrentWord(){if(!reviewMode||reviewTarget<0)return;const state=sentenceStates[sentenceIndex],word=state.words[reviewTarget],clean=norm(word),chunks=HELP_CHUNKS[clean]||word.split('').join(' • ');statusEl.textContent=chunks;statusEl.className='status ok';const targetEl=storyEl.querySelectorAll('.sentence')[sentenceIndex]?.querySelectorAll('.word')[reviewTarget];targetEl?.classList.add('helping');setTimeout(()=>targetEl?.classList.remove('helping'),1500);try{speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(clean);utterance.lang='he-IL';utterance.rate=.65;speechSynthesis.speak(utterance)}catch(_){}events.push({type:'help',time:new Date().toISOString(),sentence:sentenceIndex,target:clean});updateDebug()}
+function nextPage(){if(nextBtn.disabled)return;if(pageIndex<PAGES.length-1){pageIndex++;rec=null;resetState()}else{burstConfetti();celebrationEl.textContent='סיימת את כל הסיפור! 🌟';celebrationEl.classList.add('show')}}
+function updateDebug(){const state=sentenceStates[sentenceIndex]||null,current=reviewMode&&state?state.words[reviewTarget]:state?.words[state.cursor]||'סיום';debugEl.innerHTML=`<strong>עמוד:</strong> ${pageIndex+1}/${PAGES.length}<br><strong>משפט:</strong> ${Math.min(sentenceIndex+1,sentenceStates.length)}/${sentenceStates.length}<br><strong>מצב:</strong> ${reviewMode?'חזרה למילה חסרה':'זרימת סיפור'}<br><strong>המילה הנוכחית:</strong> ${current||'—'}<br><strong>שמעתי:</strong> ${lastHeard||'—'}<br><strong>חלופות:</strong> ${lastAlternatives.join(' | ')||'—'}<br><strong>קצב:</strong> ${pace}<br><strong>ניסיונות:</strong> ${reviewAttempts}`}
+copyBtn.onclick=async()=>{const report={createdAt:new Date().toISOString(),device:navigator.userAgent,page:pageIndex+1,sentence:sentenceIndex+1,reviewMode,reviewTarget:reviewTarget>=0?norm(sentenceStates[sentenceIndex]?.words[reviewTarget]):null,events};try{await navigator.clipboard.writeText(JSON.stringify(report,null,2));copyBtn.textContent='הועתק ✓'}catch(_){copyBtn.textContent='לא הצלחתי להעתיק — שלחו צילום'}setTimeout(()=>copyBtn.textContent='העתקת תוצאות הטסט',1700)};
+listenBtn.onclick=toggleListening;helpBtn.onclick=helpCurrentWord;nextBtn.onclick=nextPage;resetBtn.onclick=()=>{stopListening();rec=null;resetState()};resetState();
 </script>
 </body>
 </html>
