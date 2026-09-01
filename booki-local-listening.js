@@ -1,36 +1,27 @@
 (() => {
   'use strict';
 
-  const ROOM_CALIBRATION_MS = 900;
-  const QUIET_TO_ARM_MS = 260;
+  const TOKEN_URL = 'https://booki-omri-listening-test.vercel.app/api/deepgram-token';
+  const RATE = 16000;
+  const AHEAD = 7;
+  const BEHIND = 2;
 
-  // iPhone/Safari often reports a much lower WebAudio RMS than desktop browsers.
-  // Keep the listener sensitive enough for a child's normal reading voice while
-  // still adapting to the room's background noise.
-  const MIN_NEAR_VOICE_RMS = .022;
-  const VOICE_MARGIN_RMS = .008;
-  const MAX_VOICE_THRESHOLD_RMS = .040;
-  const MAX_ROOM_FLOOR_RMS = .022;
-
-  const SILENCE_RESET_MS = 1200;
-  const WORD_COOLDOWN_MS = 110;
-
-  let stream = null;
-  let context = null;
-  let source = null;
-  let analyser = null;
-  let frame = null;
+  let stream, audio, source, analyser, processor, mute, socket, recognition;
+  let meterFrame, keepAliveTimer;
   let running = false;
-  let startedAt = 0;
-  let previousAt = 0;
-  let roomFloor = .01;
-  let detector = null;
-  let wordIndex = 0;
+  let stopping = false;
+  let engine = null;
   let words = [];
+  let normalized = [];
+  let confirmed = new Set();
+  let anchor = 0;
+  let lastFinal = '';
+  let lastFinalAt = 0;
 
-  const ui = () => document.getElementById('booki-local-listening');
-  const status = () => document.getElementById('booki-listening-status');
-  const text = () => document.getElementById('reader-text');
+  const el = id => document.getElementById(id);
+  const panel = () => el('booki-local-listening');
+  const status = () => el('booki-listening-status');
+  const text = () => el('reader-text');
   const bars = () => [...document.querySelectorAll('#booki-listening-meter i')];
 
   function readerName() {
@@ -38,228 +29,349 @@
       || (typeof getActiveReader === 'function' ? getActiveReader()?.name : '')
       || '').trim();
   }
+  function isEnabled() { return readerName() === 'עומרי'; }
+  function say(value) { if (status()) status().textContent = value; }
 
-  function isEnabled() {
-    return readerName() === 'עומרי';
+  function normalizeHebrew(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/[\u0591-\u05C7]/g, '')
+      .replace(/["'׳״.,!?;:()\[\]{}־–—/\\]/g, ' ')
+      .replace(/[^א-ת\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function key(value) { return normalizeHebrew(value).replace(/[וי]/g, ''); }
+
+  function distance(a, b) {
+    if (a === b) return 0;
+    const row = Array.from({ length:b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let diagonal = row[0];
+      row[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const above = row[j];
+        row[j] = Math.min(row[j] + 1, row[j - 1] + 1,
+          diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+        diagonal = above;
+      }
+    }
+    return row[b.length];
   }
 
-  function plainLength(value) {
-    return String(value || '').normalize('NFKD').replace(/[\u0591-\u05C7]/g, '').replace(/[^א-ת]/g, '').length;
+  function wordScore(spoken, expected) {
+    const a = normalizeHebrew(spoken);
+    const b = normalizeHebrew(expected);
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+    const ak = key(a), bk = key(b);
+    if (ak && ak === bk) return .96;
+    const prefix = /^[ובכלמשה]/;
+    if (a.length > 3 && prefix.test(a) && a.slice(1) === b) return .94;
+    if (b.length > 3 && prefix.test(b) && b.slice(1) === a) return .94;
+    if (ak.length > 3 && prefix.test(ak) && ak.slice(1) === bk) return .91;
+    if (bk.length > 3 && prefix.test(bk) && bk.slice(1) === ak) return .91;
+    const longest = Math.max(ak.length, bk.length);
+    if (longest < 3) return 0;
+    const d = distance(ak, bk);
+    const similarity = 1 - d / longest;
+    if (longest <= 4) return d <= 1 ? similarity : 0;
+    return d <= 2 ? similarity : 0;
   }
 
-  function expectedMs(index) {
-    const letters = plainLength(words[index]);
-    return Math.max(300, Math.min(720, 170 + Math.max(2, letters) * 65));
+  function nextNeeded() {
+    for (let i = 0; i < words.length; i++) if (!confirmed.has(i)) return i;
+    return words.length;
   }
 
-  function createDetector() {
-    let floor = .01;
-    let armed = false;
-    let quietFor = 0;
-    let voicedFor = 0;
-    let silenceFor = 0;
-    let cooldownFor = 0;
-
-    return {
-      process(rms, elapsed, sinceStart, neededMs) {
-        const calibrating = sinceStart < ROOM_CALIBRATION_MS;
-        if (calibrating) {
-          // Learn the room level, but cap it so a voice during startup cannot
-          // make Booki "deaf" for the rest of the page.
-          if (rms < .08) {
-            floor = Math.max(.004, Math.min(
-              MAX_ROOM_FLOOR_RMS,
-              floor * .9 + rms * .1
-            ));
-          }
-          return { calibrating:true, armed:false, voiceActive:false, confirmed:false, floor };
-        }
-
-        const threshold = Math.min(
-          MAX_VOICE_THRESHOLD_RMS,
-          Math.max(MIN_NEAR_VOICE_RMS, floor + VOICE_MARGIN_RMS)
-        );
-        const voiceActive = rms >= threshold;
-
-        // Do not confirm the first word until there was a short quiet moment
-        // after opening the microphone.
-        if (!armed) {
-          if (voiceActive) quietFor = 0;
-          else quietFor += elapsed;
-          if (quietFor >= QUIET_TO_ARM_MS) armed = true;
-          return { calibrating:false, armed, voiceActive:false, confirmed:false, floor };
-        }
-
-        // Follow room changes faster than before, but only while the input is
-        // below the speech threshold.
-        if (!voiceActive) {
-          floor = Math.max(.004, Math.min(
-            MAX_ROOM_FLOOR_RMS,
-            floor * .985 + rms * .015
-          ));
-        }
-
-        if (cooldownFor > 0) {
-          cooldownFor = Math.max(0, cooldownFor - elapsed);
-          return { calibrating:false, armed:true, voiceActive, confirmed:false, floor };
-        }
-
-        if (voiceActive) {
-          voicedFor += elapsed;
-          silenceFor = 0;
-          if (voicedFor >= neededMs) {
-            voicedFor = 0;
-            silenceFor = 0;
-            cooldownFor = WORD_COOLDOWN_MS;
-            return { calibrating:false, armed:true, voiceActive:true, confirmed:true, floor };
-          }
-        } else if (voicedFor > 0) {
-          silenceFor += elapsed;
-          if (silenceFor >= SILENCE_RESET_MS) {
-            voicedFor = 0;
-            silenceFor = 0;
-          }
-        }
-
-        return { calibrating:false, armed:true, voiceActive, confirmed:false, floor };
-      },
-      resetProgress() {
-        voicedFor = 0;
-        silenceFor = 0;
-        cooldownFor = 0;
-      },
-      snapshot() { return { floor, armed, quietFor, voicedFor, silenceFor, cooldownFor }; },
-    };
+  function bestTarget(spoken, cursor) {
+    const from = Math.max(0, cursor - BEHIND);
+    const to = Math.min(words.length - 1, cursor + AHEAD);
+    let best = { index:-1, score:0 };
+    for (let i = from; i <= to; i++) {
+      const score = wordScore(spoken, normalized[i]);
+      const betterTie = score === best.score && i >= cursor && best.index < cursor;
+      if (score > best.score || betterTie) best = { index:i, score };
+    }
+    return best;
   }
 
-  function render(displayText) {
-    const el = text();
-    if (!el) return;
-    const tokens = String(displayText || '').match(/\S+|\s+/g) || [];
+  function applyTranscript(value) {
+    const spoken = normalizeHebrew(value).split(' ').filter(Boolean);
+    if (!spoken.length || !words.length) return [];
+    let cursor = Math.max(0, anchor - BEHIND);
+    const candidates = [];
+    for (const token of spoken) {
+      const match = bestTarget(token, cursor);
+      if (match.index < 0 || match.score < .72) continue;
+      candidates.push(match);
+      cursor = Math.max(cursor, match.index + 1);
+    }
+    if (!candidates.length) return [];
+
+    const first = nextNeeded();
+    const sequence = candidates.some((item, i) => {
+      const next = candidates[i + 1];
+      return next && next.index > item.index && next.index - item.index <= 2;
+    });
+    const added = [];
+    let furthest = anchor;
+    for (const item of candidates) {
+      if (!sequence && item.index > first + 1) continue;
+      if (!confirmed.has(item.index)) added.push(item.index);
+      confirmed.add(item.index);
+      furthest = Math.max(furthest, item.index + 1);
+    }
+    anchor = Math.max(anchor, furthest);
+    refresh();
+    if (confirmed.size === words.length) say('שמעתי את כל העמוד!');
+    else if (added.length) say('כן, אני איתך');
+    return added;
+  }
+
+  function render(value) {
+    const tokens = String(value || '').match(/\S+|\s+/g) || [];
     words = tokens.filter(token => !/^\s+$/.test(token));
-    wordIndex = 0;
-    detector?.resetProgress();
-    const nodes = [];
-    let index = 0;
-    tokens.forEach(token => {
-      if (/^\s+$/.test(token)) {
-        nodes.push(document.createTextNode(token));
-        return;
-      }
-      const span = document.createElement('span');
-      span.className = 'reader-word';
-      span.dataset.wordIndex = String(index);
-      span.textContent = token;
-      nodes.push(span);
-      index++;
+    normalized = words.map(normalizeHebrew);
+    confirmed = new Set();
+    anchor = 0;
+    lastFinal = '';
+    lastFinalAt = 0;
+    const target = text();
+    if (target) {
+      let index = 0;
+      target.replaceChildren(...tokens.map(token => {
+        if (/^\s+$/.test(token)) return document.createTextNode(token);
+        const span = document.createElement('span');
+        span.className = 'reader-word';
+        span.dataset.wordIndex = String(index++);
+        span.textContent = token;
+        return span;
+      }));
+    }
+    refresh();
+  }
+
+  function refresh() {
+    const current = nextNeeded();
+    [...(text()?.children || [])].forEach((node, index) => {
+      node.classList.toggle('is-heard', confirmed.has(index));
+      node.classList.toggle('is-listening-now', running && index === current);
     });
-    el.replaceChildren(...nodes);
-    refreshWords();
   }
 
-  function refreshWords() {
-    [...(text()?.children || [])].forEach((el, index) => {
-      el.classList.toggle('is-heard', index < wordIndex);
-      el.classList.toggle('is-listening-now', running && index === wordIndex);
+  function terms() {
+    const seen = new Set();
+    const result = [];
+    for (const item of normalized) {
+      const clean = normalizeHebrew(item);
+      if (clean.length < 3 || seen.has(clean)) continue;
+      seen.add(clean);
+      result.push(clean);
+      if (result.length === 60) break;
+    }
+    return result;
+  }
+
+  function listenUrl() {
+    const q = new URLSearchParams({
+      model:'nova-3', language:'he', encoding:'linear16', sample_rate:String(RATE),
+      channels:'1', interim_results:'true', punctuate:'false', smart_format:'false',
+      endpointing:'300', utterance_end_ms:'1000', vad_events:'true',
+      tag:'booki-omri-reading-test'
     });
+    terms().forEach(term => q.append('keyterm', term));
+    return `wss://api.deepgram.com/v1/listen?${q}`;
   }
 
-  function confirmWord() {
-    if (wordIndex >= words.length) return;
-    wordIndex++;
-    refreshWords();
-    if (wordIndex >= words.length && status()) status().textContent = 'שמעתי אותך קורא!';
+  async function token() {
+    const response = await fetch(TOKEN_URL, { cache:'no-store', credentials:'omit' });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.access_token) throw new Error(body.error || `token_${response.status}`);
+    return body.access_token;
   }
 
-  function tick(now) {
+  function deepgramMessage(event) {
+    let data;
+    try { data = JSON.parse(event.data); } catch (_) { return; }
+    if (data.type === 'SpeechStarted') return say('אני שומע אותך');
+    if (data.type !== 'Results') return;
+    const transcript = String(data.channel?.alternatives?.[0]?.transcript || '').trim();
+    if (!transcript) return;
+    panel()?.classList.add('voice-active');
+    window.setTimeout(() => panel()?.classList.remove('voice-active'), 220);
+    if (!data.is_final) return say('אני שומע אותך');
+    const signature = normalizeHebrew(transcript);
+    const now = Date.now();
+    if (signature && (signature !== lastFinal || now - lastFinalAt > 2500)) {
+      lastFinal = signature;
+      lastFinalAt = now;
+      applyTranscript(transcript);
+    }
+  }
+
+  function pcm16(input, inputRate) {
+    const ratio = inputRate / RATE;
+    const output = new Int16Array(Math.max(1, Math.round(input.length / ratio)));
+    let from = 0;
+    for (let i = 0; i < output.length; i++) {
+      const to = Math.min(input.length, Math.round((i + 1) * ratio));
+      let sum = 0, count = 0;
+      for (; from < to; from++) { sum += input[from]; count++; }
+      const sample = Math.max(-1, Math.min(1, count ? sum / count : 0));
+      output[i] = sample < 0 ? sample * 32768 : sample * 32767;
+    }
+    return output.buffer;
+  }
+
+  function meter() {
     if (!running || !analyser) return;
-    const samples = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(samples);
+    const data = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(data);
     let energy = 0;
-    for (const value of samples) {
-      const sample = (value - 128) / 128;
-      energy += sample * sample;
-    }
-    const rms = Math.sqrt(energy / samples.length);
-    const elapsed = Math.min(100, previousAt ? now - previousAt : 16);
-    previousAt = now;
-    const state = detector.process(rms, elapsed, now - startedAt, expectedMs(wordIndex));
-    roomFloor = state.floor;
+    for (const value of data) { const sample = (value - 128) / 128; energy += sample * sample; }
+    const level = Math.min(1, Math.sqrt(energy / data.length) * 14);
+    bars().forEach((bar, index) => {
+      const shape = 1 - Math.abs(index - 2) * .16;
+      bar.style.setProperty('--meter', String(1 + level * 3.5 * shape));
+    });
+    meterFrame = requestAnimationFrame(meter);
+  }
 
-    if (state.calibrating) {
-      if (status()) status().textContent = 'בוקי מכוון אוזניים...';
-    } else if (!state.armed) {
-      ui()?.classList.remove('voice-active');
-      if (status()) status().textContent = 'רגע של שקט, ואז מתחילים';
-    } else {
-      ui()?.classList.toggle('voice-active', state.voiceActive);
-      if (state.voiceActive) {
-        if (status()) status().textContent = 'אני שומע אותך';
-      } else if (status() && wordIndex < words.length) {
-        status().textContent = 'בוקי שומע אותך';
+  async function startDeepgram(accessToken) {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio:{ channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+      video:false
+    });
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) throw new Error('audio_context_unsupported');
+    audio = new AudioContext();
+    await audio.resume();
+    source = audio.createMediaStreamSource(stream);
+    analyser = audio.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    processor = audio.createScriptProcessor(4096, 1, 1);
+    mute = audio.createGain();
+    mute.gain.value = 0;
+    source.connect(processor);
+    processor.connect(mute);
+    mute.connect(audio.destination);
+
+    socket = new WebSocket(listenUrl(), ['bearer', accessToken]);
+    socket.binaryType = 'arraybuffer';
+    await new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('deepgram_timeout')), 8000);
+      socket.addEventListener('open', () => { window.clearTimeout(timeout); resolve(); }, { once:true });
+      socket.addEventListener('error', () => { window.clearTimeout(timeout); reject(new Error('deepgram_socket')); }, { once:true });
+    });
+    socket.addEventListener('message', deepgramMessage);
+    socket.addEventListener('close', () => {
+      if (running && !stopping) say('ההאזנה נעצרה, פתחו שוב את העמוד');
+    });
+    keepAliveTimer = window.setInterval(() => {
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type:'KeepAlive' }));
+    }, 4000);
+    processor.onaudioprocess = event => {
+      if (!running || socket?.readyState !== WebSocket.OPEN) return;
+      const data = pcm16(event.inputBuffer.getChannelData(0), audio.sampleRate);
+      if (data.byteLength) socket.send(data);
+    };
+    engine = 'deepgram';
+    meterFrame = requestAnimationFrame(meter);
+  }
+
+  function startBrowser() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) throw new Error('speech_recognition_unsupported');
+    recognition = new Recognition();
+    recognition.lang = 'he-IL';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onstart = () => say('בוקי מקשיב למילים');
+    recognition.onspeechstart = () => say('אני שומע אותך');
+    recognition.onresult = event => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = String(result?.[0]?.transcript || '').trim();
+        if (transcript && result.isFinal) applyTranscript(transcript);
+        else if (transcript) say('אני שומע אותך');
       }
-
-      const level = Math.min(1, Math.max(0, (rms - roomFloor) * 11));
-      bars().forEach((bar, index) => {
-        const shape = 1 - Math.abs(index - 2) * .16;
-        bar.style.setProperty('--meter', String(1 + level * 3.5 * shape));
-      });
-      if (state.confirmed && wordIndex < words.length) confirmWord();
-    }
-    frame = requestAnimationFrame(tick);
+    };
+    recognition.onerror = event => {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') say('כדי שבוקי ישמע צריך לאשר מיקרופון');
+      else if (event.error !== 'no-speech' && event.error !== 'aborted') say('לא הצלחתי לזהות את המילים');
+    };
+    recognition.onend = () => {
+      if (!running || stopping || engine !== 'browser') return;
+      try { recognition.start(); } catch (_) {}
+    };
+    engine = 'browser';
+    recognition.start();
   }
 
   async function start() {
-    if (!isEnabled() || running) return;
-    const panel = ui();
-    if (panel) panel.hidden = false;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      if (status()) status().textContent = 'המכשיר לא מאפשר לבוקי להקשיב';
-      return;
-    }
+    if (!isEnabled() || running || !words.length) return;
+    if (panel()) panel().hidden = false;
+    running = true;
+    stopping = false;
+    refresh();
+    say('בוקי מתחבר לאוזניים...');
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio:{ channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true },
-        video:false,
-      });
-      context = new (window.AudioContext || window.webkitAudioContext)();
-      await context.resume();
-      source = context.createMediaStreamSource(stream);
-      analyser = context.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = .35;
-      source.connect(analyser);
-      running = true;
-      startedAt = performance.now();
-      previousAt = 0;
-      roomFloor = .01;
-      detector = createDetector();
-      refreshWords();
-      frame = requestAnimationFrame(tick);
+      await startDeepgram(await token());
+      if (running) say('בוקי מקשיב למילים');
     } catch (error) {
-      stop(false);
-      if (panel) panel.hidden = false;
-      if (status()) status().textContent = error?.name === 'NotAllowedError'
-        ? 'כדי שבוקי ישמע צריך לאשר מיקרופון'
-        : 'בוקי לא הצליח לפתוח את המיקרופון';
+      cleanupDeepgram();
+      if (!running) return;
+      try { startBrowser(); }
+      catch (_) {
+        running = false;
+        refresh();
+        say(error?.name === 'NotAllowedError'
+          ? 'כדי שבוקי ישמע צריך לאשר מיקרופון'
+          : 'לא הצלחתי לחבר זיהוי מילים');
+      }
     }
   }
 
-  function stop(hide = true) {
-    running = false;
-    if (frame) cancelAnimationFrame(frame);
-    frame = null;
+  function cleanupDeepgram() {
+    if (meterFrame) cancelAnimationFrame(meterFrame);
+    if (keepAliveTimer) window.clearInterval(keepAliveTimer);
+    meterFrame = keepAliveTimer = null;
+    if (processor) processor.onaudioprocess = null;
+    try { processor?.disconnect(); } catch (_) {}
+    try { mute?.disconnect(); } catch (_) {}
     try { analyser?.disconnect(); } catch (_) {}
     try { source?.disconnect(); } catch (_) {}
     stream?.getTracks().forEach(track => track.stop());
-    context?.close().catch(() => {});
-    stream = context = source = analyser = null;
-    detector = null;
-    ui()?.classList.remove('voice-active');
-    if (hide && ui()) ui().hidden = true;
+    audio?.close().catch(() => {});
+    try {
+      if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type:'CloseStream' }));
+      socket?.close();
+    } catch (_) {}
+    stream = audio = source = analyser = processor = mute = socket = null;
     bars().forEach(bar => bar.style.setProperty('--meter', '1'));
-    refreshWords();
+    panel()?.classList.remove('voice-active');
   }
 
-  window.BookiLocalListening = { isEnabled, render, start, stop, _createDetector:createDetector };
+  function stop(hide = true) {
+    stopping = true;
+    running = false;
+    try { if (recognition) recognition.onend = null; recognition?.abort(); } catch (_) {}
+    recognition = null;
+    cleanupDeepgram();
+    engine = null;
+    if (hide && panel()) panel().hidden = true;
+    refresh();
+    stopping = false;
+  }
+
+  window.addEventListener('pagehide', () => stop(true));
+  window.BookiLocalListening = {
+    isEnabled, render, start, stop,
+    _normalizeHebrew:normalizeHebrew,
+    _wordScore:wordScore,
+    _applyTranscriptForTest:applyTranscript,
+    _snapshotForTest:() => ({ words:[...words], confirmed:[...confirmed].sort((a,b) => a-b), anchor, running, engine })
+  };
 })();
