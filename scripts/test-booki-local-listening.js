@@ -1,51 +1,61 @@
 const assert = require('node:assert/strict');
 
-global.window = {};
+const readerText = {
+  children: [],
+  replaceChildren(...nodes) {
+    this.children = nodes.filter(node => node?.nodeType !== 3);
+  },
+};
+
+function createSpan() {
+  return {
+    nodeType: 1,
+    className: '',
+    dataset: {},
+    textContent: '',
+    classList: { toggle() {} },
+  };
+}
+
+global.window = {
+  addEventListener() {},
+  setTimeout,
+  clearTimeout,
+  setInterval,
+  clearInterval,
+  currentStudentData: { name: 'עומרי' },
+};
+global.document = {
+  getElementById(id) { return id === 'reader-text' ? readerText : null; },
+  querySelectorAll() { return []; },
+  createTextNode(text) { return { nodeType: 3, textContent: text }; },
+  createElement() { return createSpan(); },
+};
+global.requestAnimationFrame = () => 0;
+global.cancelAnimationFrame = () => {};
+
 require('../booki-local-listening.js');
 
-const createDetector = window.BookiLocalListening._createDetector;
+const listener = window.BookiLocalListening;
 
-function feed(detector, { rms, from, to, step = 20, neededMs = 360 }) {
-  const results = [];
-  for (let at = from; at < to; at += step) {
-    results.push(detector.process(rms, step, at, neededMs));
-  }
-  return results;
-}
+assert.equal(listener.isEnabled(), true, 'listening should remain limited to Omri');
+assert.equal(listener._normalizeHebrew('בַּבֹּקֶר!'), 'בבקר');
+assert.ok(listener._wordScore('בבוקר', 'בַּבֹּקֶר') > 0.9,
+  'full and defective Hebrew spelling should match');
+assert.ok(listener._wordScore('לגינה', 'לַגִּנָּה') > 0.9,
+  'niqqud differences should not block a word');
 
-{
-  const detector = createDetector();
-  feed(detector, { rms:.01, from:0, to:900 });
-  const startupNoise = feed(detector, { rms:.7, from:900, to:1400 });
-  assert.equal(startupNoise.some(state => state.confirmed), false,
-    'startup noise must not confirm the first word');
-  assert.equal(detector.snapshot().armed, false,
-    'the detector must wait for quiet after startup');
+listener.render('בַּבֹּקֶר נֹעַם יָצָא לַגִּנָּה');
+assert.deepEqual(listener._snapshotForTest().confirmed, []);
+listener._applyTranscriptForTest('בבוקר נועם');
+assert.deepEqual(listener._snapshotForTest().confirmed, [0, 1],
+  'only words actually recognized from the page should be confirmed');
+listener._applyTranscriptForTest('יצא לגינה');
+assert.deepEqual(listener._snapshotForTest().confirmed, [0, 1, 2, 3]);
 
-  feed(detector, { rms:.01, from:1400, to:1700 });
-  assert.equal(detector.snapshot().armed, true, 'quiet should arm listening');
+listener.render('חתול רץ מהר');
+listener._applyTranscriptForTest('חדשות מזג האוויר');
+assert.deepEqual(listener._snapshotForTest().confirmed, [],
+  'unrelated room speech must not advance the reading');
 
-  const reading = feed(detector, { rms:.09, from:1700, to:3300 });
-  assert.ok(reading.filter(state => state.confirmed).length >= 3,
-    'continuous near speech should keep advancing through words');
-}
-
-{
-  const detector = createDetector();
-  feed(detector, { rms:.01, from:0, to:1200 });
-  assert.equal(detector.snapshot().armed, true);
-  const quiet = feed(detector, { rms:.02, from:1200, to:2400 });
-  assert.equal(quiet.some(state => state.confirmed), false,
-    'room noise must never color a word');
-}
-
-{
-  const detector = createDetector();
-  feed(detector, { rms:.01, from:0, to:1200 });
-  assert.equal(detector.snapshot().armed, true);
-  const softReading = feed(detector, { rms:.028, from:1200, to:2000 });
-  assert.ok(softReading.some(state => state.confirmed),
-    'a child reading softly should be detected without shouting');
-}
-
-console.log('booki local listening detector: all tests passed');
+console.log('booki word-recognition listener: all tests passed');
