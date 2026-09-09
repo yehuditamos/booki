@@ -40,13 +40,11 @@ async function submitInitialSetup() {
   if (btn) { btn.disabled = true; btn.textContent = 'מגדיר מערכת...'; }
 
   try {
-    // 1. צור חשבון Firebase Auth
     const auth = firebase.auth();
     const cred = await auth.createUserWithEmailAndPassword(email, password);
     const uid  = cred.user.uid;
     await cred.user.updateProfile({ displayName: name });
 
-    // 2. כתוב מסמך Owner ב-Firestore — role:'owner' מותר כי config/setup עדיין אינו קיים
     const now = new Date().toISOString();
     await firebase.firestore().collection('users').doc(uid).set({
       name,
@@ -59,7 +57,6 @@ async function submitInitialSetup() {
       lastLoginAt: now,
     });
 
-    // 3. צור sentinel — נועל Initial Setup לצמיתות
     if (typeof fbCreateSetupRecord === 'function') {
       await fbCreateSetupRecord(uid, orgName);
     } else {
@@ -70,7 +67,6 @@ async function submitInitialSetup() {
       });
     }
 
-    // 4. עדכן state גלובלי ונתב ל-Owner Dashboard
     const teacher = { uid, email, name, role: 'owner' };
     window._currentTeacher = teacher;
     if (typeof showOwnerDashboard === 'function') {
@@ -90,3 +86,14 @@ async function submitInitialSetup() {
 
 window.showInitialSetup   = showInitialSetup;
 window.submitInitialSetup = submitInitialSetup;
+
+// הרחבה מבודדת למסכי תצוגת העץ. טעינה דינמית שומרת את index.html ללא שינוי.
+(function loadClassDisplayModes() {
+  if (document.querySelector('script[data-booki-class-display-modes]')) return;
+  const s = document.createElement('script');
+  s.src = 'class-display-modes.js?v=1';
+  s.async = false;
+  s.dataset.bookiClassDisplayModes = '1';
+  s.onerror = () => console.warn('[booki] class display modes extension did not load');
+  document.head.appendChild(s);
+})();
