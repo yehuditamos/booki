@@ -143,10 +143,19 @@
 
   // ─── Teacher Auth Screen ──────────────────────────────────────────────────────
 
+  const _pilotEntry = new URLSearchParams(window.location.search).get('pilot') === '1';
+  let _pilotFirstAuthOpen = _pilotEntry;
   let _authMode = 'login';
 
   function showTeacherAuth(mode) {
-    _authMode = mode || 'login';
+    // קישור הפיילוט מיועד למורות חדשות: בפעם הראשונה פותחים ישר הרשמה.
+    // לאחר מכן כפתור "כבר יש לי חשבון" ממשיך לעבוד רגיל.
+    if (_pilotFirstAuthOpen && (!mode || mode === 'login')) {
+      _authMode = 'register';
+      _pilotFirstAuthOpen = false;
+    } else {
+      _authMode = mode || 'login';
+    }
     _renderAuthForm();
     if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
   }
@@ -156,8 +165,8 @@
     if (!form) return;
     const isReg = _authMode === 'register';
     form.innerHTML = `
-      <div class="auth-mode-title">${isReg ? 'יצירת חשבון מורה חדש' : 'כניסה לחשבון קיים'}</div>
-      <p class="auth-mode-help">${isReg ? 'ממלאים שלושה פרטים ומיד מתחילים להקים את המועדון.' : 'הכניסי את האימייל והסיסמה שאיתם נרשמת.'}</p>
+      <div class="auth-mode-title">${isReg ? (_pilotEntry ? 'הצטרפות לפיילוט בוקי' : 'יצירת חשבון מורה חדש') : 'כניסה לחשבון קיים'}</div>
+      <p class="auth-mode-help">${isReg ? (_pilotEntry ? 'פיילוט חינמי מוגבל ל־20 מורות. ממלאים שלושה פרטים ומיד פותחים כיתה.' : 'ממלאים שלושה פרטים ומיד מתחילים להקים את המועדון.') : 'הכניסי את האימייל והסיסמה שאיתם נרשמת.'}</p>
       <div class="auth-tabs">
         <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login')">כבר יש לי חשבון</button>
         <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">זו הפעם הראשונה שלי</button>
