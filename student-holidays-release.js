@@ -55,7 +55,8 @@
     const card = byId('home-shelf-card');
     if (!card) return;
     const count = holidayStories().length;
-    card.style.display = count ? '' : 'none';
+    // An older home layout hides this card with !important. Override this card only.
+    card.style.setProperty('display', count ? 'flex' : 'none', 'important');
     card.onclick = openHolidayShelf;
     card.setAttribute('aria-label', 'חדש על המדף — ספריית החגים');
     const label = card.querySelector('.home-shelf-title');
@@ -180,6 +181,8 @@
   const style = document.createElement('style'); style.id = 'booki-student-holidays-style';
   style.textContent = `
     #back-to-school-promo{display:none!important}
+    #screen-main #home-shelf-card{margin:18px auto 0}
+    #home-shelf-card .home-shelf-label{flex-direction:column;align-items:center;gap:4px;text-align:center}
     #booki-holidays-promo[hidden]{display:none!important}
     #booki-holidays-promo{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;background:rgba(26,43,49,.48);backdrop-filter:blur(4px)}
     body.booki-holidays-promo-open{overflow:hidden}
