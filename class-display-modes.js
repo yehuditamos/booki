@@ -1,4 +1,4 @@
-/* Booki — class display modes v5 */
+/* Booki — class display modes v5.1: single real student tree; bounded reads */
 (function(){'use strict';
 const B='leaderboard',D='todayReaders',T='progressOnly',orig=window.setProgressDisplayMode;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,10 +13,53 @@ function picker(id,m,ms){const e=document.createElement('div');e.className='book
 function labelTeacherTable(){if(!window._currentTeacher)return;const c=document.getElementById('class-content');if(!c)return;const table=c.querySelector('.tcd-leaderboard,.leaderboard,table');if(!table)return;if(table.previousElementSibling?.classList.contains('teacher-only-label'))return;const l=document.createElement('div');l.className='teacher-only-label';l.innerHTML='<strong>🔒 לעיני המורה בלבד</strong><span>הטבלה הזו קבועה במסך הניהול שלך ואינה מושפעת ממה שבחרת להציג לילדים.</span>';table.parentNode.insertBefore(l,table);}
 function hideAnnouncement(){if(!window._currentTeacher)return;document.querySelectorAll('#class-content .tcd-qa-announce,#class-content #tcd-announce-composer').forEach(el=>el.style.display='none');}
 function enhance(){const old=document.querySelector('#class-content .tcd-qa-view');if(!old||old.dataset.up)return;const id=window.currentClubId||window._activeClubId;if(!id)return;old.dataset.up='1';Promise.all([fbLoadClub?.(id),fbLoadClubMemberships?.(id)||[]]).then(([c,m])=>{if(old.isConnected)old.replaceWith(picker(id,c?.settings?.progressDisplay||B,m||[]));labelTeacherTable();hideAnnouncement()}).catch(()=>{});}
-function student(c,ms){const ct=document.getElementById('class-content');if(!ct||window._currentTeacher)return;const mode=c?.settings?.progressDisplay||B,a=(ms||[]).filter(x=>x.status!=='left'),lb=ct.querySelector('.tcd-leaderboard,.leaderboard');ct.querySelector('.booki-student-mode')?.remove();if(mode===B){if(lb)lb.style.display='';return}if(lb)lb.style.display='none';const h=document.createElement('section');h.className='booki-student-mode';if(mode===T)h.innerHTML='<div class="student-tree">🌳</div>';else{const l=a.filter(x=>same(x.cachedStats?.lastReadAt)).sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'he'));h.innerHTML=`<h3>קראו היום:</h3><div class="orbit">${l.length?l.map(x=>`<span>${av(x)} <b>${esc(x.name||'קורא/ת')}</b> <strong>${day(x)} דק׳</strong></span>`).join(''):'<p>עוד לא קראו היום 🌱</p>'}<div class="student-tree">🌳</div></div>`}ct.prepend(h)}
-let tm;new MutationObserver(()=>{clearTimeout(tm);tm=setTimeout(async()=>{enhance();labelTeacherTable();hideAnnouncement();if(window._currentTeacher)return;const s=document.getElementById('screen-class'),id=window.currentClubId;if(!s?.classList.contains('active')||!id)return;try{const[c,m]=await Promise.all([fbLoadClub(id),fbLoadClubMemberships(id)]);student(c,m)}catch{}},30)}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});enhance();hideAnnouncement();
-const st=document.createElement('style');st.textContent=`.booki-display-picker{direction:rtl;display:grid;gap:8px;width:100%;margin:8px 0 12px}.bdp-title{font-weight:900;color:#24372f}.bdp-option{direction:rtl;text-align:right;border:2px solid #dce9df;background:#fff;border-radius:15px;padding:11px 13px;display:grid;gap:3px;font-family:inherit}.bdp-option span{font-size:12px;color:#64736c}.bdp-option em{font-style:normal;background:#e5f7ed;color:#24734a;padding:2px 7px;border-radius:999px;font-size:11px}.bdp-option.active{border-color:#43a86f;background:#f0fbf4}.bdp-preview{display:none;margin:-3px 8px 5px;padding:12px;background:#f8fcf9;border:1px dashed #b9d9c5;border-radius:14px}.bdp-preview.open{display:block}.children-see{display:block;color:#28764d;margin-bottom:9px}.bdp-note,.bdp-save{font-size:11px;color:#66736e}.bdp-save{min-height:14px;color:#28764d;font-weight:800}.bdp-demo{text-align:center}.bdp-demo h4{margin:4px 0 8px}.rank-row{display:grid;grid-template-columns:28px 1fr auto;gap:5px;text-align:right;padding:5px;border-bottom:1px solid #e7eee9}.rank-person{display:flex;align-items:center;gap:6px}.reader-avatar-img{width:28px;height:28px;border-radius:50%;object-fit:cover;display:inline-block;vertical-align:middle;border:1px solid #dce9df}.reader-avatar-emoji{font-size:20px;line-height:1}.big-tree,.student-tree{font-size:70px}.tree{display:grid;gap:4px}.tree small{color:#68756e}.floaters,.orbit{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;align-items:center}.floaters>span,.orbit>span{background:#fff;border:1.5px solid #bce6ce;border-radius:999px;padding:6px 9px;display:flex;align-items:center;gap:5px}.teacher-only-label{direction:rtl;background:#fff8df;border:1px solid #ead58d;border-radius:12px;padding:9px 11px;margin:14px 0 7px;display:grid;gap:2px}.teacher-only-label strong{font-size:13px}.teacher-only-label span{font-size:11px;color:#6e674e}.booki-student-mode{text-align:center;margin:8px auto 18px}.booki-student-mode h3{color:#244b39}.orbit{min-height:220px;padding:12px}.orbit>span{animation:flt 3s ease-in-out infinite alternate}.student-tree{width:100%}@keyframes flt{from{transform:translateY(-3px)}to{transform:translateY(5px)}}`;document.head.appendChild(st);
+function student(c,ms){
+  const ct=document.getElementById('class-content');
+  if(!ct||window._currentTeacher)return;
+  const hero=ct.querySelector('.class-hero');
+  if(!hero)return;
+  const mode=c?.settings?.progressDisplay||B,a=(ms||[]).filter(x=>x.status!=='left');
+  const lb=ct.querySelector('.tcd-leaderboard,.leaderboard');
+  ct.querySelector('.booki-student-mode')?.remove();
+  if(lb)lb.style.display=mode===B?'':'none';
+  // Keep the original class-hero, actual goal progress, units and Booki character.
+  // The old extension prepended a second, static tree and triggered itself forever.
+  if(mode!==D)return;
+  const l=a.filter(x=>same(x.cachedStats?.lastReadAt)).sort((x,y)=>String(x.name||'').localeCompare(String(y.name||''),'he'));
+  const h=document.createElement('section');h.className='booki-student-mode';
+  h.innerHTML=`<h3>קראו היום:</h3><div class="orbit">${l.length?l.map(x=>`<span>${av(x)} <b>${esc(x.name||'קורא/ת')}</b> <strong>${day(x)} דק׳</strong></span>`).join(''):'<p>עוד לא קראו היום 🌱</p>'}</div>`;
+  hero.appendChild(h);
+}
+// One read pair per newly rendered tree, never per animation/label/DOM mutation.
+const checkedTrees=new WeakSet();
+let tm;
+new MutationObserver(()=>{clearTimeout(tm);tm=setTimeout(async()=>{
+  enhance();labelTeacherTable();hideAnnouncement();
+  if(window._currentTeacher)return;
+  const s=document.getElementById('screen-class'),id=window.currentClubId;
+  const hero=document.querySelector('#class-content .class-hero');
+  if(!s?.classList.contains('active')||!id||!hero||checkedTrees.has(hero))return;
+  if(typeof fbLoadClub!=='function'||typeof fbLoadClubMemberships!=='function')return;
+  checkedTrees.add(hero);
+  try{
+    const[c,m]=await Promise.all([fbLoadClub(id),fbLoadClubMemberships(id)]);
+    if(window.currentClubId!==id||!s.classList.contains('active')||!hero.isConnected)return;
+    student(c,m);
+  }catch(e){console.warn('[booki] class mode unavailable',e);}
+},30)}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});enhance();hideAnnouncement();
+const st=document.createElement('style');st.textContent=`.booki-display-picker{direction:rtl;display:grid;gap:8px;width:100%;margin:8px 0 12px}.bdp-title{font-weight:900;color:#24372f}.bdp-option{direction:rtl;text-align:right;border:2px solid #dce9df;background:#fff;border-radius:15px;padding:11px 13px;display:grid;gap:3px;font-family:inherit}.bdp-option span{font-size:12px;color:#64736c}.bdp-option em{font-style:normal;background:#e5f7ed;color:#24734a;padding:2px 7px;border-radius:999px;font-size:11px}.bdp-option.active{border-color:#43a86f;background:#f0fbf4}.bdp-preview{display:none;margin:-3px 8px 5px;padding:12px;background:#f8fcf9;border:1px dashed #b9d9c5;border-radius:14px}.bdp-preview.open{display:block}.children-see{display:block;color:#28764d;margin-bottom:9px}.bdp-note,.bdp-save{font-size:11px;color:#66736e}.bdp-save{min-height:14px;color:#28764d;font-weight:800}.bdp-demo{text-align:center}.bdp-demo h4{margin:4px 0 8px}.rank-row{display:grid;grid-template-columns:28px 1fr auto;gap:5px;text-align:right;padding:5px;border-bottom:1px solid #e7eee9}.rank-person{display:flex;align-items:center;gap:6px}.reader-avatar-img{width:28px;height:28px;border-radius:50%;object-fit:cover;display:inline-block;vertical-align:middle;border:1px solid #dce9df}.reader-avatar-emoji{font-size:20px;line-height:1}.big-tree,.student-tree{font-size:70px}.tree{display:grid;gap:4px}.tree small{color:#68756e}.floaters,.orbit{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;align-items:center}.floaters>span,.orbit>span{background:#fff;border:1.5px solid #bce6ce;border-radius:999px;padding:6px 9px;display:flex;align-items:center;gap:5px}.teacher-only-label{direction:rtl;background:#fff8df;border:1px solid #ead58d;border-radius:12px;padding:9px 11px;margin:14px 0 7px;display:grid;gap:2px}.teacher-only-label strong{font-size:13px}.teacher-only-label span{font-size:11px;color:#6e674e}.booki-student-mode{text-align:center;margin:8px auto 18px}.booki-student-mode h3{color:#244b39}.orbit{min-height:220px;padding:12px}.orbit>span{animation:flt 3s ease-in-out infinite alternate}.student-tree{width:100%}@keyframes flt{from{transform:translateY(-3px)}to{transform:translateY(5px)}}@media(prefers-reduced-motion:reduce){.orbit>span{animation:none}}`;document.head.appendChild(st);
 })();
 
 // Load optional teacher contact support for the pilot without touching the main app shell.
 (function(){if(document.querySelector('script[data-booki-teacher-contact]'))return;const s=document.createElement('script');s.src='teacher-contact.js?v=1';s.async=false;s.dataset.bookiTeacherContact='1';document.head.appendChild(s);})();
+
+// Ordered, isolated student release. No teacher-entry video is loaded here.
+(function(){
+  if(document.querySelector('script[data-booki-student-holidays]'))return;
+  for(const src of ['content/stories-holidays-autumn-2026.js?v=1','student-holidays-release.js?v=1']){
+    const script=document.createElement('script');script.src=src;script.async=false;
+    script.dataset.bookiStudentHolidays='1';
+    script.onerror=()=>console.warn('[booki] holiday release file unavailable:',src);
+    document.head.appendChild(script);
+  }
+})();
