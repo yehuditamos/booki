@@ -26,11 +26,11 @@
   function configureLibrary() {
     if (typeof BOOKI_LIBRARY_SHELVES !== 'undefined') {
       const shelf = BOOKI_LIBRARY_SHELVES.find(s => s.id === 'holidays');
-      if (shelf) { shelf.title = 'ספריית החגים'; shelf.subtitle = 'סיפורים מתוקים לכל חג בשנה'; }
+      if (shelf) { shelf.title = 'ספריית החגים'; shelf.subtitle = 'סיפורים לחגי תשרי'; }
     }
     if (typeof LIBRARIES !== 'undefined') {
       const library = LIBRARIES.find(s => s.id === 'holidays');
-      if (library) { library.active = true; library.label = 'ספריית החגים'; }
+      if (library) { library.active = true; library.label = 'ספריית החגים'; library.description = 'סיפורים לחגי תשרי'; }
     }
     // Retire only the promotion, not the actual stories or their stable IDs.
     if (typeof STORIES_BACK_TO_SCHOOL !== 'undefined') {
@@ -62,7 +62,7 @@
     const label = card.querySelector('.home-shelf-title');
     if (label) label.replaceChildren(pointed('חדש על המדף — ספריית החגים', 'חָדָשׁ עַל הַמַּדָּף — סִפְרִיַּת הַחַגִּים'));
     const countEl = byId('home-shelf-count');
-    if (countEl) countEl.replaceChildren(pointed(`${count} סיפורים לחגים`, `${count} סִפּוּרִים לַחַגִּים`));
+    if (countEl) countEl.replaceChildren(pointed(`${count} סיפורים לחגי תשרי`, `${count} סִפּוּרִים לְחַגֵּי תִּשְׁרֵי`));
     window._homeShelfTarget = 'holidays';
     applyLabels(card);
   }
@@ -113,7 +113,7 @@
         el.id !== 'booki-holidays-promo' && el.id !== 'back-to-school-promo' && el.getClientRects().length)) return;
       const overlay = ensurePromo();
       const n = holidayStories().length;
-      byId('booki-holidays-count').replaceChildren(pointed(`${n} סיפורים — קצרים וגם ארוכים`, `${n} סִפּוּרִים — קְצָרִים וְגַם אֲרֻכִּים`));
+      byId('booki-holidays-count').replaceChildren(pointed(`${n} סיפורים לחגי תשרי — קצרים וגם ארוכים`, `${n} סִפּוּרִים לְחַגֵּי תִּשְׁרֵי — קְצָרִים וְגַם אֲרֻכִּים`));
       applyLabels(overlay);
       previousFocus = document.activeElement;
       overlay.hidden = false;
