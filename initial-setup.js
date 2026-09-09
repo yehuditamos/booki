@@ -108,3 +108,14 @@ window.submitInitialSetup = submitInitialSetup;
   s.onerror = () => console.warn('[booki] teacher flow extension did not load');
   document.head.appendChild(s);
 })();
+
+// Teacher catalog preview and professional feedback. No student/database writes.
+(function loadTeacherWorkspace() {
+  if (document.querySelector('script[data-booki-teacher-workspace]')) return;
+  const s = document.createElement('script');
+  s.src = 'teacher-workspace.js?v=20260909-1';
+  s.async = false;
+  s.dataset.bookiTeacherWorkspace = '1';
+  s.onerror = () => console.warn('[booki] teacher workspace did not load');
+  document.head.appendChild(s);
+})();
