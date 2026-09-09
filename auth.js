@@ -143,18 +143,22 @@
 
   // ─── Teacher Auth Screen ──────────────────────────────────────────────────────
 
-  const _pilotEntry = new URLSearchParams(window.location.search).get('pilot') === '1';
+  // בתקופת הפיילוט הקישור החי היחיד למורות הוא ?teacher=1.
+  // אין צורך בקישור נפרד: כניסה ראשונה דרך הקישור הזה נפתחת ישר בהרשמה.
+  const _entryParams = new URLSearchParams(window.location.search);
+  const _pilotEntry = _entryParams.get('teacher') === '1' || _entryParams.get('pilot') === '1';
   let _pilotFirstAuthOpen = _pilotEntry;
   let _authMode = 'login';
 
-  function showTeacherAuth(mode) {
-    // קישור הפיילוט מיועד למורות חדשות: בפעם הראשונה פותחים ישר הרשמה.
-    // לאחר מכן כפתור "כבר יש לי חשבון" ממשיך לעבוד רגיל.
-    if (_pilotFirstAuthOpen && (!mode || mode === 'login')) {
+  function showTeacherAuth(mode, explicitChoice = false) {
+    // בפתיחה הראשונה של הקישור החי למורה — הרשמה היא ברירת המחדל.
+    // בחירה מפורשת של המורה ב"כבר יש לי חשבון" תמיד מכובדת.
+    if (_pilotFirstAuthOpen && !explicitChoice && (!mode || mode === 'login')) {
       _authMode = 'register';
       _pilotFirstAuthOpen = false;
     } else {
       _authMode = mode || 'login';
+      if (explicitChoice) _pilotFirstAuthOpen = false;
     }
     _renderAuthForm();
     if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
@@ -168,8 +172,8 @@
       <div class="auth-mode-title">${isReg ? (_pilotEntry ? 'הצטרפות לפיילוט בוקי' : 'יצירת חשבון מורה חדש') : 'כניסה לחשבון קיים'}</div>
       <p class="auth-mode-help">${isReg ? (_pilotEntry ? 'פיילוט חינמי מוגבל ל־20 מורות. ממלאים שלושה פרטים ומיד פותחים כיתה.' : 'ממלאים שלושה פרטים ומיד מתחילים להקים את המועדון.') : 'הכניסי את האימייל והסיסמה שאיתם נרשמת.'}</p>
       <div class="auth-tabs">
-        <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login')">כבר יש לי חשבון</button>
-        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register')">זו הפעם הראשונה שלי</button>
+        <button class="auth-tab${!isReg ? ' active' : ''}" onclick="showTeacherAuth('login', true)">כבר יש לי חשבון</button>
+        <button class="auth-tab${isReg  ? ' active' : ''}" onclick="showTeacherAuth('register', true)">זו הפעם הראשונה שלי</button>
       </div>
       ${isReg ? `<div class="auth-first-time-heading">✨ פעם ראשונה בבוקי? מכאן מקימים חשבון מורה</div>` : ''}
       ${isReg ? `<input id="ta-name" type="text" class="input-field" placeholder="שם מלא" autocomplete="name" />` : ''}
@@ -184,7 +188,7 @@
       </button>
       ${!isReg ? `
         <button type="button" class="auth-forgot-link" onclick="resetTeacherPassword()">שכחתי סיסמה</button>
-        <button type="button" class="auth-first-account" onclick="showTeacherAuth('register')">
+        <button type="button" class="auth-first-account" onclick="showTeacherAuth('register', true)">
           <span class="auth-new-badge">פעם ראשונה?</span>
           <strong>הקמת חשבון מורה חדש</strong>
           <span>חינם ולוקח פחות מדקה ←</span>
@@ -256,8 +260,8 @@
     if (window.history?.replaceState) {
       window.history.replaceState(null, '', window.location.pathname + '?teacher=1');
     }
-    // יציאה מאזור הניהול נשארת באזור המורה — לעולם לא עוברת למסכי תלמידים.
-    if (typeof showTeacherAuth === 'function') showTeacherAuth('login');
+    // יציאה יזומה מחשבון קיים חייבת להחזיר לכניסה, לא להרשמה.
+    if (typeof showTeacherAuth === 'function') showTeacherAuth('login', true);
     else if (typeof showScreen === 'function') showScreen('screen-teacher-auth');
   }
 
