@@ -45,6 +45,9 @@ function applyNiqud() {
     if (el.dataset.plain === undefined) el.dataset.plain = el.textContent;
     el.textContent = on ? el.dataset.nk : el.dataset.plain;
   });
+  // מסך ההרשמה נבנה דינמית. מנקדים גם את ההנחיות והשדות הריקים,
+  // בלי לשנות ערכי קלט, סיסמאות, תיבות סימון או את פעולות ההרשמה.
+  if (typeof window.applyTeacherAuthNiqud === 'function') window.applyTeacherAuthNiqud();
   const btn = document.getElementById('btn-niqud-toggle');
   if (btn) btn.classList.toggle('niqud-active', on);
 }
