@@ -1,0 +1,99 @@
+// ADD these helpers and matches INSIDE match /databases/{database}/documents.
+// Do not replace the entire deployed ruleset with this fragment.
+// Requires the existing isSignedIn(), isMe(uid), isTeacher(), isOwner() helpers.
+// Review the actual deployed rules first. This source file is NOT a deployment.
+
+function bcConfig() {
+  return get(/databases/$(database)/documents/config/basicConsent).data;
+}
+function bcEnabled(version) {
+  return exists(/databases/$(database)/documents/config/basicConsent)
+    && bcConfig().enabled == true && bcConfig().version == version;
+}
+function bcExistingCardOwner(clubId, cardId) {
+  return isSignedIn() && (isMe(cardId)
+    || (exists(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId))
+      && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId)).data.get('claimedByUid', null) == request.auth.uid));
+}
+function bcCanStartCard(clubId, cardId) {
+  return isSignedIn() && exists(/databases/$(database)/documents/clubs/$(clubId))
+    && (bcExistingCardOwner(clubId, cardId)
+      || (exists(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId))
+        && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId)).data.get('createdByTeacher', false) == true
+        && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId)).data.get('claimedByUid', null) == null
+        && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(cardId)).data.get('personalized', false) == false));
+}
+function bcValidReceipt(version, kind, subjectId, clubId) {
+  let d = request.resource.data;
+  return isSignedIn() && bcEnabled(version)
+    && d.keys().hasOnly(['kind','subjectId','subjectName','clubId','teacherUid','signerName','relationship','acceptedByUid','accepted','status','version','policyVersion','termsVersion','noticeText','verificationMethod','voiceEnabled','acceptedAt'])
+    && d.kind == kind && d.subjectId == subjectId && d.clubId == clubId
+    && d.version == version && d.policyVersion == version && d.termsVersion == version
+    && d.acceptedByUid == request.auth.uid
+    && d.accepted == true && d.status == 'accepted' && d.voiceEnabled == false
+    && d.acceptedAt == request.time
+    && d.subjectName is string && d.subjectName.size() <= 120
+    && d.signerName is string && d.signerName.size() >= 2 && d.signerName.size() <= 100
+    && d.teacherUid is string
+    && d.noticeText is string && d.noticeText.size() <= 18000
+    && ((kind == 'teacher'
+      && d.relationship == 'teacher'
+      && d.verificationMethod == 'signed_in_teacher_declaration'
+      && d.noticeText == bcConfig().teacherNoticeText)
+      || (kind == 'guardian'
+        && d.relationship in ['parent','guardian']
+        && d.verificationMethod == 'self_declared_guardian'
+        && d.noticeText == bcConfig().guardianNoticeText));
+}
+
+match /config/basicConsent {
+  allow get: if true;
+  allow list: if false;
+  allow create, update: if isOwner()
+    && request.resource.data.keys().hasOnly(['enabled','version','contactEmail','operatorName','reviewConfirmed','updatedAt','teacherNoticeText','guardianNoticeText'])
+    && request.resource.data.enabled is bool
+    && request.resource.data.version == 'basic-2026-09-v1'
+    && request.resource.data.contactEmail is string
+    && request.resource.data.contactEmail.size() >= 5 && request.resource.data.contactEmail.size() <= 254
+    && request.resource.data.operatorName == 'יהודית עמוס'
+    && request.resource.data.reviewConfirmed == true
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.teacherNoticeText is string && request.resource.data.teacherNoticeText.size() <= 18000
+    && request.resource.data.guardianNoticeText is string && request.resource.data.guardianNoticeText.size() <= 18000;
+  allow delete: if false;
+}
+
+match /bookiTeacherConsents/{uid}/bookiConsentReceipts/{version} {
+  allow get: if isOwner() || isMe(uid);
+  allow list: if isOwner();
+  allow create: if isTeacher() && isMe(uid)
+    && bcValidReceipt(version,'teacher',uid,'')
+    && request.resource.data.teacherUid == uid;
+  allow update, delete: if false;
+}
+
+match /bookiGuardianConsents/{clubId}/students/{cardId}/bookiConsentReceipts/{version} {
+  allow get: if isOwner() || bcExistingCardOwner(clubId,cardId)
+    || (exists(/databases/$(database)/documents/bookiGuardianConsents/$(clubId)/students/$(cardId)/bookiConsentReceipts/$(version))
+      && isMe(resource.data.acceptedByUid))
+    || (!exists(/databases/$(database)/documents/bookiGuardianConsents/$(clubId)/students/$(cardId)/bookiConsentReceipts/$(version))
+      && bcCanStartCard(clubId,cardId));
+  allow list: if isOwner();
+  allow create: if bcCanStartCard(clubId,cardId)
+    && bcValidReceipt(version,'guardian',cardId,clubId)
+    && request.resource.data.teacherUid == get(/databases/$(database)/documents/clubs/$(clubId)).data.get('teacherUid','');
+  allow update, delete: if false;
+}
+
+match /bookiPersonalConsents/{uid}/bookiConsentReceipts/{version} {
+  allow get: if isOwner() || isMe(uid);
+  allow list: if isOwner();
+  allow create: if isMe(uid) && bcValidReceipt(version,'guardian',uid,'')
+    && request.resource.data.teacherUid == '';
+  allow update, delete: if false;
+}
+
+// Owner dashboard collection-group query; no teacher-wide or public access.
+match /{path=**}/bookiConsentReceipts/{version} {
+  allow read: if isOwner();
+}
