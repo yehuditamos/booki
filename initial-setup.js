@@ -97,3 +97,14 @@ window.submitInitialSetup = submitInitialSetup;
   s.onerror = () => console.warn('[booki] class display modes extension did not load');
   document.head.appendChild(s);
 })();
+
+// Pilot teacher/parent flow: scoped UI and reliable dashboard read states.
+(function loadTeacherFlow() {
+  if (document.querySelector('script[data-booki-teacher-flow]')) return;
+  const s = document.createElement('script');
+  s.src = 'teacher-flow.js?v=20260909-1';
+  s.async = false;
+  s.dataset.bookiTeacherFlow = '1';
+  s.onerror = () => console.warn('[booki] teacher flow extension did not load');
+  document.head.appendChild(s);
+})();
