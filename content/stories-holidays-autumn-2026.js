@@ -121,7 +121,18 @@
       ]
     }
   ];
-  const stories = entries.map(({texts, ...entry}) => ({
+  // Manual publication only. Keep every draft above, but publish Tishrei stories now.
+  // Add another story ID here only after Yehudit explicitly asks to open it.
+  // Dates/newUntil control badges, NEVER publication of an unpublished story.
+  const publishedIds = new Set([
+    'holidays-card-for-grandma',
+    'holidays-rolling-pomegranate',
+    'holidays-small-sorry',
+    'holidays-paper-star',
+    'holidays-itai-flag'
+  ]);
+  const unpublishedIds = new Set(entries.filter(entry => !publishedIds.has(entry.id)).map(entry => entry.id));
+  const stories = entries.filter(entry => publishedIds.has(entry.id)).map(({texts, ...entry}) => ({
     ...entry, libraryId: 'holidays', author: 'בוקי', source: 'original',
     copyright: '© 2026 יהודית עמוס — בוקי. כל הזכויות שמורות.',
     license: 'all-rights-reserved', newUntil: '2026-10-15T23:59:59+03:00',
@@ -132,6 +143,8 @@
     typeof STORIES !== 'undefined' ? STORIES : null
   ]) {
     if (!Array.isArray(target)) continue;
+    // Also handle re-loading over an older in-memory catalogue. No persisted data is touched.
+    for (let i = target.length - 1; i >= 0; i--) if (unpublishedIds.has(target[i]?.id)) target.splice(i, 1);
     const ids = new Set(target.map(story => story.id));
     for (const story of stories) if (!ids.has(story.id)) { target.push(story); ids.add(story.id); }
   }
