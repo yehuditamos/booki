@@ -20,14 +20,18 @@
     async function wrapped(){
       const phone=(document.getElementById('ta-phone')?.value||'').trim();
       const hadPhoneField=!!document.getElementById('ta-phone');
-      await original.apply(this,arguments);
-      if(hadPhoneField&&phone&&window.firebase?.auth){
+      const submittedEmail=(document.getElementById('ta-email')?.value||'').trim().toLowerCase();
+      const consentAllowed=window.BookiBasicConsent?.registrationAllowed?.()!==false;
+      const result=await original.apply(this,arguments);
+      const hasAuthError=!!document.getElementById('ta-error')?.textContent.trim();
+      if(consentAllowed&&!hasAuthError&&hadPhoneField&&phone&&window.firebase?.auth){
         const u=window.firebase.auth().currentUser;
-        if(u&&!u.isAnonymous&&window.db){
+        if(u&&!u.isAnonymous&&u.email?.toLowerCase()===submittedEmail&&window.db){
           try{await window.db.collection('users').doc(u.uid).set({phone:phone,phoneProvidedVoluntarily:true,phoneUpdatedAt:new Date().toISOString()},{merge:true});}
           catch(e){console.warn('[booki] optional teacher phone save failed',e);}
         }
       }
+      return result;
     }
     wrapped.__bookiPhoneWrapped=true;
     window.submitTeacherAuth=wrapped;
