@@ -14,7 +14,8 @@
     'pilot-editorial-04-2026-09-10.js?v=1',
     'pilot-editorial-apply-2026-09-10.js?v=1',
     'pilot-teacher-minutes-2026-09-10.js?v=1',
-    'pilot-reading-dial-2026-09-10.js?v=6'
+    'pilot-reading-dial-2026-09-10.js?v=6',
+    'pilot-home-clean-2026-09-10.js?v=1'
   ];
   let i=0;
   function next(){
@@ -24,6 +25,6 @@
     s.onload=next;s.onerror=()=>console.error('[booki] pilot module failed:',src);
     document.head.appendChild(s);
   }
-  window.BookiPilotLoader20260910={version:'2026-09-10.7',ready:false};
+  window.BookiPilotLoader20260910={version:'2026-09-10.8',ready:false};
   next();
 })();
