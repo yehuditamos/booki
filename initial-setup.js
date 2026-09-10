@@ -119,3 +119,14 @@ window.submitInitialSetup = submitInitialSetup;
   s.onerror = () => console.warn('[booki] teacher workspace did not load');
   document.head.appendChild(s);
 })();
+
+// Pilot release 2026-09-10 — ordered hotfix modules; no Firebase Rules changes.
+(function loadPilotRelease20260910() {
+  if (document.querySelector('script[data-booki-pilot-loader-20260910]')) return;
+  const s = document.createElement('script');
+  s.src = 'pilot-loader-2026-09-10.js?v=1';
+  s.async = false;
+  s.dataset.bookiPilotLoader20260910 = '1';
+  s.onerror = () => console.warn('[booki] pilot release loader did not load');
+  document.head.appendChild(s);
+})();
