@@ -16,6 +16,9 @@
 
   let selected = 0;
   let dragging = false;
+  let moved = false;
+  let dragStartY = 0;
+  let suppressClickUntil = 0;
   let wasMainActive = false;
 
   const $ = id => document.getElementById(id);
@@ -115,13 +118,10 @@
     node.setAttribute('aria-label', item.label);
     node.setAttribute('aria-selected', String(index === selected));
     node.innerHTML = `<span aria-hidden="true">${item.reelIcon}</span>`;
-    node.addEventListener('pointerdown', event => {
-      event.stopPropagation();
-      select(index);
-    });
     node.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
+      if (Date.now() < suppressClickUntil) return;
       select(index);
     });
     node.addEventListener('keydown', event => {
@@ -224,16 +224,18 @@
     oldStart.tabIndex = -1;
     cleanLegacyHome();
 
-    // The reel grabs on the first touch and follows the finger vertically.
+    // First touch selects immediately; continuing the same gesture scrolls the reel.
     reel.addEventListener('pointerdown', event => {
-      if (event.target.closest('.booki-reading-reel-slot')) return;
       dragging = true;
+      moved = false;
+      dragStartY = event.clientY;
       reel.setPointerCapture?.(event.pointerId);
       selectFromPointer(event);
       event.preventDefault();
     });
     reel.addEventListener('pointermove', event => {
       if (!dragging) return;
+      if (Math.abs(event.clientY - dragStartY) > 4) moved = true;
       selectFromPointer(event);
       event.preventDefault();
     });
@@ -241,6 +243,7 @@
       if (!dragging) return;
       dragging = false;
       selectFromPointer(event);
+      if (moved) suppressClickUntil = Date.now() + 320;
       try { reel.releasePointerCapture?.(event.pointerId); } catch (_) {}
     };
     reel.addEventListener('pointerup', endDrag);
@@ -378,7 +381,7 @@
         transition:background .16s ease,box-shadow .16s ease,transform .16s ease,filter .16s ease;
         -webkit-tap-highlight-color:transparent;
       }
-      .booki-reading-reel-slot span{display:grid;place-items:center;min-width:38px;min-height:30px}
+      .booki-reading-reel-slot span{display:grid;place-items:center;min-width:38px;min-height:30px;pointer-events:none}
       .booki-reading-reel-slot.is-selected{
         background:linear-gradient(180deg,#dcffe8,#c8f6d7);
         box-shadow:inset 0 0 0 2px rgba(104,211,146,.46),0 3px 8px rgba(49,151,91,.13);
