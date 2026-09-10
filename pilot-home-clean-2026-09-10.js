@@ -5,19 +5,31 @@
   window.BookiPilotHomeClean20260910=true;
 
   function apply(){
-    const cue=document.querySelector('#screen-main .booki-unread-cue');
-    if(cue) cue.style.setProperty('display','none','important');
     const personal=document.getElementById('booki-personal-message');
-    if(personal){personal.style.setProperty('display','none','important');personal.setAttribute('aria-hidden','true');}
+    if(personal){
+      personal.style.setProperty('display','none','important');
+      personal.setAttribute('aria-hidden','true');
+    }
+
     const stage=document.getElementById('home-console-stage');
-    if(stage){stage.style.setProperty('pointer-events','none','important');stage.removeAttribute('role');stage.removeAttribute('tabindex');stage.removeAttribute('aria-label');}
+    if(stage){
+      stage.style.setProperty('pointer-events','none','important');
+      stage.tabIndex=-1;
+      stage.removeAttribute('role');
+      stage.removeAttribute('aria-label');
+    }
+
     ['home-class-goal','home-shelf-card'].forEach(id=>{
       const el=document.getElementById(id);
-      if(el){el.style.setProperty('display','none','important');el.setAttribute('aria-hidden','true');el.tabIndex=-1;}
+      if(!el) return;
+      el.style.setProperty('display','none','important');
+      el.setAttribute('aria-hidden','true');
+      el.tabIndex=-1;
     });
   }
 
   const style=document.createElement('style');
+  style.id='booki-pilot-home-clean-style';
   style.textContent=`
     #screen-main .booki-unread-cue,
     #screen-main #home-class-goal,
@@ -27,5 +39,13 @@
   `;
   document.head.appendChild(style);
   apply();
-  new MutationObserver(apply).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
+
+  // CSS handles later dynamic renders. Only re-apply semantic/tab behavior when
+  // new nodes are inserted; do not observe style/class mutations and create loops.
+  let queued=false;
+  new MutationObserver(()=>{
+    if(queued) return;
+    queued=true;
+    queueMicrotask(()=>{queued=false;apply();});
+  }).observe(document.body,{subtree:true,childList:true});
 })();
