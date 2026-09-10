@@ -1,16 +1,17 @@
 /**
- * Booki reading dial v4 — one question, one selector, one action.
- * Four equal reading modes sit on one ring. Only the center is a CTA button.
+ * Booki reading selector v5 — one button, one side reel, one immediate action.
+ * The four reading modes keep their existing actions. The home UI is intentionally
+ * clean: no question bubble, no helper copy, no intermediate chooser.
  */
 (function () {
   'use strict';
   if (window.BookiReadingDial) return;
 
   const MODES = [
-    { id: 'app',     icon: '📚', label: 'קריאה בבוקי',   action: 'enterAppStoryReading' },
-    { id: 'letters', icon: 'א',  label: 'קוראים אותיות', action: 'showLettersReading' },
-    { id: 'timer',   icon: '⏱️', label: 'ספר עם שעון',   action: 'startBookiReading' },
-    { id: 'report',  icon: '✓',  label: 'דיווח קריאה',   action: 'startBookReading' },
+    { id: 'app',     icon: '📚', reelIcon: '📚', label: 'קריאה בבוקי',   action: 'enterAppStoryReading' },
+    { id: 'letters', icon: 'אב', reelIcon: 'אב', label: 'קוראים אותיות', action: 'showLettersReading' },
+    { id: 'timer',   icon: '⏱️', reelIcon: '⏱️', label: 'ספר עם שעון',   action: 'startBookiReading' },
+    { id: 'report',  icon: '📋', reelIcon: '📋', label: 'דיווח קריאה',   action: 'startBookReading' },
   ];
 
   let selected = 0;
@@ -20,44 +21,40 @@
   const $ = id => document.getElementById(id);
   const current = () => MODES[selected];
 
-  function normalizeAngle(value) {
-    value %= 360;
-    return value < 0 ? value + 360 : value;
-  }
-
-  function pointerAngle(event, wheel) {
-    const rect = wheel.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    return normalizeAngle(Math.atan2(event.clientX - cx, -(event.clientY - cy)) * 180 / Math.PI);
-  }
-
-  function nearestIndex(angle) {
-    return Math.round(normalizeAngle(angle) / 90) % MODES.length;
-  }
-
   function render(announce = false) {
-    const wheel = $('booki-reading-dial-wheel');
+    const shell = $('booki-reading-dial');
+    const reel = $('booki-reading-reel');
     const start = $('booki-reading-dial-start');
-    if (!wheel || !start) return;
+    const icon = $('booki-reading-main-icon');
+    const mode = $('booki-reading-main-mode');
+    if (!shell || !reel || !start || !icon || !mode) return;
 
-    wheel.dataset.selected = current().id;
-    wheel.setAttribute('aria-valuenow', String(selected));
-    wheel.setAttribute('aria-valuetext', current().label);
-    start.setAttribute('aria-label', `התחל קריאה — ${current().label}`);
+    const item = current();
+    shell.dataset.selected = item.id;
+    reel.setAttribute('aria-valuenow', String(selected));
+    reel.setAttribute('aria-valuetext', item.label);
+    start.setAttribute('aria-label', `התחל קריאה — ${item.label}`);
+    icon.textContent = item.icon;
+    mode.textContent = item.label;
 
-    wheel.querySelectorAll('.booki-reading-dial-station').forEach((node, index) => {
-      node.classList.toggle('is-selected', index === selected);
+    reel.querySelectorAll('.booki-reading-reel-slot').forEach((node, index) => {
+      const active = index === selected;
+      node.classList.toggle('is-selected', active);
+      node.setAttribute('aria-selected', String(active));
+      node.tabIndex = active ? 0 : -1;
     });
+
+    start.classList.remove('mode-changed');
+    requestAnimationFrame(() => start.classList.add('mode-changed'));
 
     if (announce) {
       const live = $('booki-reading-dial-live');
-      if (live) live.textContent = `נבחרה ${current().label}`;
+      if (live) live.textContent = `נבחרה ${item.label}`;
     }
   }
 
   function select(index, announce = true) {
-    const next = ((Number(index) || 0) % MODES.length + MODES.length) % MODES.length;
+    const next = Math.max(0, Math.min(MODES.length - 1, Number(index) || 0));
     if (next === selected) {
       render(false);
       return;
@@ -68,9 +65,12 @@
   }
 
   function selectFromPointer(event) {
-    const wheel = $('booki-reading-dial-wheel');
-    if (!wheel) return;
-    select(nearestIndex(pointerAngle(event, wheel)));
+    const track = $('booki-reading-reel-track');
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height - 1, event.clientY - rect.top));
+    const index = Math.floor((y / rect.height) * MODES.length);
+    select(index);
   }
 
   function runSelected() {
@@ -82,7 +82,7 @@
     const status = $('booki-reading-dial-status');
     if (typeof action !== 'function') {
       if (status) status.textContent = 'רגע, בוקי עדיין מכין את אפשרות הקריאה הזאת. נסו שוב.';
-      console.error('[booki-reading-dial] Missing action:', item.action);
+      console.error('[booki-reading-selector] Missing action:', item.action);
       return;
     }
 
@@ -94,30 +94,66 @@
 
     try {
       Promise.resolve(action()).catch(error => {
-        console.error('[booki-reading-dial] Reading action failed:', error);
+        console.error('[booki-reading-selector] Reading action failed:', error);
         if (status) status.textContent = 'משהו נתקע. נסו שוב.';
       }).finally(() => {
         setTimeout(() => { if (start) start.disabled = false; }, 450);
       });
     } catch (error) {
-      console.error('[booki-reading-dial] Reading action failed:', error);
+      console.error('[booki-reading-selector] Reading action failed:', error);
       if (status) status.textContent = 'משהו נתקע. נסו שוב.';
       if (start) start.disabled = false;
     }
   }
 
-  function station(item, index) {
-    const node = document.createElement('div');
-    node.className = `booki-reading-dial-station booki-reading-dial-station-${index}`;
-    node.dataset.mode = item.id;
-    node.setAttribute('aria-hidden', 'true');
-    node.innerHTML = `<span class="booki-reading-dial-station-icon">${item.icon}</span><span class="booki-reading-dial-station-label">${item.label}</span>`;
+  function slot(item, index) {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = `booki-reading-reel-slot booki-reading-reel-slot-${index}`;
+    node.dataset.index = String(index);
+    node.setAttribute('role', 'option');
+    node.setAttribute('aria-label', item.label);
+    node.setAttribute('aria-selected', String(index === selected));
+    node.innerHTML = `<span aria-hidden="true">${item.reelIcon}</span>`;
+    node.addEventListener('pointerdown', event => {
+      event.stopPropagation();
+      select(index);
+    });
+    node.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      select(index);
+    });
+    node.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        event.preventDefault(); select(Math.min(MODES.length - 1, selected + 1));
+        $('booki-reading-reel')?.querySelector('.is-selected')?.focus();
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        event.preventDefault(); select(Math.max(0, selected - 1));
+        $('booki-reading-reel')?.querySelector('.is-selected')?.focus();
+      }
+    });
     return node;
   }
 
-  function applyQuestion() {
-    const encouragement = $('home-encouragement');
-    if (encouragement) encouragement.textContent = 'איך נקרא היום?';
+  function cleanLegacyHome() {
+    const bubble = document.querySelector('#screen-main .home-speech-bubble');
+    if (bubble) {
+      bubble.style.display = 'none';
+      bubble.setAttribute('aria-hidden', 'true');
+    }
+    const oldHint = document.querySelector('#screen-main .home-start-hint');
+    if (oldHint) oldHint.style.display = 'none';
+    const oldConsole = document.querySelector('#screen-main .console-frame');
+    if (oldConsole) {
+      oldConsole.style.display = 'none';
+      oldConsole.setAttribute('aria-hidden', 'true');
+    }
+    const chooser = $('reading-chooser-overlay');
+    if (chooser) {
+      chooser.style.display = 'none';
+      chooser.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function build() {
@@ -128,30 +164,47 @@
     const shell = document.createElement('section');
     shell.id = 'booki-reading-dial';
     shell.className = 'booki-reading-dial';
-    shell.setAttribute('aria-label', 'בחירת אופן הקריאה');
+    shell.setAttribute('aria-label', 'בחירת אופן הקריאה והתחלת קריאה');
 
-    const wheel = document.createElement('div');
-    wheel.id = 'booki-reading-dial-wheel';
-    wheel.className = 'booki-reading-dial-wheel';
-    wheel.setAttribute('role', 'slider');
-    wheel.tabIndex = 0;
-    wheel.setAttribute('aria-label', 'אופן הקריאה');
-    wheel.setAttribute('aria-valuemin', '0');
-    wheel.setAttribute('aria-valuemax', String(MODES.length - 1));
-
-    MODES.forEach((item, index) => wheel.appendChild(station(item, index)));
+    const machine = document.createElement('div');
+    machine.className = 'booki-reading-machine';
 
     const start = document.createElement('button');
     start.type = 'button';
     start.id = 'booki-reading-dial-start';
     start.className = 'booki-reading-dial-start';
-    start.innerHTML = '<span class="booki-reading-dial-start-icon" aria-hidden="true">▶</span><strong>התחל קריאה</strong>';
-    start.addEventListener('pointerdown', event => event.stopPropagation());
-    start.addEventListener('click', event => {
-      event.stopPropagation();
-      runSelected();
-    });
-    wheel.appendChild(start);
+    start.innerHTML = `
+      <span id="booki-reading-main-icon" class="booki-reading-main-icon" aria-hidden="true">📚</span>
+      <strong class="booki-reading-main-title">התחל קריאה</strong>
+      <span id="booki-reading-main-mode" class="booki-reading-main-mode">קריאה בבוקי</span>`;
+    start.addEventListener('click', runSelected);
+
+    const reel = document.createElement('div');
+    reel.id = 'booki-reading-reel';
+    reel.className = 'booki-reading-reel';
+    reel.setAttribute('role', 'listbox');
+    reel.setAttribute('aria-label', 'אופן הקריאה');
+    reel.setAttribute('aria-orientation', 'vertical');
+    reel.setAttribute('aria-valuemin', '0');
+    reel.setAttribute('aria-valuemax', String(MODES.length - 1));
+
+    const up = document.createElement('span');
+    up.className = 'booki-reading-reel-arrow';
+    up.setAttribute('aria-hidden', 'true');
+    up.textContent = '▲';
+
+    const track = document.createElement('div');
+    track.id = 'booki-reading-reel-track';
+    track.className = 'booki-reading-reel-track';
+    MODES.forEach((item, index) => track.appendChild(slot(item, index)));
+
+    const down = document.createElement('span');
+    down.className = 'booki-reading-reel-arrow';
+    down.setAttribute('aria-hidden', 'true');
+    down.textContent = '▼';
+
+    reel.append(up, track, down);
+    machine.append(start, reel);
 
     const live = document.createElement('span');
     live.id = 'booki-reading-dial-live';
@@ -163,66 +216,54 @@
     status.className = 'booki-reading-dial-status';
     status.setAttribute('role', 'status');
 
-    shell.append(wheel, live, status);
+    shell.append(machine, live, status);
     wrap.insertBefore(shell, oldStart);
 
     oldStart.style.display = 'none';
     oldStart.setAttribute('aria-hidden', 'true');
     oldStart.tabIndex = -1;
+    cleanLegacyHome();
 
-    const oldHint = wrap.querySelector('.home-start-hint');
-    if (oldHint) oldHint.style.display = 'none';
-    const oldConsole = wrap.querySelector('.console-frame');
-    if (oldConsole) {
-      oldConsole.style.display = 'none';
-      oldConsole.setAttribute('aria-hidden', 'true');
-    }
-    const chooser = $('reading-chooser-overlay');
-    if (chooser) {
-      chooser.style.display = 'none';
-      chooser.setAttribute('aria-hidden', 'true');
-    }
-
-    // The whole dial surface (except the center CTA) grabs on the first touch.
-    // There is no movement threshold: the first pointer-down already snaps to a mode.
-    wheel.addEventListener('pointerdown', event => {
-      if (event.target.closest('#booki-reading-dial-start')) return;
+    // The reel grabs on the first touch and follows the finger vertically.
+    reel.addEventListener('pointerdown', event => {
+      if (event.target.closest('.booki-reading-reel-slot')) return;
       dragging = true;
-      wheel.setPointerCapture?.(event.pointerId);
+      reel.setPointerCapture?.(event.pointerId);
       selectFromPointer(event);
       event.preventDefault();
     });
-
-    wheel.addEventListener('pointermove', event => {
+    reel.addEventListener('pointermove', event => {
       if (!dragging) return;
       selectFromPointer(event);
       event.preventDefault();
     });
-
     const endDrag = event => {
       if (!dragging) return;
       dragging = false;
       selectFromPointer(event);
-      try { wheel.releasePointerCapture?.(event.pointerId); } catch (_) {}
+      try { reel.releasePointerCapture?.(event.pointerId); } catch (_) {}
     };
-    wheel.addEventListener('pointerup', endDrag);
-    wheel.addEventListener('pointercancel', () => { dragging = false; });
+    reel.addEventListener('pointerup', endDrag);
+    reel.addEventListener('pointercancel', () => { dragging = false; });
 
-    wheel.addEventListener('keydown', event => {
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        event.preventDefault(); select(selected + 1);
-      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-        event.preventDefault(); select(selected - 1);
+    reel.addEventListener('wheel', event => {
+      event.preventDefault();
+      select(selected + (event.deltaY > 0 ? 1 : -1));
+    }, { passive: false });
+
+    reel.addEventListener('keydown', event => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+        event.preventDefault(); select(Math.min(MODES.length - 1, selected + 1));
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        event.preventDefault(); select(Math.max(0, selected - 1));
       } else if (event.key === 'Home') {
         event.preventDefault(); select(0);
       } else if (event.key === 'End') {
         event.preventDefault(); select(MODES.length - 1);
-      } else if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault(); runSelected();
       }
     });
 
-    // Legacy calls perform the selected action directly — never open the old chooser.
+    // Legacy calls now perform the selected action directly — never reopen the old chooser.
     window.openReadingChooser = runSelected;
     render(false);
   }
@@ -231,7 +272,7 @@
     selected = 0;
     const status = $('booki-reading-dial-status');
     if (status) status.textContent = '';
-    applyQuestion();
+    cleanLegacyHome();
     render(false);
   }
 
@@ -243,6 +284,7 @@
     new MutationObserver(() => {
       const active = main.classList.contains('active');
       if (active && !wasMainActive) resetForHome();
+      if (active) cleanLegacyHome();
       wasMainActive = active;
     }).observe(main, { attributes: true, attributeFilter: ['class'] });
   }
@@ -252,67 +294,133 @@
     const style = document.createElement('style');
     style.id = 'booki-reading-dial-style';
     style.textContent = `
-      #screen-main .console-frame{display:none!important}
       #reading-chooser-overlay{display:none!important}
-      .booki-reading-dial{width:min(100%,370px);margin:0 auto 8px;text-align:center;font-family:Heebo,Arial,sans-serif;direction:rtl}
-      .booki-reading-dial-wheel{position:relative;width:min(84vw,310px);aspect-ratio:1;margin:0 auto;touch-action:none;user-select:none;cursor:grab;outline:none}
-      .booki-reading-dial-wheel:active{cursor:grabbing}
-      .booki-reading-dial-wheel::before{content:"";position:absolute;inset:45px;border-radius:50%;border:2px solid rgba(63,143,101,.24);box-shadow:inset 0 0 0 12px rgba(230,247,237,.38);pointer-events:none}
-      .booki-reading-dial-wheel::after{content:"";position:absolute;inset:64px;border-radius:50%;border:1px dashed rgba(63,143,101,.22);pointer-events:none}
+      #screen-main .console-frame{display:none!important}
+      #screen-main .home-speech-bubble{display:none!important}
+      #screen-main .home-start-hint{display:none!important}
 
-      .booki-reading-dial-station{position:absolute;width:88px;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#4d6b5e;font:800 12.5px/1.15 Heebo,Arial,sans-serif;pointer-events:none;transition:transform .16s ease,color .16s ease}
-      .booki-reading-dial-station-0{top:0;left:50%;transform:translateX(-50%)}
-      .booki-reading-dial-station-1{right:-2px;top:50%;transform:translateY(-50%)}
-      .booki-reading-dial-station-2{bottom:0;left:50%;transform:translateX(-50%)}
-      .booki-reading-dial-station-3{left:-2px;top:50%;transform:translateY(-50%)}
-      .booki-reading-dial-station-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;font-size:21px;line-height:1;background:transparent;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
-      .booki-reading-dial-station-label{max-width:88px;transition:transform .16s ease,color .16s ease}
-      .booki-reading-dial-station.is-selected{color:#116d45}
-      .booki-reading-dial-station.is-selected .booki-reading-dial-station-icon{background:#f4fff7;box-shadow:0 0 0 5px rgba(53,181,113,.30),0 0 24px rgba(28,176,94,.42);transform:scale(1.16)}
-      .booki-reading-dial-station.is-selected .booki-reading-dial-station-label{transform:scale(1.06);color:#126d46}
-      .booki-reading-dial-station-0.is-selected{transform:translateX(-50%) scale(1.03)}
-      .booki-reading-dial-station-1.is-selected{transform:translateY(-50%) scale(1.03)}
-      .booki-reading-dial-station-2.is-selected{transform:translateX(-50%) scale(1.03)}
-      .booki-reading-dial-station-3.is-selected{transform:translateY(-50%) scale(1.03)}
+      /* Mockup background: warm cream, soft green canopy shapes, peach corners and tiny pastel dots. */
+      #screen-main.booki-world--home{
+        background-color:#fff7df!important;
+        background-image:
+          radial-gradient(78% 31% at -8% 7%,rgba(210,226,190,.72) 0 52%,transparent 53%),
+          radial-gradient(72% 28% at 108% 13%,rgba(210,229,196,.62) 0 53%,transparent 54%),
+          radial-gradient(65% 23% at -9% 57%,rgba(250,194,163,.43) 0 51%,transparent 52%),
+          radial-gradient(75% 27% at 111% 76%,rgba(228,207,205,.38) 0 52%,transparent 53%),
+          radial-gradient(circle at 8% 72%,rgba(72,192,159,.25) 0 6px,transparent 7px),
+          radial-gradient(circle at 95% 64%,rgba(151,129,175,.25) 0 7px,transparent 8px),
+          radial-gradient(circle at 77% 87%,rgba(244,196,81,.28) 0 5px,transparent 6px),
+          linear-gradient(180deg,#fff9e9 0%,#fff3d4 54%,#fff9e8 100%)!important;
+        background-attachment:fixed!important;
+      }
+      #screen-main .home-ambient{display:none!important}
+      #screen-main .home-console-wrap{padding-top:8px!important}
+      #screen-main .home-console-stage{margin:0 auto 10px!important;position:relative;z-index:1}
+      #screen-main .home-console-char{width:min(55vw,220px)!important;height:auto!important;filter:drop-shadow(0 14px 15px rgba(117,91,46,.12))}
+      #screen-main .home-console-stage .booki-character-stage{min-height:auto!important}
+      #screen-main .home-console-stage .booki-character-stage::before{opacity:.25!important}
 
-      .booki-reading-dial-start{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:142px;height:142px;border:0;border-radius:50%;background:linear-gradient(160deg,#2eb86f,#199052);color:#fff;box-shadow:inset 0 -7px 0 rgba(0,0,0,.09),0 9px 23px rgba(24,126,74,.20);font:900 1.2rem/1.2 Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:3}
-      .booki-reading-dial-start-icon{font-size:1.45rem;line-height:1}
-      .booki-reading-dial-start:active{transform:translate(-50%,calc(-50% + 2px));box-shadow:inset 0 -4px 0 rgba(0,0,0,.09),0 6px 18px rgba(24,126,74,.18)}
+      .booki-reading-dial{
+        position:relative;z-index:2;width:min(94vw,560px);margin:2px auto 26px;
+        direction:rtl;font-family:Heebo,Arial,sans-serif;text-align:center;
+      }
+      .booki-reading-machine{
+        position:relative;width:100%;height:184px;margin:0 auto;
+      }
+      .booki-reading-dial-start{
+        position:absolute;left:0;right:34px;top:8px;bottom:8px;z-index:1;
+        border:0;border-radius:58px 50px 50px 58px;
+        background:
+          radial-gradient(circle at 26% 22%,rgba(117,243,166,.46),transparent 28%),
+          linear-gradient(145deg,#3fd77a 0%,#24b95f 58%,#15934e 100%);
+        color:#fff;box-shadow:
+          inset 0 -10px 0 rgba(0,89,47,.13),
+          inset 0 2px 0 rgba(255,255,255,.28),
+          0 16px 32px rgba(26,136,75,.22);
+        padding:20px 84px 18px 30px;cursor:pointer;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+        transition:transform .13s ease,box-shadow .13s ease,filter .18s ease;
+        -webkit-tap-highlight-color:transparent;
+      }
+      .booki-reading-dial-start::after{
+        content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+        background:linear-gradient(115deg,rgba(255,255,255,.18),transparent 35% 70%,rgba(0,92,48,.08));
+      }
+      .booki-reading-main-icon{position:relative;z-index:1;font-size:2.15rem;line-height:1;min-height:35px;display:grid;place-items:center}
+      .booki-reading-main-title{position:relative;z-index:1;font:900 clamp(1.9rem,7.3vw,2.8rem)/1 Heebo,Arial,sans-serif;letter-spacing:-.025em;white-space:nowrap;text-shadow:0 2px 1px rgba(0,91,47,.12)}
+      .booki-reading-main-mode{
+        position:relative;z-index:1;min-width:min(72%,310px);max-width:82%;padding:8px 18px 9px;
+        border-radius:999px;background:rgba(5,120,60,.33);box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+        color:#cffff0;font:900 clamp(.92rem,4.2vw,1.18rem)/1.1 Heebo,Arial,sans-serif;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      }
+      .booki-reading-dial-start:active{transform:translateY(3px);box-shadow:inset 0 -6px 0 rgba(0,89,47,.12),0 9px 20px rgba(26,136,75,.18)}
+      .booki-reading-dial-start:focus-visible{outline:3px solid #2877b8;outline-offset:4px}
       .booki-reading-dial-start:disabled{opacity:.72;cursor:wait}
-      .booki-reading-dial-wheel:focus-visible{outline:3px solid #2877b8;outline-offset:4px;border-radius:50%}
-      .booki-reading-dial-start:focus-visible{outline:3px solid #2877b8;outline-offset:3px}
+      .booki-reading-dial-start.mode-changed .booki-reading-main-icon,
+      .booki-reading-dial-start.mode-changed .booki-reading-main-mode{animation:bookiModeFill .22s ease both}
+
+      .booki-reading-reel{
+        position:absolute;right:0;top:0;bottom:0;z-index:4;width:78px;
+        display:grid;grid-template-rows:18px 1fr 18px;align-items:center;
+        padding:7px 6px;border:3px solid rgba(54,171,102,.48);border-radius:42px;
+        background:linear-gradient(180deg,rgba(255,249,229,.98),rgba(255,244,213,.98));
+        box-shadow:inset 0 0 0 4px rgba(255,255,255,.48),0 10px 26px rgba(75,118,79,.20);
+        touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;
+      }
+      .booki-reading-reel:focus-within{box-shadow:inset 0 0 0 4px rgba(255,255,255,.48),0 0 0 3px rgba(40,119,184,.28),0 10px 26px rgba(75,118,79,.20)}
+      .booki-reading-reel-arrow{font:900 12px/1 Arial,sans-serif;color:#29935d;opacity:.82;pointer-events:none}
+      .booki-reading-reel-track{height:100%;display:grid;grid-template-rows:repeat(4,1fr);gap:2px;align-items:stretch}
+      .booki-reading-reel-slot{
+        appearance:none;-webkit-appearance:none;border:0;background:transparent;margin:0;padding:0;
+        border-radius:14px;display:grid;place-items:center;color:#326a54;
+        font:900 1.32rem/1 Heebo,Arial,sans-serif;cursor:grab;
+        transition:background .16s ease,box-shadow .16s ease,transform .16s ease,filter .16s ease;
+        -webkit-tap-highlight-color:transparent;
+      }
+      .booki-reading-reel-slot span{display:grid;place-items:center;min-width:38px;min-height:30px}
+      .booki-reading-reel-slot.is-selected{
+        background:linear-gradient(180deg,#dcffe8,#c8f6d7);
+        box-shadow:inset 0 0 0 2px rgba(104,211,146,.46),0 3px 8px rgba(49,151,91,.13);
+        transform:scale(1.06);filter:saturate(1.08);
+      }
+      .booki-reading-reel-slot:focus-visible{outline:2px solid #2877b8;outline-offset:1px}
+
       .booki-reading-dial-status:empty{display:none}
       .booki-reading-dial-status{margin:5px 0 0;color:#a83f36;font-size:.8rem;font-weight:700}
       .booki-reading-dial-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-      @media(max-width:370px){.booki-reading-dial-wheel{width:288px}.booki-reading-dial-station{width:80px;font-size:12px}.booki-reading-dial-start{width:132px;height:132px}.booki-reading-dial-station-icon{width:35px;height:35px}}
-      @media(prefers-reduced-motion:reduce){.booki-reading-dial-station,.booki-reading-dial-station-icon,.booki-reading-dial-station-label{transition:none}}
+
+      @keyframes bookiModeFill{
+        from{opacity:.55;transform:translateY(4px) scale(.98)}
+        to{opacity:1;transform:none}
+      }
+
+      @media(max-width:370px){
+        .booki-reading-dial{width:min(95vw,344px)}
+        .booki-reading-machine{height:164px}
+        .booki-reading-reel{width:70px;border-radius:37px}
+        .booki-reading-dial-start{right:30px;border-radius:50px;padding-right:75px;gap:6px}
+        .booki-reading-main-icon{font-size:1.85rem;min-height:30px}
+        .booki-reading-main-title{font-size:1.72rem}
+        .booki-reading-main-mode{font-size:.9rem;padding:7px 13px 8px}
+        .booki-reading-reel-slot{font-size:1.12rem}
+      }
+      @media(prefers-reduced-motion:reduce){
+        .booki-reading-dial-start,.booki-reading-main-icon,.booki-reading-main-mode,.booki-reading-reel-slot{transition:none!important;animation:none!important}
+      }
     `;
     document.head.appendChild(style);
   }
 
-  function install() {
+  function init() {
     installStyle();
     build();
-    applyQuestion();
+    cleanLegacyHome();
     watchHome();
   }
 
-  // Unify the two old home prompts into the single product question chosen for the pilot.
-  window.getPersonalHomeQuestion = () => 'איך נקרא היום?';
-  window.renderHomeEncouragement = applyQuestion;
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+  else init();
 
-  window.BookiReadingDial = {
-    version: '2026-09-10.4',
-    modes: MODES.map(({ id, label }) => ({ id, label })),
-    select: idOrIndex => {
-      const index = typeof idOrIndex === 'string' ? MODES.findIndex(item => item.id === idOrIndex) : Number(idOrIndex);
-      if (index >= 0) select(index);
-    },
-    getSelected: () => current().id,
-    start: runSelected,
-    reset: resetForHome,
-  };
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
-  else install();
+  window.BookiReadingDial = { select, runSelected, reset: resetForHome, modes: MODES };
 })();
