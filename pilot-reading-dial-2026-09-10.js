@@ -1,30 +1,30 @@
 /**
- * Booki reading dial — one decision, one action.
- * Replaces: "Start reading" -> chooser -> another click.
- * New flow: choose the reading mode on the dial -> press the center once -> go.
- * All four existing reading modes receive equal visual weight.
+ * Booki reading dial — one choice, one action.
+ * The four reading modes are equal stations on one rotary selector.
+ * The only primary action button is the center: "התחל קריאה".
  */
 (function () {
   'use strict';
   if (window.BookiReadingDial) return;
 
   const MODES = [
-    { id: 'app',     icon: '📚', label: 'קריאה בבוקי',   short: 'סיפור בבוקי',  action: 'enterAppStoryReading' },
-    { id: 'letters', icon: 'א',  label: 'קוראים אותיות', short: 'אותיות',       action: 'showLettersReading' },
-    { id: 'timer',   icon: '⏱️', label: 'ספר עם שעון',   short: 'עם שעון',      action: 'startBookiReading' },
-    { id: 'report',  icon: '✓',  label: 'דיווח קריאה',   short: 'כבר קראתי',    action: 'startBookReading' },
+    { id: 'app',     icon: '📚', label: 'קריאה בבוקי',   action: 'enterAppStoryReading' },
+    { id: 'letters', icon: 'א',  label: 'קוראים אותיות', action: 'showLettersReading' },
+    { id: 'timer',   icon: '⏱️', label: 'ספר עם שעון',   action: 'startBookiReading' },
+    { id: 'report',  icon: '✓',  label: 'דיווח קריאה',   action: 'startBookReading' },
   ];
 
   let selected = 0;
   let dragging = false;
   let moved = false;
-  let suppressClickUntil = 0;
-  let wasMainActive = false;
   let dragStartX = 0;
   let dragStartY = 0;
+  let lastPreview = 0;
+  let suppressClickUntil = 0;
+  let wasMainActive = false;
 
   const $ = id => document.getElementById(id);
-  const mode = () => MODES[selected];
+  const currentMode = () => MODES[selected];
 
   function normalizeAngle(value) {
     value %= 360;
@@ -35,125 +35,129 @@
     const rect = wheel.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-    const dx = event.clientX - cx;
-    const dy = event.clientY - cy;
-    return normalizeAngle(Math.atan2(dx, -dy) * 180 / Math.PI);
+    return normalizeAngle(Math.atan2(event.clientX - cx, -(event.clientY - cy)) * 180 / Math.PI);
   }
 
   function nearestIndex(angle) {
     return Math.round(normalizeAngle(angle) / 90) % MODES.length;
   }
 
-  function announceSelection() {
+  function updateReadout(index, announce = false) {
+    const item = MODES[index];
+    const icon = $('booki-reading-dial-readout-icon');
+    const name = $('booki-reading-dial-readout-name');
     const live = $('booki-reading-dial-live');
-    if (live) live.textContent = `נבחרה ${mode().label}`;
+    if (icon) icon.textContent = item.icon;
+    if (name) name.textContent = item.label;
+    if (announce && live) live.textContent = `נבחרה ${item.label}`;
+  }
+
+  function updateStations(index) {
+    $('booki-reading-dial-wheel')?.querySelectorAll('.booki-reading-dial-station').forEach((node, i) => {
+      const active = i === index;
+      node.classList.toggle('is-selected', active);
+      node.setAttribute('aria-checked', String(active));
+      node.tabIndex = active ? 0 : -1;
+    });
   }
 
   function renderSelection({ announce = false } = {}) {
-    const wheel = $('booki-reading-dial-wheel');
-    const needle = $('booki-reading-dial-needle');
-    const knob = $('booki-reading-dial-knob');
-    const icon = $('booki-reading-dial-icon');
-    const name = $('booki-reading-dial-name');
-    const action = $('booki-reading-dial-start');
-    if (!wheel || !needle || !knob || !icon || !name || !action) return;
+    const control = $('booki-reading-dial-control');
+    const rotor = $('booki-reading-dial-rotor');
+    const start = $('booki-reading-dial-start');
+    if (!control || !rotor || !start) return;
 
     const angle = selected * 90;
-    needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-    knob.style.setProperty('--booki-dial-angle', `${angle}deg`);
-    icon.textContent = mode().icon;
-    name.textContent = mode().label;
-    action.setAttribute('aria-label', `התחל קריאה — ${mode().label}`);
-    knob.setAttribute('aria-valuenow', String(selected));
-    knob.setAttribute('aria-valuetext', mode().label);
+    rotor.style.transform = `rotate(${angle}deg)`;
+    control.setAttribute('aria-valuenow', String(selected));
+    control.setAttribute('aria-valuetext', currentMode().label);
+    start.setAttribute('aria-label', `התחל קריאה — ${currentMode().label}`);
+    updateReadout(selected, announce);
+    updateStations(selected);
+    lastPreview = selected;
+  }
 
-    wheel.querySelectorAll('.booki-reading-dial-mode').forEach((node, index) => {
-      const isSelected = index === selected;
-      node.classList.toggle('is-selected', isSelected);
-      node.setAttribute('aria-checked', String(isSelected));
-      node.tabIndex = isSelected ? 0 : -1;
-    });
-
-    if (announce) announceSelection();
+  function previewAngle(angle) {
+    const rotor = $('booki-reading-dial-rotor');
+    if (rotor) {
+      rotor.style.transition = 'none';
+      rotor.style.transform = `rotate(${angle}deg)`;
+    }
+    const index = nearestIndex(angle);
+    if (index !== lastPreview) {
+      lastPreview = index;
+      updateReadout(index, false);
+      updateStations(index);
+      try { navigator.vibrate?.(7); } catch (_) {}
+    }
   }
 
   function select(index, { announce = true } = {}) {
-    const next = ((Number(index) || 0) % MODES.length + MODES.length) % MODES.length;
-    if (next === selected) return renderSelection({ announce: false });
-    selected = next;
+    selected = ((Number(index) || 0) % MODES.length + MODES.length) % MODES.length;
+    const rotor = $('booki-reading-dial-rotor');
+    if (rotor) rotor.style.transition = '';
     renderSelection({ announce });
-    try { navigator.vibrate?.(8); } catch (_) {}
   }
 
-  function selectFromPointer(event, final = false) {
-    const wheel = $('booki-reading-dial-wheel');
-    const needle = $('booki-reading-dial-needle');
-    if (!wheel || !needle) return;
-    const angle = angleForPointer(event, wheel);
-    if (!final) {
-      needle.style.transition = 'none';
-      needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-      return;
-    }
-    needle.style.transition = '';
-    select(nearestIndex(angle));
+  function finishAtAngle(angle) {
+    select(nearestIndex(angle), { announce: true });
   }
 
   function runSelected() {
     if (Date.now() < suppressClickUntil) return;
-    const button = $('booki-reading-dial-start');
-    if (button?.disabled) return;
-    const current = mode();
-    const fn = window[current.action];
-    if (typeof fn !== 'function') {
-      const status = $('booki-reading-dial-status');
+    const start = $('booki-reading-dial-start');
+    if (start?.disabled) return;
+
+    const item = currentMode();
+    const action = window[item.action];
+    const status = $('booki-reading-dial-status');
+    if (typeof action !== 'function') {
       if (status) status.textContent = 'רגע, בוקי עדיין מכין את אפשרות הקריאה הזאת. נסו שוב.';
-      console.error('[booki-reading-dial] Missing action:', current.action);
+      console.error('[booki-reading-dial] Missing action:', item.action);
       return;
     }
 
-    if (button) button.disabled = true;
-    const status = $('booki-reading-dial-status');
     if (status) status.textContent = '';
-    if (typeof track === 'function') {
-      try { track('reading_mode_started', { mode: current.id }); } catch (_) {}
-    }
+    if (start) start.disabled = true;
+    try {
+      if (typeof track === 'function') track('reading_mode_started', { mode: item.id });
+    } catch (_) {}
 
     try {
-      const result = fn();
+      const result = action();
       Promise.resolve(result).catch(error => {
         console.error('[booki-reading-dial] Reading action failed:', error);
         if (status) status.textContent = 'משהו נתקע. נסו שוב.';
       }).finally(() => {
-        setTimeout(() => { if (button) button.disabled = false; }, 450);
+        setTimeout(() => { if (start) start.disabled = false; }, 450);
       });
     } catch (error) {
       console.error('[booki-reading-dial] Reading action failed:', error);
       if (status) status.textContent = 'משהו נתקע. נסו שוב.';
-      if (button) button.disabled = false;
+      if (start) start.disabled = false;
     }
   }
 
-  function modeButton(item, index) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `booki-reading-dial-mode booki-reading-dial-mode-${index}`;
-    button.dataset.mode = item.id;
-    button.setAttribute('role', 'radio');
-    button.setAttribute('aria-label', item.label);
-    button.innerHTML = `<span class="booki-reading-dial-mode-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span>`;
-    button.addEventListener('click', event => {
+  function station(item, index) {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = `booki-reading-dial-station booki-reading-dial-station-${index}`;
+    node.dataset.mode = item.id;
+    node.setAttribute('role', 'radio');
+    node.setAttribute('aria-label', item.label);
+    node.innerHTML = `<span class="booki-reading-dial-station-icon" aria-hidden="true">${item.icon}</span><span class="booki-reading-dial-station-label">${item.label}</span>`;
+    node.addEventListener('click', event => {
       event.stopPropagation();
       select(index);
     });
-    button.addEventListener('keydown', event => {
+    node.addEventListener('keydown', event => {
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
         event.preventDefault(); select(selected + 1); $('booki-reading-dial-wheel')?.querySelector('.is-selected')?.focus();
       } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
         event.preventDefault(); select(selected - 1); $('booki-reading-dial-wheel')?.querySelector('.is-selected')?.focus();
       }
     });
-    return button;
+    return node;
   }
 
   function build() {
@@ -171,46 +175,55 @@
     title.className = 'booki-reading-dial-title';
     title.textContent = 'איך בא לך לקרוא היום?';
 
+    // Passive readout: intentionally a DIV, not a button, with no button-like chrome.
+    const readout = document.createElement('div');
+    readout.id = 'booki-reading-dial-readout';
+    readout.className = 'booki-reading-dial-readout';
+    readout.setAttribute('aria-hidden', 'true');
+    readout.innerHTML = `
+      <span class="booki-reading-dial-readout-caption">נבחר עכשיו</span>
+      <span class="booki-reading-dial-readout-value">
+        <span id="booki-reading-dial-readout-icon" aria-hidden="true">📚</span>
+        <strong id="booki-reading-dial-readout-name">קריאה בבוקי</strong>
+      </span>`;
+
     const wheel = document.createElement('div');
     wheel.id = 'booki-reading-dial-wheel';
     wheel.className = 'booki-reading-dial-wheel';
     wheel.setAttribute('role', 'radiogroup');
     wheel.setAttribute('aria-label', 'בחירת אופן הקריאה');
+    MODES.forEach((item, index) => wheel.appendChild(station(item, index)));
 
-    MODES.forEach((item, index) => wheel.appendChild(modeButton(item, index)));
+    const control = document.createElement('div');
+    control.id = 'booki-reading-dial-control';
+    control.className = 'booki-reading-dial-control';
+    control.setAttribute('role', 'slider');
+    control.setAttribute('tabindex', '0');
+    control.setAttribute('aria-label', 'סיבוב לבחירת אופן הקריאה');
+    control.setAttribute('aria-valuemin', '0');
+    control.setAttribute('aria-valuemax', String(MODES.length - 1));
+    control.setAttribute('aria-valuenow', '0');
+    control.setAttribute('aria-valuetext', MODES[0].label);
 
-    const needle = document.createElement('span');
-    needle.id = 'booki-reading-dial-needle';
-    needle.className = 'booki-reading-dial-needle';
-    needle.setAttribute('aria-hidden', 'true');
-
-    const knob = document.createElement('div');
-    knob.id = 'booki-reading-dial-knob';
-    knob.className = 'booki-reading-dial-knob';
-    knob.setAttribute('role', 'slider');
-    knob.setAttribute('tabindex', '0');
-    knob.setAttribute('aria-label', 'כוונון אופן הקריאה');
-    knob.setAttribute('aria-valuemin', '0');
-    knob.setAttribute('aria-valuemax', String(MODES.length - 1));
-    knob.setAttribute('aria-orientation', 'horizontal');
-    knob.innerHTML = '<span class="booki-reading-dial-grip" aria-hidden="true">•••</span>';
+    const rotor = document.createElement('div');
+    rotor.id = 'booki-reading-dial-rotor';
+    rotor.className = 'booki-reading-dial-rotor';
+    rotor.setAttribute('aria-hidden', 'true');
+    rotor.innerHTML = '<span class="booki-reading-dial-handle"></span><span class="booki-reading-dial-pointer"></span>';
 
     const start = document.createElement('button');
     start.type = 'button';
     start.id = 'booki-reading-dial-start';
     start.className = 'booki-reading-dial-start';
-    start.innerHTML = `
-      <span id="booki-reading-dial-icon" class="booki-reading-dial-center-icon" aria-hidden="true">📚</span>
-      <strong>התחל קריאה</strong>
-      <small id="booki-reading-dial-name">קריאה בבוקי</small>`;
+    start.innerHTML = '<span class="booki-reading-dial-start-icon" aria-hidden="true">▶</span><strong>התחל קריאה</strong>';
     start.addEventListener('click', runSelected);
 
-    knob.appendChild(start);
-    wheel.append(needle, knob);
+    control.append(rotor, start);
+    wheel.appendChild(control);
 
     const hint = document.createElement('p');
     hint.className = 'booki-reading-dial-hint';
-    hint.innerHTML = '<strong>סובבו לבחירה</strong><span aria-hidden="true"> • </span>ואז לחצו במרכז ומתחילים';
+    hint.innerHTML = '<strong>מסובבים לבחירה</strong><span aria-hidden="true"> · </span>לוחצים במרכז ומתחילים';
 
     const live = document.createElement('span');
     live.id = 'booki-reading-dial-live';
@@ -222,7 +235,7 @@
     status.className = 'booki-reading-dial-status';
     status.setAttribute('role', 'status');
 
-    shell.append(title, wheel, hint, live, status);
+    shell.append(title, readout, wheel, hint, live, status);
     wrap.insertBefore(shell, oldStart);
 
     oldStart.style.display = 'none';
@@ -235,7 +248,7 @@
     const chooser = $('reading-chooser-overlay');
     if (chooser) { chooser.style.display = 'none'; chooser.setAttribute('aria-hidden', 'true'); }
 
-    knob.addEventListener('keydown', event => {
+    control.addEventListener('keydown', event => {
       if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); select(selected + 1); }
       else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); select(selected - 1); }
       else if (event.key === 'Home') { event.preventDefault(); select(0); }
@@ -243,42 +256,44 @@
       else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); runSelected(); }
     });
 
-    knob.addEventListener('pointerdown', event => {
+    control.addEventListener('pointerdown', event => {
       dragging = true;
       moved = false;
       dragStartX = event.clientX;
       dragStartY = event.clientY;
     });
-    knob.addEventListener('pointermove', event => {
+
+    control.addEventListener('pointermove', event => {
       if (!dragging) return;
       const distance = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
       if (!moved && distance < 8) return;
       moved = true;
-      knob.setPointerCapture?.(event.pointerId);
-      selectFromPointer(event, false);
+      control.setPointerCapture?.(event.pointerId);
+      previewAngle(angleForPointer(event, wheel));
       event.preventDefault();
     });
+
     const finishDrag = event => {
       if (!dragging) return;
       dragging = false;
       if (moved) {
-        selectFromPointer(event, true);
-        suppressClickUntil = Date.now() + 350;
+        finishAtAngle(angleForPointer(event, wheel));
+        suppressClickUntil = Date.now() + 360;
       } else {
         renderSelection();
       }
-      try { knob.releasePointerCapture?.(event.pointerId); } catch (_) {}
+      try { control.releasePointerCapture?.(event.pointerId); } catch (_) {}
     };
-    knob.addEventListener('pointerup', finishDrag);
-    knob.addEventListener('pointercancel', finishDrag);
+    control.addEventListener('pointerup', finishDrag);
+    control.addEventListener('pointercancel', finishDrag);
 
-    // The former chooser function must no longer open another decision screen.
+    // The former chooser no longer opens another decision screen.
     window.openReadingChooser = runSelected;
     renderSelection();
   }
 
   function resetForHome() {
-    selected = 0; // Explicit product decision: every home entry defaults to Booki reading.
+    selected = 0;
     const status = $('booki-reading-dial-status');
     if (status) status.textContent = '';
     renderSelection({ announce: false });
@@ -304,33 +319,60 @@
     style.textContent = `
       #screen-main .console-frame{display:none!important}
       #reading-chooser-overlay{display:none!important}
-      .booki-reading-dial{width:min(100%,390px);margin:10px auto 18px;text-align:center;font-family:Heebo,Arial,sans-serif;direction:rtl}
-      .booki-reading-dial-title{margin:0 0 8px;color:#28483d;font-size:1rem;font-weight:900}
-      .booki-reading-dial-wheel{position:relative;width:min(92vw,340px);aspect-ratio:1;margin:0 auto;isolation:isolate;touch-action:none}
-      .booki-reading-dial-wheel::before{content:"";position:absolute;inset:40px;border-radius:50%;background:radial-gradient(circle,#fffdf7 0 48%,#eaf8f0 49% 63%,#d8efe4 64% 65%,transparent 66%);box-shadow:0 12px 30px rgba(36,93,67,.12);z-index:-2}
-      .booki-reading-dial-wheel::after{content:"";position:absolute;inset:64px;border-radius:50%;border:2px dashed rgba(54,129,92,.22);z-index:-1}
-      .booki-reading-dial-mode{position:absolute;width:92px;height:76px;min-height:0;padding:7px 5px;border:2px solid #c8ddd1;border-radius:18px;background:#fff;color:#315247;font:800 13px/1.25 Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 5px 14px rgba(38,86,64,.08);cursor:pointer;z-index:4;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
-      .booki-reading-dial-mode-0{top:0;left:50%;transform:translateX(-50%)}
-      .booki-reading-dial-mode-1{right:0;top:50%;transform:translateY(-50%)}
-      .booki-reading-dial-mode-2{bottom:0;left:50%;transform:translateX(-50%)}
-      .booki-reading-dial-mode-3{left:0;top:50%;transform:translateY(-50%)}
-      .booki-reading-dial-mode.is-selected{background:#eefaf3;border-color:#2f9d67;box-shadow:0 0 0 4px rgba(47,157,103,.10),0 7px 18px rgba(38,86,64,.12)}
-      .booki-reading-dial-mode-icon{font-size:22px;line-height:1}
-      .booki-reading-dial-needle{position:absolute;left:50%;top:50%;width:5px;height:82px;border-radius:999px;background:linear-gradient(#2e9b66 0 18%,#8fd3ad 19% 100%);transform-origin:50% 100%;transform:translateX(-50%) rotate(0deg);transition:transform .28s cubic-bezier(.2,.85,.25,1.18);z-index:1;margin-top:-82px;pointer-events:none}
-      .booki-reading-dial-needle::before{content:"";position:absolute;top:-4px;left:50%;width:13px;height:13px;border-radius:50%;background:#238657;transform:translateX(-50%);box-shadow:0 0 0 4px #fff}
-      .booki-reading-dial-knob{position:absolute;left:50%;top:50%;width:154px;height:154px;transform:translate(-50%,-50%);border-radius:50%;padding:9px;background:linear-gradient(145deg,#e7f5ec,#cbe7d7);box-shadow:inset 0 2px 5px rgba(255,255,255,.9),0 9px 22px rgba(34,89,64,.18);z-index:3;touch-action:none;cursor:grab}
-      .booki-reading-dial-knob:active{cursor:grabbing}
-      .booki-reading-dial-grip{position:absolute;top:7px;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:2px;color:#5a826e;z-index:5;pointer-events:none}
-      .booki-reading-dial-start{width:100%;height:100%;border:0;border-radius:50%;background:linear-gradient(160deg,#2eb86f,#199052);color:white;box-shadow:inset 0 -7px 0 rgba(0,0,0,.09),inset 0 2px 0 rgba(255,255,255,.25);font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:16px 12px 12px;cursor:pointer}
-      .booki-reading-dial-start:active{transform:translateY(2px);box-shadow:inset 0 -4px 0 rgba(0,0,0,.09)}
+      .booki-reading-dial{width:min(100%,390px);margin:8px auto 18px;text-align:center;font-family:Heebo,Arial,sans-serif;direction:rtl;color:#294b3e}
+      .booki-reading-dial-title{margin:0 0 2px;font-size:1.02rem;font-weight:900;color:#28483d}
+
+      /* Passive information only — deliberately no border, background, shadow or pointer affordance. */
+      .booki-reading-dial-readout{display:flex;align-items:center;justify-content:center;gap:7px;min-height:43px;margin:0 auto 1px;padding:0;color:#4f6e60;pointer-events:none;user-select:none;cursor:default}
+      .booki-reading-dial-readout-caption{font-size:.72rem;font-weight:700;opacity:.72}
+      .booki-reading-dial-readout-value{display:inline-flex;align-items:center;gap:5px;font-size:.98rem;line-height:1.25;color:#236a49}
+      .booki-reading-dial-readout-value strong{font-weight:900}
+
+      .booki-reading-dial-wheel{position:relative;width:min(90vw,326px);aspect-ratio:1;margin:0 auto;isolation:isolate;touch-action:none}
+      .booki-reading-dial-wheel::before{content:"";position:absolute;inset:48px;border-radius:50%;border:2px solid rgba(79,151,113,.26);background:rgba(232,247,238,.42);box-shadow:inset 0 0 0 12px rgba(255,255,255,.35);z-index:-2}
+      .booki-reading-dial-wheel::after{content:"";position:absolute;inset:66px;border-radius:50%;border:1px dashed rgba(65,135,101,.30);z-index:-1}
+
+      /* These are stations on one dial, not four CTA cards: no box, fill, shadow or card outline. */
+      .booki-reading-dial-station{position:absolute;width:88px;min-height:56px;padding:3px;border:0;background:transparent;box-shadow:none;color:#47685a;font:800 12.5px/1.18 Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;z-index:5;transition:color .18s ease,transform .18s ease,opacity .18s ease}
+      .booki-reading-dial-station-0{top:0;left:50%;transform:translateX(-50%)}
+      .booki-reading-dial-station-1{right:-1px;top:50%;transform:translateY(-50%)}
+      .booki-reading-dial-station-2{bottom:0;left:50%;transform:translateX(-50%)}
+      .booki-reading-dial-station-3{left:-1px;top:50%;transform:translateY(-50%)}
+      .booki-reading-dial-station-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-size:20px;line-height:1;background:rgba(255,255,255,.78);border:1px solid rgba(92,153,124,.20);transition:background .18s ease,transform .18s ease,border-color .18s ease}
+      .booki-reading-dial-station-label{max-width:88px}
+      .booki-reading-dial-station.is-selected{color:#176c46}
+      .booki-reading-dial-station.is-selected .booki-reading-dial-station-icon{background:#e1f6e9;border-color:#47a879;transform:scale(1.12)}
+      .booki-reading-dial-station-0.is-selected{transform:translateX(-50%) scale(1.04)}
+      .booki-reading-dial-station-1.is-selected{transform:translateY(-50%) scale(1.04)}
+      .booki-reading-dial-station-2.is-selected{transform:translateX(-50%) scale(1.04)}
+      .booki-reading-dial-station-3.is-selected{transform:translateY(-50%) scale(1.04)}
+
+      .booki-reading-dial-control{position:absolute;left:50%;top:50%;width:176px;height:176px;transform:translate(-50%,-50%);border-radius:50%;z-index:4;touch-action:none;cursor:grab}
+      .booki-reading-dial-control:active{cursor:grabbing}
+      .booki-reading-dial-rotor{position:absolute;inset:0;border-radius:50%;border:4px solid #b9dfca;background:linear-gradient(145deg,rgba(255,255,255,.86),rgba(219,241,228,.88));box-shadow:inset 0 2px 5px rgba(255,255,255,.95),0 7px 18px rgba(38,86,64,.12);transition:transform .30s cubic-bezier(.2,.85,.25,1.15);pointer-events:none}
+      .booki-reading-dial-handle{position:absolute;top:7px;left:50%;width:28px;height:12px;transform:translateX(-50%);border-radius:999px;background:#278e5d;box-shadow:0 2px 6px rgba(32,108,72,.22)}
+      .booki-reading-dial-pointer{position:absolute;top:-13px;left:50%;width:0;height:0;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:12px solid #278e5d}
+
+      /* The center is the ONE real action button. */
+      .booki-reading-dial-start{position:absolute;left:50%;top:50%;width:132px;height:132px;transform:translate(-50%,-50%);border:0;border-radius:50%;background:linear-gradient(160deg,#31b970,#188f50);color:#fff;box-shadow:inset 0 -7px 0 rgba(0,0,0,.08),0 8px 18px rgba(34,112,74,.22);font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:15px;cursor:pointer;z-index:3}
+      .booki-reading-dial-start strong{font-size:1.2rem;line-height:1.15;font-weight:900}
+      .booki-reading-dial-start-icon{font-size:1.15rem;line-height:1;direction:ltr}
+      .booki-reading-dial-start:active{transform:translate(-50%,-48%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.08),0 5px 12px rgba(34,112,74,.18)}
       .booki-reading-dial-start:disabled{opacity:.72;cursor:wait}
-      .booki-reading-dial-center-icon{font-size:29px;line-height:1;margin-bottom:3px}.booki-reading-dial-start strong{font-size:1.16rem;line-height:1.2}.booki-reading-dial-start small{font-size:.78rem;line-height:1.25;font-weight:800;color:#effff5;margin-top:3px}
-      .booki-reading-dial-hint{margin:7px 0 0;color:#587166;font-size:.78rem;line-height:1.45}.booki-reading-dial-hint strong{color:#315849}
-      .booki-reading-dial-status{min-height:1.25em;margin:5px 0 0;color:#a83f36;font-size:.8rem;font-weight:700}
+
+      .booki-reading-dial-hint{margin:5px 0 0;color:#667c72;font-size:.76rem;line-height:1.45}.booki-reading-dial-hint strong{color:#315849}
+      .booki-reading-dial-status{min-height:1.25em;margin:4px 0 0;color:#a83f36;font-size:.8rem;font-weight:700}
       .booki-reading-dial-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-      .booki-reading-dial-mode:focus-visible,.booki-reading-dial-knob:focus-visible,.booki-reading-dial-start:focus-visible{outline:3px solid #2877b8;outline-offset:3px}
-      @media(max-width:370px){.booki-reading-dial-wheel{width:306px}.booki-reading-dial-mode{width:84px;height:72px;min-height:0;font-size:12px}.booki-reading-dial-knob{width:142px;height:142px}.booki-reading-dial-needle{height:74px;margin-top:-74px}}
-      @media(prefers-reduced-motion:reduce){.booki-reading-dial-mode,.booki-reading-dial-needle{transition:none}}
+      .booki-reading-dial-station:focus-visible,.booki-reading-dial-control:focus-visible,.booki-reading-dial-start:focus-visible{outline:3px solid #2877b8;outline-offset:3px}
+
+      @media(max-width:370px){
+        .booki-reading-dial-wheel{width:304px}
+        .booki-reading-dial-station{width:78px;font-size:11.7px}
+        .booki-reading-dial-station-label{max-width:78px}
+        .booki-reading-dial-control{width:164px;height:164px}
+        .booki-reading-dial-start{width:124px;height:124px}
+      }
+      @media(prefers-reduced-motion:reduce){.booki-reading-dial-station,.booki-reading-dial-station-icon,.booki-reading-dial-rotor{transition:none}}
     `;
     document.head.appendChild(style);
   }
@@ -342,13 +384,13 @@
   }
 
   window.BookiReadingDial = {
-    version: '2026-09-10.2',
+    version: '2026-09-10.3',
     modes: MODES.map(({ id, label }) => ({ id, label })),
     select: idOrIndex => {
       const index = typeof idOrIndex === 'string' ? MODES.findIndex(item => item.id === idOrIndex) : Number(idOrIndex);
       if (index >= 0) select(index);
     },
-    getSelected: () => mode().id,
+    getSelected: () => currentMode().id,
     start: runSelected,
     reset: resetForHome,
   };
