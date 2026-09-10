@@ -20,6 +20,8 @@
   let moved = false;
   let suppressClickUntil = 0;
   let wasMainActive = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
 
   const $ = id => document.getElementById(id);
   const mode = () => MODES[selected];
@@ -242,14 +244,17 @@
     });
 
     knob.addEventListener('pointerdown', event => {
-      if (event.target.closest('#booki-reading-dial-start')) return;
-      dragging = true; moved = false;
-      knob.setPointerCapture?.(event.pointerId);
-      event.preventDefault();
+      dragging = true;
+      moved = false;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
     });
     knob.addEventListener('pointermove', event => {
       if (!dragging) return;
+      const distance = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
+      if (!moved && distance < 8) return;
       moved = true;
+      knob.setPointerCapture?.(event.pointerId);
       selectFromPointer(event, false);
       event.preventDefault();
     });
@@ -304,7 +309,7 @@
       .booki-reading-dial-wheel{position:relative;width:min(92vw,340px);aspect-ratio:1;margin:0 auto;isolation:isolate;touch-action:none}
       .booki-reading-dial-wheel::before{content:"";position:absolute;inset:40px;border-radius:50%;background:radial-gradient(circle,#fffdf7 0 48%,#eaf8f0 49% 63%,#d8efe4 64% 65%,transparent 66%);box-shadow:0 12px 30px rgba(36,93,67,.12);z-index:-2}
       .booki-reading-dial-wheel::after{content:"";position:absolute;inset:64px;border-radius:50%;border:2px dashed rgba(54,129,92,.22);z-index:-1}
-      .booki-reading-dial-mode{position:absolute;width:92px;min-height:68px;padding:7px 5px;border:2px solid #c8ddd1;border-radius:18px;background:#fff;color:#315247;font:800 13px/1.25 Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 5px 14px rgba(38,86,64,.08);cursor:pointer;z-index:4;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+      .booki-reading-dial-mode{position:absolute;width:92px;height:76px;min-height:0;padding:7px 5px;border:2px solid #c8ddd1;border-radius:18px;background:#fff;color:#315247;font:800 13px/1.25 Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 5px 14px rgba(38,86,64,.08);cursor:pointer;z-index:4;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
       .booki-reading-dial-mode-0{top:0;left:50%;transform:translateX(-50%)}
       .booki-reading-dial-mode-1{right:0;top:50%;transform:translateY(-50%)}
       .booki-reading-dial-mode-2{bottom:0;left:50%;transform:translateX(-50%)}
@@ -324,7 +329,7 @@
       .booki-reading-dial-status{min-height:1.25em;margin:5px 0 0;color:#a83f36;font-size:.8rem;font-weight:700}
       .booki-reading-dial-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
       .booki-reading-dial-mode:focus-visible,.booki-reading-dial-knob:focus-visible,.booki-reading-dial-start:focus-visible{outline:3px solid #2877b8;outline-offset:3px}
-      @media(max-width:370px){.booki-reading-dial-wheel{width:306px}.booki-reading-dial-mode{width:84px;min-height:64px;font-size:12px}.booki-reading-dial-knob{width:142px;height:142px}.booki-reading-dial-needle{height:74px;margin-top:-74px}}
+      @media(max-width:370px){.booki-reading-dial-wheel{width:306px}.booki-reading-dial-mode{width:84px;height:72px;min-height:0;font-size:12px}.booki-reading-dial-knob{width:142px;height:142px}.booki-reading-dial-needle{height:74px;margin-top:-74px}}
       @media(prefers-reduced-motion:reduce){.booki-reading-dial-mode,.booki-reading-dial-needle{transition:none}}
     `;
     document.head.appendChild(style);
@@ -337,7 +342,7 @@
   }
 
   window.BookiReadingDial = {
-    version: '2026-09-10.1',
+    version: '2026-09-10.2',
     modes: MODES.map(({ id, label }) => ({ id, label })),
     select: idOrIndex => {
       const index = typeof idOrIndex === 'string' ? MODES.findIndex(item => item.id === idOrIndex) : Number(idOrIndex);
