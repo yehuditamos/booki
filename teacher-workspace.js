@@ -205,7 +205,7 @@
     document.querySelector('#screen-teacher-dashboard h2').textContent = 'המרחב שלך בבוקי';
     body.querySelectorAll('.teacher-management-only,.teacher-dashboard-guide,.btn-td-primary').forEach(node => node.remove());
     const actions = el('section', undefined, 'tw-dashboard-actions'); actions.id = 'tw-dashboard-actions'; actions.setAttribute('aria-label', 'פעולות למורה');
-    const primary = el('div', undefined, 'tw-action-primary-group'); primary.append(el('p', 'מתחילות כאן', 'tw-eyebrow'), action('🌱', 'הקמת מועדון חדש', 'מוסיפים תלמידים ומזמינים אותם לקרוא יחד', () => showCreateClub(), true));
+    const primary = el('div', undefined, 'tw-action-primary-group'); primary.append(el('p', 'מתחילות כאן', 'tw-eyebrow'), action('🌱', 'פתח מועדון קריאה', 'מוסיפים תלמידים ומזמינים אותם לקרוא יחד', () => showCreateClub(), true));
     const secondary = el('div', undefined, 'tw-action-secondary-group'); secondary.append(el('p', 'לרשותך בכל שלב', 'tw-eyebrow'));
     const pair = el('div', undefined, 'tw-secondary-pair');
     pair.append(action('📚', 'ספריית בוקי', 'להכיר את הסיפורים שהילדים קוראים', openLibrary), action('💬', 'עזרי לנו לשפר את בוקי', 'הצעות מקצועיות ובקשות מיוחדות', () => openFeedback())); secondary.append(pair);
