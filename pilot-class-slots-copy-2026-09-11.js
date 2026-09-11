@@ -7,6 +7,16 @@
   const $ = id => document.getElementById(id);
   let queued = false;
 
+  const setText = (el, value) => {
+    if (el && el.textContent !== value) el.textContent = value;
+  };
+  const setHtml = (el, value) => {
+    if (el && el.innerHTML !== value) el.innerHTML = value;
+  };
+  const setAttr = (el, name, value) => {
+    if (el && el.getAttribute(name) !== value) el.setAttribute(name, value);
+  };
+
   function ensureInfoBox(section){
     if (!section || document.getElementById('booki-named-card-explainer')) return;
     const box = document.createElement('div');
@@ -25,37 +35,44 @@
       panel.dataset.copyReady = '1';
       const strong = panel.querySelector(':scope > strong');
       const p = panel.querySelector(':scope > p');
-      if (strong) strong.textContent = '🎨 פתיחת כרטיסים לכל הכיתה';
-      if (p) p.innerHTML = '<b>הילדים מקימים את הכרטיס בעצמם.</b> כתבי כמה ילדים יש בכיתה — בוקי יפתח רק את הכרטיסים החסרים. כל ילד יבחר כרטיס צבעוני פנוי, יכתוב עליו את השם שלו, ומאותו רגע זה הכרטיס שלו.';
+      setText(strong, '🎨 פתיחת כרטיסים לכל הכיתה');
+      setHtml(p, '<b>הילדים מקימים את הכרטיס בעצמם.</b> כתבי כמה ילדים יש בכיתה — בוקי יפתח רק את הכרטיסים החסרים. כל ילד יבחר כרטיס צבעוני פנוי, יכתוב עליו את השם שלו, ומאותו רגע זה הכרטיס שלו.');
       const action = $('booki-topup-action');
       if (action && !action.disabled && /^פתחי/.test(action.textContent || '')) {
-        action.textContent = (action.textContent || '').replace('פתחי','פתחי כרטיסים פנויים —');
+        const next = (action.textContent || '').replace('פתחי','פתחי כרטיסים פנויים —');
+        setText(action, next);
       }
       const input = $('booki-topup-count');
       if (input) {
-        input.placeholder = 'מספר הילדים בכיתה';
-        input.setAttribute('aria-label','כמה ילדים יש בכיתה לפתיחת כרטיסים פנויים');
+        if (input.placeholder !== 'מספר הילדים בכיתה') input.placeholder = 'מספר הילדים בכיתה';
+        setAttr(input, 'aria-label', 'כמה ילדים יש בכיתה לפתיחת כרטיסים פנויים');
       }
-      const tag = document.createElement('span');
-      tag.className = 'booki-flow-label';
-      tag.textContent = 'הילד בוחר ומשיים בעצמו';
-      panel.insertBefore(tag,panel.firstChild);
+      if (!panel.querySelector(':scope > .booki-flow-label')) {
+        const tag = document.createElement('span');
+        tag.className = 'booki-flow-label';
+        tag.textContent = 'הילד בוחר ומשיים בעצמו';
+        panel.insertBefore(tag,panel.firstChild);
+      }
     }
 
     const section = $('add-student-section');
     if (section) {
       ensureInfoBox(section);
       const toggle = section.querySelector('.btn-add-student-toggle');
-      if (toggle) toggle.textContent = '👩‍🏫 הכיני כרטיס בשם לתלמיד';
+      setText(toggle, '👩‍🏫 הכיני כרטיס בשם לתלמיד');
       const input = $('add-student-name-input');
-      if (input) input.placeholder = 'שם שיופיע לילד כשייכנס';
+      if (input && input.placeholder !== 'שם שיופיע לילד כשייכנס') {
+        input.placeholder = 'שם שיופיע לילד כשייכנס';
+      }
       const confirm = section.querySelector('.add-student-confirm');
       if (confirm && !confirm.dataset.copyReady) {
         confirm.dataset.copyReady = '1';
-        const note = document.createElement('p');
-        note.className = 'booki-named-card-note';
-        note.textContent = 'השם שתכתבי כאן יחכה לילד כבר בכניסה למועדון.';
-        confirm.insertAdjacentElement('afterend', note);
+        if (!section.querySelector('.booki-named-card-note')) {
+          const note = document.createElement('p');
+          note.className = 'booki-named-card-note';
+          note.textContent = 'השם שתכתבי כאן יחכה לילד כבר בכניסה למועדון.';
+          confirm.insertAdjacentElement('afterend', note);
+        }
       }
     }
   }
@@ -66,8 +83,8 @@
     panel.dataset.copyReady = '1';
     const title = panel.querySelector('h3');
     const p = panel.querySelector('p');
-    if (title) title.textContent = '🎨 פתיחת כרטיסים לכל הכיתה';
-    if (p) p.innerHTML = '<b>במסלול הזה הילדים ישיימו את הכרטיסים בעצמם.</b> כתבי רק כמה ילדים יש בכיתה. בוקי יכין לכל ילד כרטיס צבעוני פנוי, וכל ילד יבחר אחד ויכתוב עליו את שמו.';
+    setText(title, '🎨 פתיחת כרטיסים לכל הכיתה');
+    setHtml(p, '<b>במסלול הזה הילדים ישיימו את הכרטיסים בעצמם.</b> כתבי רק כמה ילדים יש בכיתה. בוקי יכין לכל ילד כרטיס צבעוני פנוי, וכל ילד יבחר אחד ויכתוב עליו את שמו.');
 
     if (!document.getElementById('booki-new-club-named-note')) {
       const note = document.createElement('div');
@@ -98,11 +115,16 @@
   `;
   document.head.appendChild(style);
 
+  // We only need to react when dynamic UI nodes are inserted. Observing class/style
+  // mutations here used to create a self-triggering loop that could freeze startup.
   const observer = new MutationObserver(()=>{
     if (queued) return;
     queued = true;
-    queueMicrotask(()=>{ queued=false; patch(); });
+    requestAnimationFrame(()=>{
+      try { patch(); }
+      finally { queued = false; }
+    });
   });
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
+  observer.observe(document.body,{childList:true,subtree:true});
   patch();
 })();
