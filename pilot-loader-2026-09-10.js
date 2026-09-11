@@ -19,7 +19,8 @@
     'pilot-niqud-context-2026-09-10.js?v=1',
     'pilot-class-slots-2026-09-11.js?v=1',
     'pilot-class-slots-hardening-2026-09-11.js?v=1',
-    'pilot-class-slots-safety-2026-09-11.js?v=1'
+    'pilot-class-slots-safety-2026-09-11.js?v=1',
+    'pilot-class-slots-copy-2026-09-11.js?v=1'
   ];
   let i=0;
   function next(){
@@ -29,6 +30,6 @@
     s.onload=next;s.onerror=()=>console.error('[booki] pilot module failed:',src);
     document.head.appendChild(s);
   }
-  window.BookiPilotLoader20260910={version:'2026-09-11.3',ready:false};
+  window.BookiPilotLoader20260910={version:'2026-09-11.4',ready:false};
   next();
 })();
