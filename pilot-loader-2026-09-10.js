@@ -3,6 +3,7 @@
   'use strict';
   if(window.BookiPilotLoader20260910) return;
   const files=[
+    'pilot-boot-failopen-2026-09-11.js?v=1',
     'pilot-reading-save-2026-09-10.js?v=1',
     'pilot-reading-overrides-2026-09-10.js?v=1',
     'pilot-niqud-exact-2026-09-10.js?v=1',
@@ -28,9 +29,10 @@
     if(i>=files.length){window.BookiPilotLoader20260910.ready=true;window.dispatchEvent(new Event('booki:pilot-release-ready'));return;}
     const src=files[i++],s=document.createElement('script');
     s.src=src;s.async=false;s.dataset.bookiPilotModule=src.split('?')[0];
-    s.onload=next;s.onerror=()=>console.error('[booki] pilot module failed:',src);
+    s.onload=next;
+    s.onerror=()=>{console.error('[booki] pilot module failed:',src);next();};
     document.head.appendChild(s);
   }
-  window.BookiPilotLoader20260910={version:'2026-09-11.5',ready:false};
+  window.BookiPilotLoader20260910={version:'2026-09-11.6',ready:false};
   next();
 })();
