@@ -81,7 +81,6 @@ jobs:
           if (!script.includes("if (typeof routeOnLoad === 'function') routeOnLoad();")) fail('bootstrap does not route after auth state');
 
           console.log(`Runtime JS files checked: ${runtime.size}`);
-          console.log([...runtime].sort().join('\n'));
           console.log('Runtime syntax + dependency integrity: OK');
           NODE
 
@@ -98,7 +97,11 @@ jobs:
           grep -q 'routing.js' /tmp/booki-index.html
           echo 'Static server smoke check: OK'
 
-      - name: Headless browser boot check
+      - name: Install browser controller
+        shell: bash
+        run: npm install --no-save --no-package-lock puppeteer-core@24
+
+      - name: Controlled browser boot check
         shell: bash
         run: |
           set -euo pipefail
@@ -106,29 +109,64 @@ jobs:
           server_pid=$!
           trap 'kill $server_pid 2>/dev/null || true' EXIT
           sleep 1
-          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -z "$chrome" ]; then
-            echo 'No Chrome/Chromium binary on runner; runtime syntax + dependency checks already passed.'
-            exit 0
-          fi
-          timeout 45s "$chrome" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=15000 --dump-dom http://127.0.0.1:8081/ >/tmp/booki-dom.html 2>/tmp/booki-chrome.log || {
-            cat /tmp/booki-chrome.log
+          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$BOOKI_CHROME" ]; then
+            echo 'No Chrome/Chromium binary on runner.'
             exit 1
-          }
-          python3 <<'PY'
-          from html.parser import HTMLParser
-          class Screens(HTMLParser):
-              def __init__(self):
-                  super().__init__(); self.screens=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag != 'section': return
-                  a=dict(attrs); sid=a.get('id',''); classes=a.get('class','').split()
-                  if sid.startswith('screen-'): self.screens.append((sid,classes))
-          p=Screens(); p.feed(open('/tmp/booki-dom.html',encoding='utf-8').read())
-          active=[sid for sid,classes in p.screens if 'active' in classes]
-          print('Active screens after boot:', active)
-          if active == ['screen-teacher-boot'] or not active:
-              print(open('/tmp/booki-chrome.log',encoding='utf-8',errors='ignore').read())
-              raise SystemExit('Booki stayed on the neutral boot screen')
-          PY
-          echo 'Headless browser boot check: OK'
+          fi
+          node <<'NODE'
+          const puppeteer = require('puppeteer-core');
+          const errors = [];
+          const consoleLines = [];
+          const failedRequests = [];
+          const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+          (async () => {
+            const browser = await puppeteer.launch({
+              executablePath: process.env.BOOKI_CHROME,
+              headless: true,
+              args: ['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--no-default-browser-check']
+            });
+            const page = await browser.newPage();
+            page.on('pageerror', err => errors.push(String(err.stack || err.message || err)));
+            page.on('console', msg => {
+              const line = `[${msg.type()}] ${msg.text()}`;
+              consoleLines.push(line);
+              if (msg.type() === 'error') errors.push(line);
+            });
+            page.on('requestfailed', req => failedRequests.push(`${req.url()} :: ${req.failure()?.errorText || 'failed'}`));
+
+            try {
+              await page.goto('http://127.0.0.1:8081/', {waitUntil:'domcontentloaded', timeout:15000});
+              const deadline = Date.now() + 20000;
+              let state = null;
+              while (Date.now() < deadline) {
+                state = await page.evaluate(() => ({
+                  readyState: document.readyState,
+                  active: [...document.querySelectorAll('.screen.active')].map(el => el.id),
+                  bootActive: document.getElementById('screen-teacher-boot')?.classList.contains('active') || false,
+                  intro: !!document.getElementById('booki-teacher-intro'),
+                  startError: document.getElementById('booki-start-error')?.textContent || '',
+                  teacherLogin: document.getElementById('screen-teacher-login')?.classList.contains('active') || false,
+                  welcome: document.getElementById('screen-welcome')?.classList.contains('active') || false
+                }));
+                if (!state.bootActive && state.active.length) break;
+                await sleep(250);
+              }
+              console.log('BOOT_STATE=' + JSON.stringify(state));
+              console.log('CONSOLE=' + JSON.stringify(consoleLines.slice(-80)));
+              console.log('FAILED_REQUESTS=' + JSON.stringify(failedRequests.slice(-40)));
+              if (errors.length) console.log('PAGE_ERRORS=' + JSON.stringify(errors.slice(-40)));
+              if (!state || state.bootActive || !state.active.length) {
+                throw new Error('Booki stayed on screen-teacher-boot');
+              }
+              if (state.startError) throw new Error('Booki start error panel appeared: ' + state.startError);
+            } finally {
+              await browser.close();
+            }
+          })().catch(err => {
+            console.error(err.stack || err);
+            process.exit(1);
+          });
+          NODE
+          echo 'Controlled browser boot check: OK'
