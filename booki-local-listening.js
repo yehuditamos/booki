@@ -23,9 +23,9 @@
     document.head.appendChild(script);
   });
   window.BookiBasicConsentReady = (async () => {
-    await load('basic-consent-copy.js?v=1');
-    await load('basic-consent.js?v=1');
-    await load('basic-consent-owner.js?v=1');
+    await load('basic-consent-copy.js?v=2');
+    await load('basic-consent.js?v=2');
+    await load('basic-consent-owner.js?v=2');
     await window.BookiBasicConsent.ready();
     window.BookiBasicConsent.install();
   })();

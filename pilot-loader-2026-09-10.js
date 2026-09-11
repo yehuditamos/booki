@@ -20,7 +20,7 @@
     'pilot-class-slots-2026-09-11.js?v=1',
     'pilot-class-slots-hardening-2026-09-11.js?v=1',
     'pilot-class-slots-safety-2026-09-11.js?v=1',
-    'pilot-class-slots-copy-2026-09-11.js?v=1'
+    'pilot-class-slots-copy-2026-09-11.js?v=2'
   ];
   let i=0;
   function next(){
