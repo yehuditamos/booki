@@ -1,0 +1,125 @@
+name: Booki Runtime QA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: JavaScript syntax check
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+            count=$((count+1))
+          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -print0)
+          echo "Checked $count JavaScript files"
+
+      - name: Boot dependency integrity
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const fail = msg => { throw new Error(msg); };
+          const exists = p => fs.existsSync(path.join(process.cwd(), p));
+          const localPath = src => src.split('?')[0].replace(/^\.\//, '');
+
+          const index = fs.readFileSync('index.html', 'utf8');
+          const indexScripts = [...index.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m => m[1]);
+          for (const src of indexScripts) {
+            if (/^(https?:)?\/\//.test(src)) continue;
+            const p = localPath(src);
+            if (p.endsWith('.js') && !exists(p)) fail(`index.html references missing script: ${src}`);
+          }
+
+          const init = fs.readFileSync('initial-setup.js', 'utf8');
+          const dynamic = [...init.matchAll(/s\.src\s*=\s*["']([^"']+\.js(?:\?[^"']*)?)["']/g)].map(m => m[1]);
+          for (const src of dynamic) {
+            if (!exists(localPath(src))) fail(`initial-setup.js references missing script: ${src}`);
+          }
+
+          const loader = fs.readFileSync('pilot-loader-2026-09-10.js', 'utf8');
+          const modules = [...loader.matchAll(/["']([^"']+\.js\?[^"']+)["']/g)].map(m => m[1]);
+          if (!modules.length) fail('pilot loader module list was not detected');
+          for (const src of modules) {
+            if (!exists(localPath(src))) fail(`pilot loader references missing module: ${src}`);
+          }
+
+          if (!index.includes('id="screen-teacher-boot"')) fail('neutral boot screen missing from index');
+          const routing = fs.readFileSync('routing.js', 'utf8');
+          if (!routing.includes('async function routeOnLoad()')) fail('routeOnLoad missing');
+          const script = fs.readFileSync('script.js', 'utf8');
+          if (!script.includes("document.addEventListener('DOMContentLoaded', async () =>")) fail('main DOMContentLoaded bootstrap missing');
+          if (!script.includes("if (typeof routeOnLoad === 'function') routeOnLoad();")) fail('bootstrap does not route after auth state');
+          if (loader.includes('pilot-manual-name-slot-2026-09-11.js')) fail('broken manual-name slot module is still active in loader');
+
+          console.log(`index scripts: ${indexScripts.length}`);
+          console.log(`dynamic initial-setup scripts: ${dynamic.length}`);
+          console.log(`pilot modules: ${modules.length}`);
+          console.log('Boot dependency integrity: OK');
+          NODE
+
+      - name: Static server smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8080 --bind 127.0.0.1 >/tmp/booki-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          sleep 1
+          curl --fail --silent --show-error http://127.0.0.1:8080/index.html >/tmp/booki-index.html
+          grep -q 'id="screen-teacher-boot"' /tmp/booki-index.html
+          grep -q 'routing.js' /tmp/booki-index.html
+          echo 'Static server smoke check: OK'
+
+      - name: Headless browser boot check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8081 --bind 127.0.0.1 >/tmp/booki-browser-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          sleep 1
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$chrome" ]; then
+            echo 'No Chrome/Chromium binary on runner; dependency + syntax checks already passed.'
+            exit 0
+          fi
+          timeout 40s "$chrome" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8081/ >/tmp/booki-dom.html 2>/tmp/booki-chrome.log || {
+            cat /tmp/booki-chrome.log
+            exit 1
+          }
+          python3 <<'PY'
+          from html.parser import HTMLParser
+          class Screens(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.screens=[]
+              def handle_starttag(self, tag, attrs):
+                  if tag != 'section': return
+                  a=dict(attrs); sid=a.get('id',''); classes=a.get('class','').split()
+                  if sid.startswith('screen-'): self.screens.append((sid,classes))
+          p=Screens(); p.feed(open('/tmp/booki-dom.html',encoding='utf-8').read())
+          active=[sid for sid,classes in p.screens if 'active' in classes]
+          print('Active screens after boot:', active)
+          if active == ['screen-teacher-boot'] or not active:
+              raise SystemExit('Booki stayed on the neutral boot screen')
+          PY
+          echo 'Headless browser boot check: OK'
