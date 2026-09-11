@@ -24,22 +24,12 @@
   ];
   let i=0;
   function next(){
-    if(i>=files.length){
-      window.BookiPilotLoader20260910.ready=true;
-      window.dispatchEvent(new Event('booki:pilot-release-ready'));
-      return;
-    }
+    if(i>=files.length){window.BookiPilotLoader20260910.ready=true;window.dispatchEvent(new Event('booki:pilot-release-ready'));return;}
     const src=files[i++],s=document.createElement('script');
-    s.src=src;
-    s.async=false;
-    s.dataset.bookiPilotModule=src.split('?')[0];
-    s.onload=next;
-    s.onerror=()=>{
-      console.error('[booki] pilot module failed:',src);
-      next();
-    };
+    s.src=src;s.async=false;s.dataset.bookiPilotModule=src.split('?')[0];
+    s.onload=next;s.onerror=()=>console.error('[booki] pilot module failed:',src);
     document.head.appendChild(s);
   }
-  window.BookiPilotLoader20260910={version:'2026-09-11.4-rollback2',ready:false};
+  window.BookiPilotLoader20260910={version:'2026-09-11.4',ready:false};
   next();
 })();
