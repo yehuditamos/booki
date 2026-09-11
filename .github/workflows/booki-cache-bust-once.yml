@@ -1,0 +1,45 @@
+name: Booki Cache Bust Once
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cache-bust:
+    if: ${{ !contains(github.event.head_commit.message, '[cache-bust-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Force fresh runtime asset URLs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          sed -i 's/booki-local-listening\.js?v=3/booki-local-listening.js?v=4/g' index.html
+          sed -i 's/initial-setup\.js?v=2/initial-setup.js?v=3/g' index.html
+          sed -i 's/pilot-loader-2026-09-10\.js?v=2/pilot-loader-2026-09-10.js?v=3/g' initial-setup.js
+          sed -i 's/basic-consent-copy\.js?v=1/basic-consent-copy.js?v=2/g' booki-local-listening.js
+          sed -i 's/basic-consent\.js?v=1/basic-consent.js?v=2/g' booki-local-listening.js
+          sed -i 's/basic-consent-owner\.js?v=1/basic-consent-owner.js?v=2/g' booki-local-listening.js
+          sed -i 's/pilot-class-slots-copy-2026-09-11\.js?v=1/pilot-class-slots-copy-2026-09-11.js?v=2/g' pilot-loader-2026-09-10.js
+
+          if git diff --quiet -- index.html initial-setup.js booki-local-listening.js pilot-loader-2026-09-10.js; then
+            echo 'Cache-bust versions are already current.'
+            exit 0
+          fi
+
+          echo 'Changed runtime URLs:'
+          git diff -- index.html initial-setup.js booki-local-listening.js pilot-loader-2026-09-10.js
+
+          git config user.name 'booki-runtime-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html initial-setup.js booki-local-listening.js pilot-loader-2026-09-10.js
+          git commit -m 'Force fresh Booki runtime assets [cache-bust-done]'
+          git push origin HEAD:main
