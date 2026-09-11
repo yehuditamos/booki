@@ -3,7 +3,6 @@
   'use strict';
   if(window.BookiPilotLoader20260910) return;
   const files=[
-    'pilot-boot-failopen-2026-09-11.js?v=1',
     'pilot-reading-save-2026-09-10.js?v=1',
     'pilot-reading-overrides-2026-09-10.js?v=1',
     'pilot-niqud-exact-2026-09-10.js?v=1',
@@ -21,8 +20,7 @@
     'pilot-class-slots-2026-09-11.js?v=1',
     'pilot-class-slots-hardening-2026-09-11.js?v=1',
     'pilot-class-slots-safety-2026-09-11.js?v=1',
-    'pilot-class-slots-copy-2026-09-11.js?v=1',
-    'pilot-manual-name-slot-2026-09-11.js?v=1'
+    'pilot-class-slots-copy-2026-09-11.js?v=1'
   ];
   let i=0;
   function next(){
@@ -30,9 +28,9 @@
     const src=files[i++],s=document.createElement('script');
     s.src=src;s.async=false;s.dataset.bookiPilotModule=src.split('?')[0];
     s.onload=next;
-    s.onerror=()=>{console.error('[booki] pilot module failed:',src);next();};
+    s.onerror=()=>console.error('[booki] pilot module failed:',src);
     document.head.appendChild(s);
   }
-  window.BookiPilotLoader20260910={version:'2026-09-11.6',ready:false};
+  window.BookiPilotLoader20260910={version:'2026-09-11.4-rollback',ready:false};
   next();
 })();
