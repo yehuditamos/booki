@@ -30,7 +30,7 @@ jobs:
           const cp = require('child_process');
           const fail = msg => { throw new Error(msg); };
           const localPath = src => src.split('?')[0].replace(/^\.\//, '');
-          const isLocalJs = src => !!src && !/^(https?:)?\/\//.test(src) && localPath(src).endsWith('.js');
+          const isLocalJs = src => !!src && /^[A-Za-z0-9_./-]+\.js(?:\?[^\s"']+)?$/.test(src) && !/^(https?:)?\/\//.test(src);
           const exists = p => fs.existsSync(path.join(process.cwd(), p));
           const runtime = new Set();
 
