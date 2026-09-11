@@ -1,0 +1,52 @@
+name: Booki Owner WhatsApp Cache Bust Once
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cache-bust:
+    if: ${{ !contains(github.event.head_commit.message, '[owner-wa-bust-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Force fresh owner WhatsApp loader chain
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('initial-setup.js')
+          s = p.read_text(encoding='utf-8')
+          s2, n = re.subn(r"pilot-loader-2026-09-10\.js\?v=\d+", "pilot-loader-2026-09-10.js?v=4", s, count=1)
+          if n != 1:
+              raise SystemExit('pilot loader version reference not found in initial-setup.js')
+          p.write_text(s2, encoding='utf-8')
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s2, n = re.subn(r"initial-setup\.js\?v=\d+", "initial-setup.js?v=4", s, count=1)
+          if n != 1:
+              raise SystemExit('initial-setup version reference not found in index.html')
+          p.write_text(s2, encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/booki-owner-wa-bust-once.yml
+
+          git config user.name "booki-runtime-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add initial-setup.js index.html .github/workflows/booki-owner-wa-bust-once.yml
+          if git diff --cached --quiet; then
+            echo "No cache-bust changes required"
+            exit 0
+          fi
+          git commit -m "Cache-bust owner WhatsApp loader [owner-wa-bust-done]"
+          git push
