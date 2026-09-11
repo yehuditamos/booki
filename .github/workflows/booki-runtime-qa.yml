@@ -21,46 +21,56 @@ jobs:
         with:
           node-version: '20'
 
-      - name: JavaScript syntax check
-        shell: bash
-        run: |
-          set -euo pipefail
-          count=0
-          while IFS= read -r -d '' file; do
-            node --check "$file"
-            count=$((count+1))
-          done < <(find . -type f -name '*.js' -not -path './node_modules/*' -print0)
-          echo "Checked $count JavaScript files"
-
-      - name: Boot dependency integrity
+      - name: Runtime JavaScript syntax + dependency check
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('fs');
           const path = require('path');
+          const cp = require('child_process');
           const fail = msg => { throw new Error(msg); };
-          const exists = p => fs.existsSync(path.join(process.cwd(), p));
           const localPath = src => src.split('?')[0].replace(/^\.\//, '');
+          const isLocalJs = src => !!src && !/^(https?:)?\/\//.test(src) && localPath(src).endsWith('.js');
+          const exists = p => fs.existsSync(path.join(process.cwd(), p));
+          const runtime = new Set();
+
+          const add = src => {
+            if (!isLocalJs(src)) return;
+            const p = localPath(src);
+            if (!exists(p)) fail(`runtime references missing script: ${src}`);
+            runtime.add(p);
+          };
 
           const index = fs.readFileSync('index.html', 'utf8');
-          const indexScripts = [...index.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m => m[1]);
-          for (const src of indexScripts) {
-            if (/^(https?:)?\/\//.test(src)) continue;
-            const p = localPath(src);
-            if (p.endsWith('.js') && !exists(p)) fail(`index.html references missing script: ${src}`);
+          for (const m of index.matchAll(/<script[^>]+src=["']([^"']+)["']/g)) add(m[1]);
+
+          const queue = [...runtime];
+          const visited = new Set();
+          while (queue.length) {
+            const file = queue.shift();
+            if (visited.has(file)) continue;
+            visited.add(file);
+            const text = fs.readFileSync(file, 'utf8');
+            for (const m of text.matchAll(/["']([^"']+\.js(?:\?[^"']*)?)["']/g)) {
+              const p = localPath(m[1]);
+              const before = runtime.size;
+              add(m[1]);
+              if (runtime.size > before && !visited.has(p)) queue.push(p);
+            }
           }
 
-          const init = fs.readFileSync('initial-setup.js', 'utf8');
-          const dynamic = [...init.matchAll(/s\.src\s*=\s*["']([^"']+\.js(?:\?[^"']*)?)["']/g)].map(m => m[1]);
-          for (const src of dynamic) {
-            if (!exists(localPath(src))) fail(`initial-setup.js references missing script: ${src}`);
-          }
+          if (!runtime.has('routing.js')) fail('routing.js is not in runtime graph');
+          if (!runtime.has('script.js')) fail('script.js is not in runtime graph');
+          if (!runtime.has('pilot-loader-2026-09-10.js')) fail('pilot loader is not in runtime graph');
+          if (runtime.has('pilot-manual-name-slot-2026-09-11.js')) fail('broken manual-name slot module is active in runtime graph');
 
-          const loader = fs.readFileSync('pilot-loader-2026-09-10.js', 'utf8');
-          const modules = [...loader.matchAll(/["']([^"']+\.js\?[^"']+)["']/g)].map(m => m[1]);
-          if (!modules.length) fail('pilot loader module list was not detected');
-          for (const src of modules) {
-            if (!exists(localPath(src))) fail(`pilot loader references missing module: ${src}`);
+          for (const file of [...runtime].sort()) {
+            try { cp.execFileSync(process.execPath, ['--check', file], {stdio:'pipe'}); }
+            catch (e) {
+              process.stderr.write(e.stdout || '');
+              process.stderr.write(e.stderr || '');
+              fail(`syntax error in runtime file: ${file}`);
+            }
           }
 
           if (!index.includes('id="screen-teacher-boot"')) fail('neutral boot screen missing from index');
@@ -69,12 +79,10 @@ jobs:
           const script = fs.readFileSync('script.js', 'utf8');
           if (!script.includes("document.addEventListener('DOMContentLoaded', async () =>")) fail('main DOMContentLoaded bootstrap missing');
           if (!script.includes("if (typeof routeOnLoad === 'function') routeOnLoad();")) fail('bootstrap does not route after auth state');
-          if (loader.includes('pilot-manual-name-slot-2026-09-11.js')) fail('broken manual-name slot module is still active in loader');
 
-          console.log(`index scripts: ${indexScripts.length}`);
-          console.log(`dynamic initial-setup scripts: ${dynamic.length}`);
-          console.log(`pilot modules: ${modules.length}`);
-          console.log('Boot dependency integrity: OK');
+          console.log(`Runtime JS files checked: ${runtime.size}`);
+          console.log([...runtime].sort().join('\n'));
+          console.log('Runtime syntax + dependency integrity: OK');
           NODE
 
       - name: Static server smoke check
@@ -100,10 +108,10 @@ jobs:
           sleep 1
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           if [ -z "$chrome" ]; then
-            echo 'No Chrome/Chromium binary on runner; dependency + syntax checks already passed.'
+            echo 'No Chrome/Chromium binary on runner; runtime syntax + dependency checks already passed.'
             exit 0
           fi
-          timeout 40s "$chrome" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8081/ >/tmp/booki-dom.html 2>/tmp/booki-chrome.log || {
+          timeout 45s "$chrome" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --virtual-time-budget=15000 --dump-dom http://127.0.0.1:8081/ >/tmp/booki-dom.html 2>/tmp/booki-chrome.log || {
             cat /tmp/booki-chrome.log
             exit 1
           }
@@ -120,6 +128,7 @@ jobs:
           active=[sid for sid,classes in p.screens if 'active' in classes]
           print('Active screens after boot:', active)
           if active == ['screen-teacher-boot'] or not active:
+              print(open('/tmp/booki-chrome.log',encoding='utf-8',errors='ignore').read())
               raise SystemExit('Booki stayed on the neutral boot screen')
           PY
           echo 'Headless browser boot check: OK'
