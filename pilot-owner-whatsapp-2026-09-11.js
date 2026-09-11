@@ -16,8 +16,6 @@
   let queueIndex = 0;
   const QUEUE_KEY = 'booki_owner_whatsapp_queue_v1';
 
-  function escText(value){ return String(value ?? ''); }
-
   function normalizePhone(raw){
     let digits = String(raw || '').replace(/\D/g,'');
     if (digits.startsWith('00')) digits = digits.slice(2);
@@ -196,8 +194,12 @@
     queueIndex += 1;
     saveQueue();
     renderQueueState(item.name);
-    const opened = window.open(url,'_blank','noopener,noreferrer');
-    if (!opened) window.location.href = url;
+    const opened = window.open(url,'_blank');
+    if (opened) {
+      try { opened.opener = null; } catch(_) {}
+    } else {
+      window.location.href = url;
+    }
   }
 
   function renderQueueState(lastOpened=''){
