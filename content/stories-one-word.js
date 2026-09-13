@@ -1,59 +1,153 @@
 /**
- * content/stories-one-word.js — סיפור של מילה אחת
- *
- * בכל עמוד מופיעה מילה מנוקדת אחת בלבד ואיור תואם.
- * מיועד לקוראים בתחילת הדרך, עם רצף פשוט שמרגיש כמו סיפור.
+ * סיפורי התחלה: מילה אחת בכל עמוד, שתי אותיות בכל מילה.
+ * פתח וקמץ בלבד. כל זוג עמודים יוצר משפט שלם;
+ * ארבעה משפטים יוצרים רצף קצר עם סיום משותף ונעים.
+ * מזהים חדשים מונעים שיוך הישגים מהסיפורים הישנים לתוכן החדש.
+ * פורמט הקורא, שמירת הזמן ומסך ההצלחה נשארים ללא שינוי.
  */
-
 const STORIES_ONE_WORD = [
   {
-    id:        "one-word-ball",
-    libraryId: "one-word",
-    category:  "סיפור של מילה אחת",
-    title:     "הַכַּדּוּר",
-    emoji:     "⚽",
-    tags:      ["מילה אחת", "כדורגל", "פעולות", "🌱 קורא ראשון"],
-    pages: [
-      { text: "כַּדּוּר", illustration: "⚽", illustrationLabel: "כדור", scene: "sky", readingMinutes: 0.2 },
-      { text: "יֶלֶד", illustration: "🧒", illustrationLabel: "ילד", scene: "sun", readingMinutes: 0.2 },
-      { text: "רָץ", illustration: "🏃", illustrationLabel: "ילד רץ", scene: "grass", readingMinutes: 0.2 },
-      { text: "בּוֹעֵט", illustration: "🦵", illustrationLabel: "רגל בועטת בכדור", scene: "grass", readingMinutes: 0.2 },
-      { text: "עָף", illustration: "💨", illustrationLabel: "כדור עף באוויר", scene: "sky", readingMinutes: 0.2 },
-      { text: "שַׁעַר", illustration: "🥅", illustrationLabel: "שער כדורגל", scene: "celebration", readingMinutes: 0.2 },
+    "id": "one-word-first-dad-arrives",
+    "libraryId": "one-word",
+    "category": "סיפור של מילה אחת",
+    "title": "אָב בָּא",
+    "emoji": "👨‍👦",
+    "tags": [
+      "מילה אחת",
+      "שתי אותיות",
+      "פתח וקמץ",
+      "🌱 קורא ראשון"
     ],
+    "description": "אב מגיע. דן רץ אליו. האב שר, ודן מצטרף לשירה.",
+    "pages": [
+      {
+        "text": "אָב",
+        "illustration": "👨",
+        "illustrationLabel": "האב מתקרב לבית",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "בָּא",
+        "illustration": "👨 🚪",
+        "illustrationLabel": "האב מגיע אל הדלת",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "דָּן",
+        "illustration": "🧒",
+        "illustrationLabel": "דן רואה את אביו מגיע",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "רָץ",
+        "illustration": "🧒 👨",
+        "illustrationLabel": "דן רץ לפגוש את אביו",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "אָב",
+        "illustration": "👨 🎵",
+        "illustrationLabel": "האב מתחיל לשיר ליד דן",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "שָׁר",
+        "illustration": "👨 🎵",
+        "illustrationLabel": "האב שר ודן מקשיב",
+        "scene": "home",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "דָּן",
+        "illustration": "🧒 🎵",
+        "illustrationLabel": "דן מצטרף לשירה של אביו",
+        "scene": "celebration",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "שָׁר",
+        "illustration": "👨 🧒 🎵",
+        "illustrationLabel": "דן ואביו שרים יחד",
+        "scene": "celebration",
+        "readingMinutes": 0.2
+      }
+    ]
   },
-
   {
-    id:        "one-word-garden",
-    libraryId: "one-word",
-    category:  "סיפור של מילה אחת",
-    title:     "הַגִּנָּה",
-    emoji:     "🌻",
-    tags:      ["מילה אחת", "טבע", "גינה", "🌱 קורא ראשון"],
-    pages: [
-      { text: "שֶׁמֶשׁ", illustration: "☀️", illustrationLabel: "שמש", scene: "sun", readingMinutes: 0.2 },
-      { text: "גֶּשֶׁם", illustration: "🌧️", illustrationLabel: "ענן וגשם", scene: "rain", readingMinutes: 0.2 },
-      { text: "זֶרַע", illustration: "🌰", illustrationLabel: "זרע באדמה", scene: "earth", readingMinutes: 0.2 },
-      { text: "נָבַט", illustration: "🌱", illustrationLabel: "נבט צעיר", scene: "grass", readingMinutes: 0.2 },
-      { text: "פֶּרַח", illustration: "🌻", illustrationLabel: "פרח", scene: "garden", readingMinutes: 0.2 },
-      { text: "פַּרְפַּר", illustration: "🦋", illustrationLabel: "פרפר ליד הפרח", scene: "garden", readingMinutes: 0.2 },
+    "id": "one-word-first-run-and-rest",
+    "libraryId": "one-word",
+    "category": "סיפור של מילה אחת",
+    "title": "גַּל רָץ",
+    "emoji": "🌳",
+    "tags": [
+      "מילה אחת",
+      "שתי אותיות",
+      "פתח וקמץ",
+      "🌱 קורא ראשון"
     ],
-  },
-
-  {
-    id:        "one-word-my-day",
-    libraryId: "one-word",
-    category:  "סיפור של מילה אחת",
-    title:     "הַיּוֹם שֶׁלִּי",
-    emoji:     "🌞",
-    tags:      ["מילה אחת", "שגרה", "בית ספר", "🌱 קורא ראשון"],
-    pages: [
-      { text: "בֹּקֶר", illustration: "🌅", illustrationLabel: "בוקר ושמש זורחת", scene: "sun", readingMinutes: 0.2 },
-      { text: "מִתְלַבֵּשׁ", illustration: "👕", illustrationLabel: "חולצה ללבישה", scene: "home", readingMinutes: 0.2 },
-      { text: "אוֹכֵל", illustration: "🥣", illustrationLabel: "קערת ארוחת בוקר", scene: "home", readingMinutes: 0.2 },
-      { text: "הוֹלֵךְ", illustration: "🚶", illustrationLabel: "ילד הולך", scene: "sky", readingMinutes: 0.2 },
-      { text: "לוֹמֵד", illustration: "✏️", illustrationLabel: "עיפרון ומחברת", scene: "school", readingMinutes: 0.2 },
-      { text: "יָשֵׁן", illustration: "😴", illustrationLabel: "ילד ישן בלילה", scene: "night", readingMinutes: 0.2 },
-    ],
-  },
+    "description": "גל רץ ודן מצטרף אליו. אחרי הריצה גל נח, ודן מצטרף למנוחה.",
+    "pages": [
+      {
+        "text": "גַּל",
+        "illustration": "🧒 🌳",
+        "illustrationLabel": "גל עומד בשביל שבגן",
+        "scene": "garden",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "רָץ",
+        "illustration": "🏃 🌳",
+        "illustrationLabel": "גל מתחיל לרוץ בשביל",
+        "scene": "grass",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "דָּן",
+        "illustration": "👦 🌳",
+        "illustrationLabel": "דן רואה את גל רץ",
+        "scene": "garden",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "רָץ",
+        "illustration": "🏃 🏃",
+        "illustrationLabel": "דן מצטרף לריצה של גל",
+        "scene": "grass",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "גַּל",
+        "illustration": "🧒 🌳",
+        "illustrationLabel": "גל מגיע לעץ אחרי הריצה",
+        "scene": "garden",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "נָח",
+        "illustration": "🧒 🌳",
+        "illustrationLabel": "גל מתיישב לנוח בצל העץ",
+        "scene": "garden",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "דָּן",
+        "illustration": "👦 🌳",
+        "illustrationLabel": "דן מגיע לעץ שבו גל נח",
+        "scene": "garden",
+        "readingMinutes": 0.2
+      },
+      {
+        "text": "נָח",
+        "illustration": "🧒 👦 🌳",
+        "illustrationLabel": "דן וגל נחים יחד בצל העץ",
+        "scene": "celebration",
+        "readingMinutes": 0.2
+      }
+    ]
+  }
 ];
