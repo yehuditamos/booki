@@ -159,13 +159,13 @@
     const existingCount = Number(countText?.textContent || 0) || 0;
 
     const input = oldInput.cloneNode(true);
-    input.value = '';
+    input.value = existingCount ? String(existingCount) : '';
     input.placeholder = 'מספר הילדים';
     oldInput.replaceWith(input);
 
     const action = oldAction.cloneNode(true);
     action.disabled = true;
-    action.textContent = 'כתבי מספר ילדים';
+    action.textContent = 'שמירת מספר הילדים';
     oldAction.replaceWith(action);
 
     const cleanup = document.createElement('button');
@@ -178,26 +178,26 @@
       const target = validCount(input.value);
       if (!target) {
         action.disabled = true;
-        action.textContent = 'כתבי מספר ילדים';
+        action.textContent = 'שמירת מספר הילדים';
         if (status) status.textContent = '';
         return;
       }
       const missing = target - existingCount;
-      if (missing <= 0) {
+      if (missing < 0) {
         action.disabled = true;
-        action.textContent = 'לא צריך להוסיף כרטיסים';
-        if (status) status.textContent = `כבר יש ${existingCount} כרטיסים במועדון.`;
+        action.textContent = 'שמירת מספר הילדים';
+        if (status) status.textContent = `קיימים ${existingCount} כרטיסים. הקטנת המספר לא מוחקת כרטיסים.`;
         return;
       }
       action.disabled = false;
-      action.textContent = `פתחי ${missing} כרטיסים חסרים`;
-      if (status) status.textContent = `בסיום יהיו ${target} כרטיסים במועדון.`;
+      action.textContent = 'שמירת מספר הילדים';
+      if (status) status.textContent = '';
     };
     input.addEventListener('input',sync);
 
     action.addEventListener('click',async()=>{
       const target = validCount(input.value);
-      if (!target || target <= existingCount || !window.BookiClassSlots?.ensureClassSize) return;
+      if (!target || target < existingCount || !window.BookiClassSlots?.ensureClassSize) return;
       const missing = target-existingCount;
       if (missing >= 5 && !confirm(`לפתוח עכשיו ${missing} כרטיסים פנויים?`)) return;
       action.disabled = true;
@@ -207,7 +207,7 @@
         action.disabled = false;
         return;
       }
-      if (status) status.textContent = `✅ נפתחו ${result.created} כרטיסים. עכשיו יש ${result.total}.`;
+      if (status) status.textContent = 'נשמר';
       setTimeout(()=>{
         panel.remove();
         if (typeof showClubStudents === 'function') showClubStudents();

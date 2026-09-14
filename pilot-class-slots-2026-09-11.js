@@ -176,14 +176,19 @@
   async function installTopUpPanel(){
     const screen = $('screen-club-students');
     const section = $('add-student-section');
-    if (!screen || !section || $('booki-topup-panel')) return;
+    if (!screen || !section) return;
+    const oldPanel = $('booki-topup-panel');
+    if (oldPanel?.dataset.clubId === currentTeacherClubId()) return;
+    oldPanel?.remove();
     const clubId = currentTeacherClubId();
     if (!clubId || typeof getCurrentTeacher !== 'function' || !getCurrentTeacher()) return;
 
     let members = [];
-    try { members = await membershipsFor(clubId); } catch (_) {}
+    try { members = await membershipsFor(clubId); } catch (_) { return; }
+    if (currentTeacherClubId() !== clubId || $('booki-topup-panel')) return;
     const panel = document.createElement('div');
     panel.id = 'booki-topup-panel';
+    panel.dataset.clubId = clubId;
     panel.className = 'booki-topup-panel';
     panel.innerHTML = `
       <strong>🎒 השלימי כרטיסים לכל הכיתה</strong>
