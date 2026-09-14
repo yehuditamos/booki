@@ -102,7 +102,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherFlow() {
   if (document.querySelector('script[data-booki-teacher-flow]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-flow.js?v=20260914-class-hub';
+  s.src = 'teacher-flow.js?v=20260914-all-cards';
   s.async = false;
   s.dataset.bookiTeacherFlow = '1';
   s.onerror = () => console.warn('[booki] teacher flow extension did not load');

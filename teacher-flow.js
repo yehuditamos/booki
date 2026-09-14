@@ -336,13 +336,13 @@
   function renderEncouragement(target, members, id) {
     target.replaceChildren();
     if (!members.length) {
-      notice(target, 'הכרטיסים מוכנים. מחכים לקוראים הראשונים.');
+      notice(target, 'עדיין אין כרטיסים בכיתה.');
       target.appendChild(button('קישור הכיתה', () => { showScreen('screen-teacher-club'); openTeacherClubShare(); }));
       return;
     }
     const summary = element('div', undefined, 'booki-reading-summary');
     const minutesTotal = members.reduce((sum,m) => sum + Math.max(0,Number(m.cachedStats?.totalMinutes)||0),0);
-    summary.append(element('span', members.length + ' קוראים'), element('span', Math.round(minutesTotal).toLocaleString('he-IL') + ' דקות קריאה'));
+    summary.append(element('span', members.length + ' כרטיסים'), element('span', Math.round(minutesTotal).toLocaleString('he-IL') + ' דקות קריאה'));
     target.appendChild(summary);
     const table = element('table', undefined, 'booki-encouragement-table');
     table.setAttribute('aria-label', 'תלמידים, נתוני קריאה ושליחת עידוד');
@@ -350,14 +350,16 @@
     ['תלמיד/ה', 'דקות קריאה', 'קריאה אחרונה', 'עידוד'].forEach(label => { const th = element('th', label); th.scope = 'col'; header.appendChild(th); });
     head.appendChild(header); table.appendChild(head);
     const body = document.createElement('tbody');
-    [...members].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he')).forEach(m => {
+    [...members].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he', { numeric: true })).forEach(m => {
       const row = document.createElement('tr');
       const name = String(m.name || 'תלמיד/ה');
       const nameCell = element('th', name); nameCell.scope = 'row';
       const minutes = Number(m.cachedStats?.totalMinutes);
       const heart = button('💙', () => openEncouragementModal(id, m.userId, name), 'booki-encouragement-heart');
       heart.title = 'שליחת עידוד ל' + name; heart.setAttribute('aria-label', heart.title);
-      const action = document.createElement('td'); action.appendChild(heart);
+      const action = document.createElement('td');
+      if (String(m.name || '').startsWith('כרטיס פנוי ') && !m.claimedByUid) action.textContent = '—';
+      else action.appendChild(heart);
       row.append(nameCell, element('td', String(Number.isFinite(minutes) ? Math.max(0, Math.round(minutes)) : 0)), element('td', lastRead(m.cachedStats?.lastReadAt)), action);
       body.appendChild(row);
     });
@@ -375,10 +377,10 @@
     const current = () => request === encouragementRequest && revision === screenRevision && active('screen-teacher-encouragement') && clubId() === id && teacher()?.uid === uid;
     try {
       const rawMembers = await membersFor(id);
-      const members = await Promise.all(rawMembers.filter(m => !String(m.name || '').startsWith('כרטיס פנוי ') || !!m.claimedByUid).map(async m => {
-        if (!String(m.name || '').startsWith('כרטיס פנוי ')) return m;
+      const members = await Promise.all(rawMembers.map(async m => {
+        if (!String(m.name || '').startsWith('כרטיס פנוי ') || !m.claimedByUid) return m;
         const name = window.BookiClassSlots?.effectiveName ? await window.BookiClassSlots.effectiveName(m) : '';
-        return {...m, name: name || 'קורא/ת'};
+        return {...m, name: name || m.name};
       }));
       if (current()) renderEncouragement(target, members, id);
     } catch (error) {
