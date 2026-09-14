@@ -63,8 +63,33 @@
   const originalShowScreen = window.showScreen;
   window.showScreen = function (...args) {
     screenRevision++;
-    return originalShowScreen.apply(this, args);
+    const result = originalShowScreen.apply(this, args);
+    if (args[0] === 'screen-teacher-club') queueMicrotask(renderClubNextAction);
+    return result;
   };
+
+
+  async function renderClubNextAction() {
+    const id = clubId(), uid = teacher()?.uid, revision = screenRevision;
+    const action = $('tc-next-action'), summary = $('tc-class-summary');
+    if (!id || !uid || !action || !summary || !active('screen-teacher-club')) return;
+    action.disabled = true; action.textContent = 'טוען…'; action.onclick = null;
+    summary.textContent = 'טוען את הכיתה…';
+    const current = () => active('screen-teacher-club') && screenRevision === revision && clubId() === id && teacher()?.uid === uid;
+    try {
+      const members = await membersFor(id);
+      if (!current()) return;
+      const minutes = members.reduce((sum,m) => sum + Math.max(0,Number(m.cachedStats?.totalMinutes)||0),0);
+      summary.textContent = members.length ? members.length + ' כרטיסים · ' + Math.round(minutes).toLocaleString('he-IL') + ' דקות קריאה' : 'הכיתה מוכנה לצירוף ילדים';
+      action.textContent = members.length ? '📊 קריאה ועידוד' : 'לצרף ילדים';
+      action.onclick = members.length ? () => window.showTeacherEncouragement() : () => openTeacherClubShare();
+      action.disabled = false;
+    } catch (_) {
+      if (!current()) return;
+      summary.textContent = 'לא הצלחנו לטעון את הכיתה';
+      action.textContent = 'לנסות שוב'; action.onclick = renderClubNextAction; action.disabled = false;
+    }
+  }
 
   // Seed only after the existing server write has actually succeeded.
   const originalCreateClub = window.fbCreateClub;
@@ -310,7 +335,15 @@
   }
   function renderEncouragement(target, members, id) {
     target.replaceChildren();
-    if (!members.length) { notice(target, 'עדיין אין תלמידים במועדון. אפשר להוסיף אותם בכפתור ״צרף תלמידים״ במסך המועדון.'); return; }
+    if (!members.length) {
+      notice(target, 'הכרטיסים מוכנים. מחכים לקוראים הראשונים.');
+      target.appendChild(button('קישור הכיתה', () => { showScreen('screen-teacher-club'); openTeacherClubShare(); }));
+      return;
+    }
+    const summary = element('div', undefined, 'booki-reading-summary');
+    const minutesTotal = members.reduce((sum,m) => sum + Math.max(0,Number(m.cachedStats?.totalMinutes)||0),0);
+    summary.append(element('span', members.length + ' קוראים'), element('span', Math.round(minutesTotal).toLocaleString('he-IL') + ' דקות קריאה'));
+    target.appendChild(summary);
     const table = element('table', undefined, 'booki-encouragement-table');
     table.setAttribute('aria-label', 'תלמידים, נתוני קריאה ושליחת עידוד');
     const head = document.createElement('thead'), header = document.createElement('tr');
@@ -341,7 +374,12 @@
     const revision = screenRevision;
     const current = () => request === encouragementRequest && revision === screenRevision && active('screen-teacher-encouragement') && clubId() === id && teacher()?.uid === uid;
     try {
-      const members = await membersFor(id);
+      const rawMembers = await membersFor(id);
+      const members = await Promise.all(rawMembers.filter(m => !String(m.name || '').startsWith('כרטיס פנוי ') || !!m.claimedByUid).map(async m => {
+        if (!String(m.name || '').startsWith('כרטיס פנוי ')) return m;
+        const name = window.BookiClassSlots?.effectiveName ? await window.BookiClassSlots.effectiveName(m) : '';
+        return {...m, name: name || 'קורא/ת'};
+      }));
       if (current()) renderEncouragement(target, members, id);
     } catch (error) {
       if (!current()) return;
@@ -378,7 +416,7 @@
     if (!$('screen-teacher-encouragement')) {
       const screen = element('section', undefined, 'screen'); screen.id = 'screen-teacher-encouragement'; screen.dir = 'rtl';
       const header = element('div', undefined, 'screen-header sticky-header'), row = element('div', undefined, 'header-row');
-      row.append(button('חזרה →', () => showScreen('screen-teacher-club'), 'btn-back'), element('h2', 'לשלוח עידוד 💙'));
+      row.append(button('חזרה →', () => showScreen('screen-teacher-club'), 'btn-back'), element('h2', 'קריאה ועידוד'));
       header.appendChild(row);
       const content = element('div', undefined, 'booki-encouragement-content'); content.id = 'booki-encouragement-content';
       screen.append(header, content); document.body.appendChild(screen);
@@ -403,6 +441,7 @@
   window.BookiTeacherFlow = { version: '2026-09-09.1', parentInvite, installUi };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installUi, { once: true });
   else installUi();
+  if (active('screen-teacher-club')) renderClubNextAction();
   // Dynamic loading can finish after the initial route: update only the screen still visible.
   if (active('screen-teacher-dashboard') && teacher()) window.showTeacherDashboard();
   else if (active('screen-who-reads') && clubId()) window.showWhoReads(clubId());

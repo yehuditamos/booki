@@ -90,6 +90,7 @@ async function _renderShopManagement(clubId) {
   }
 
   _renderRewardGrid(clubId, rewards, statusHtml, shopState?.lastWinner?.rewardId || null);
+  renderTeacherTreeSettings(clubId, 'shop-teacher-content');
 }
 
 // ─── Goal Settings — מסך נפרד (Redesign) ──────────────────────────────────────
@@ -120,6 +121,7 @@ async function _renderGoalSettingsScreen(clubId) {
   ]);
 
   container.innerHTML = _goalSettingsHtml(clubId, cycle, econ, club?.shopSettings || {});
+  renderTeacherTreeSettings(clubId, 'goal-settings-content');
 }
 
 function _enableShopSetupHtml(clubId) {
@@ -1387,3 +1389,53 @@ Object.assign(window, {
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
   checkHomeShopTeaser,
 });
+
+/** Student tree display lives beside the goal, not in reading analytics. */
+async function renderTeacherTreeSettings(clubId, containerId) {
+  const container = document.getElementById(containerId);
+  const teacherUid = typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null;
+  if (!container || !teacherUid || !window.db || window.currentClubId !== clubId) return;
+  container.querySelector('.booki-tree-display')?.remove();
+  const panel = document.createElement('fieldset');
+  panel.className = 'booki-tree-display';
+  const legend = document.createElement('legend'); legend.textContent = 'מה הילדים יראו ליד העץ';
+  const status = document.createElement('p'); status.setAttribute('role','status'); status.textContent = 'טוען…';
+  panel.append(legend,status);
+  const anchor = container.querySelector('.mgmt-toolbar') || container.querySelector('.goals-row-target')?.nextElementSibling;
+  if (anchor) container.insertBefore(panel,anchor); else container.appendChild(panel);
+  const current = () => panel.isConnected && window.currentClubId === clubId && getCurrentTeacher()?.uid === teacherUid;
+  const ref = window.db.collection('clubs').doc(clubId);
+  let selected;
+  try {
+    const snap = await ref.get({source:'server'});
+    if (!current()) return;
+    if (!snap.exists || snap.metadata?.fromCache) throw new Error('unconfirmed-club');
+    selected = snap.data()?.settings?.progressDisplay || 'leaderboard';
+  } catch (_) {
+    if (!current()) return;
+    status.textContent = 'לא הצלחנו לטעון את ההגדרה';
+    const retry = document.createElement('button'); retry.type='button'; retry.textContent='לנסות שוב';
+    retry.onclick=()=>renderTeacherTreeSettings(clubId,containerId);panel.appendChild(retry);return;
+  }
+  const inputs=[];
+  for (const [value,text] of [['progressOnly','התקדמות הכיתה בלבד'],['leaderboard','התקדמות הכיתה וטבלת קוראים']]) {
+    const label=document.createElement('label'),input=document.createElement('input');
+    input.type='radio';input.name='tree-display-'+containerId;input.value=value;input.checked=value===selected;
+    label.append(input,document.createTextNode(text));panel.insertBefore(label,status);inputs.push(input);
+    input.addEventListener('change',async()=>{
+      if (!current() || !input.checked) return;
+      inputs.forEach(el=>el.disabled=true);status.textContent='שומר…';
+      try {
+        // Field-level update preserves every other class setting; failures propagate.
+        await ref.update({'settings.progressDisplay':value});
+        if (!current()) return;
+        selected=value;status.textContent='נשמר';
+      } catch (_) {
+        if (!current()) return;
+        inputs.forEach(el=>el.checked=el.value===selected);
+        status.textContent='השינוי לא נשמר. נסו שוב.';
+      } finally { if(current()) inputs.forEach(el=>el.disabled=false); }
+    });
+  }
+  status.textContent='';
+}

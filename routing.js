@@ -1751,6 +1751,7 @@ function _goBackFromWhoReads() {
 }
 
 async function showTeacherClassScreen() {
+  if (typeof window.showTeacherEncouragement === 'function') return window.showTeacherEncouragement();
   const clubId = _activeClubId;
   if (!clubId) return;
 
