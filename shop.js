@@ -125,19 +125,12 @@ async function _renderGoalSettingsScreen(clubId) {
 function _enableShopSetupHtml(clubId) {
   return `
     <div class="shop-setup-card">
-      <div class="shop-setup-icon">🎯</div>
-      <h3>הפעילו את היעד הראשון</h3>
-      <p>הכיתה תצבור דקות קריאה משותפות. כשהיא תגיע ליעד — בוקי יחגוג, ותיפתח הצבעה על פרס.</p>
-      <div class="goals-toggle-group">
-        <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
-        <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
-        <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
-      </div>
+      <h3><label for="shop-setup-target">הגדרת יעד בדקות קריאה</label></h3>
       <div class="shop-setup-row">
         <input id="shop-setup-target" type="number" class="input-field" value="300" min="10" step="10" />
         <span>דקות</span>
       </div>
-      <button class="btn-giant btn-green" onclick="submitEnableShop('${clubId}')">🎯 הפעילו את החנות</button>
+      <button class="btn-giant btn-green" onclick="submitEnableShop('${clubId}')">הפעלת החנות</button>
       <p id="shop-setup-error" class="auth-error"></p>
     </div>`;
 }
@@ -148,7 +141,7 @@ async function submitEnableShop(clubId) {
   const target = Math.round(Number(input?.value) || 0);
 
   if (errEl) errEl.textContent = '';
-  if (target < 10) { if (errEl) errEl.textContent = 'היעד חייב להיות לפחות 10 נקודות'; return; }
+  if (target < 10) { if (errEl) errEl.textContent = 'היעד חייב להיות לפחות 10 דקות'; return; }
 
   const btn = document.querySelector('.shop-setup-card .btn-green');
   if (btn) { btn.disabled = true; btn.textContent = 'מפעיל...'; }
@@ -156,7 +149,7 @@ async function submitEnableShop(clubId) {
   const ok = typeof fbEnableShopForClub === 'function' ? await fbEnableShopForClub(clubId, target) : false;
   if (!ok) {
     if (errEl) errEl.textContent = 'שגיאה בהפעלה — נסה/י שוב';
-    if (btn) { btn.disabled = false; btn.textContent = '🎯 הפעילו את החנות'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'הפעלת החנות'; }
     return;
   }
   _renderShopManagement(clubId);
@@ -196,15 +189,6 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
   const pct = target ? Math.min(100, Math.round((progress / target) * 100)) : 0;
 
   return `
-    <div class="goals-row">
-      <span class="goals-row-label">סוג יעד</span>
-      <div class="goals-toggle-group">
-        <button class="goals-toggle-btn active" disabled>⏱️ דקות קריאה</button>
-        <button class="goals-toggle-btn" disabled title="בקרוב">📄 עמודים</button>
-        <button class="goals-toggle-btn" disabled title="בקרוב">📖 מפגשי קריאה</button>
-      </div>
-    </div>
-
     <div class="goals-row goals-row-target">
       <span class="goals-row-label">ניהול היעד</span>
       <div class="goal-slider-head">

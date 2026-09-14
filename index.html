@@ -50,6 +50,12 @@
     #screen-create-members #booki-class-size-step h3 { margin: 0 0 20px; }
     #screen-create-members #booki-class-size-input { font-family: Arial, sans-serif; }
   </style>
+<style id="booki-simple-shop-setup">
+#screen-shop-teacher .shop-setup-card { padding:20px 16px; border-width:1px; border-radius:20px; font-family:Arial,sans-serif; }
+#screen-shop-teacher .shop-setup-card h3 { margin:0 0 14px; }
+#screen-shop-teacher .shop-setup-card .btn-giant { min-height:48px; padding:14px 18px; font-size:1.1rem; border-radius:16px; }
+#screen-shop-teacher #shop-setup-error:empty { display:none; }
+</style>
 </head>
 <body>
 
@@ -910,7 +916,7 @@ window.addEventListener('pageshow', function (e) {
       <h2>🎁 ניהול פרסים</h2>
       <button id="btn-goal-settings-gear" class="btn-header-icon" style="display:none" onclick="showGoalSettings()" title="הגדרות יעד">⚙️</button>
     </div>
-    <p class="header-sub">הוסיפו פרסים — התלמידים יצביעו על הפרס האהוב עליהם כשהכיתה תגיע ליעד</p>
+    <p class="header-sub">קוראים יחד, מגיעים ליעד ובוחרים פרס.</p>
   </div>
   <div id="shop-teacher-content" class="shop-teacher-content"></div>
 </section>
@@ -1323,7 +1329,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="seed-clubs.js?v=3"></script>
 <script src="firebase-clubs.js?v=5"></script>
 <script src="class-stories.js?v=3"></script>
-<script src="firebase-shop.js?v=7"></script>
+<script src="firebase-shop.js?v=20260914-simple"></script>
 <script src="firebase-messages.js?v=6"></script>
 <script src="auth.js?v=7"></script>
 <script src="analytics.js?v=2"></script>
