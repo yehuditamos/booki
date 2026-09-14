@@ -81,18 +81,7 @@
     const panel = $('booki-class-size-step');
     if (!panel || panel.dataset.copyReady === '1') return;
     panel.dataset.copyReady = '1';
-    const title = panel.querySelector('h3');
-    const p = panel.querySelector('p');
-    setText(title, '🎨 פתיחת כרטיסים לכל הכיתה');
-    setHtml(p, '<b>במסלול הזה הילדים ישיימו את הכרטיסים בעצמם.</b> כתבי רק כמה ילדים יש בכיתה. בוקי יכין לכל ילד כרטיס צבעוני פנוי, וכל ילד יבחר אחד ויכתוב עליו את שמו.');
-
-    if (!document.getElementById('booki-new-club-named-note')) {
-      const note = document.createElement('div');
-      note.id = 'booki-new-club-named-note';
-      note.className = 'booki-new-club-named-note';
-      note.innerHTML = '<strong>רוצה שהשם כבר יחכה לילד?</strong><span>אחרי הקמת המועדון אפשר להוסיף תלמידים בשם, אחד־אחד. במקרה הזה הילד ייכנס ויראה את הכרטיס שלו כבר מוכן.</span>';
-      panel.appendChild(note);
-    }
+    setText(panel.querySelector('h3'), 'כמה ילדים יש בכיתה?');
   }
 
   function patch(){
