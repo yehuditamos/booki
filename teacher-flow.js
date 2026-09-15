@@ -281,7 +281,7 @@
       const count = _createdCardsCount;
       note.textContent = count === _newClub.members.length && count > 0
         ? `נפתחו ${count} כרטיסי תלמידים. העתיקי את ההודעה והקישור ושלחי להורים.`
-        : `נפתחו ${count} כרטיסי תלמידים. להוספת שמות, בחרי ״שמות הילדים״ במועדון.`;
+        : `נפתחו ${count} כרטיסי תלמידים. להוספת שמות, בחרי ״ילדי המועדון״ במועדון.`;
       if (args[0]?.invitationCreated === false) note.append(' קוד ההצטרפות לא נוצר — נסי לשתף שוב מתוך מסך המועדון.');
     }
   };
@@ -392,29 +392,13 @@
   };
 
   function installUi() {
-    const createForm = document.querySelector('#screen-create-members .form-card');
-    if (createForm && !$('booki-members-help')) {
-      const help = element('div', undefined, 'teacher-step-help booki-members-help'); help.id = 'booki-members-help';
-      help.append(element('strong', 'פותחים כרטיס אישי לכל ילד וילדה'),
-        element('p', 'הוסיפי שמות אחד־אחד, או הדביקי רשימה — שם אחד בכל שורה. אחרי יצירת המועדון תשלחי להורים קישור, והילדים יבחרו את שמם ויתחילו לקרוא.'),
-        element('p', 'אפשר גם לדלג ולהוסיף אחר כך בכפתור ״צרף תלמידים״. עד שתוסיפי שמות, הילדים יראו הודעה שהמועדון עדיין בהכנה.'));
-      createForm.prepend(help);
-      const indicator = document.querySelector('#screen-create-members .step-indicator'); if (indicator) indicator.textContent = 'שלב 3 מתוך 3 — הוספת תלמידים';
-    }
     const misplaced = document.querySelector('#screen-create-name .teacher-step-help');
-    if (misplaced) misplaced.textContent = 'בחרי שם וסמל למועדון. בשלב הבא תוכלי להוסיף את שמות הילדים.';
+    if (misplaced) misplaced.textContent = 'בחרי שם וסמל למועדון. בשלב הבא מוסיפים ילדים.';
     const actions = [...document.querySelectorAll('#screen-teacher-club .tc-action-choice')];
     const encourage = actions.find(el => el.textContent.includes('לשלוח עידוד'));
     if (encourage) encourage.setAttribute('onclick', 'showTeacherEncouragement()');
     const join = actions.find(el => el.textContent.includes('לצרף ילדים'));
     if (join?.querySelector('small')) join.querySelector('small').textContent = 'להוסיף תלמידים ולשלוח קישור להורים';
-    const panel = $('tc-share-panel');
-    if (panel && !$('booki-add-students-button')) {
-      const add = button('＋ צרף תלמידים', () => window.bookiAddClubStudents(), 'btn-giant btn-green');
-      add.id = 'booki-add-students-button'; panel.prepend(add);
-      const heading = panel.querySelector('.tc-share-heading');
-      if (heading) heading.appendChild(element('p', 'ההודעה להורים כוללת הסבר קצר על מועדון הקריאה, בחירת שם הילד וקישור קבוע לכניסה.', 'booki-parent-share-help'));
-    }
     const copy = document.querySelector('[onclick="copyJoinLink()"]'); if (copy) copy.textContent = '📋 העתקת הודעה וקישור להורים';
     if (!$('screen-teacher-encouragement')) {
       const screen = element('section', undefined, 'screen'); screen.id = 'screen-teacher-encouragement'; screen.dir = 'rtl';
