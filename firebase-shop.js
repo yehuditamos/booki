@@ -311,9 +311,12 @@ async function fbEnableShopForClub(clubId, initialTarget) {
     const cycleId = await fbCreateGoalCycle(clubId, { metric: 'minutes', target: initialTarget, startBaseline: 0 });
     if (!cycleId) return false;
 
-    await _shopRef(clubId).set({
-      state: 'browsing', activeCycleId: cycleId, activeVoteId: null, activePurchaseId: null, updatedAt: _now(),
+    const batch = _db().batch();
+    batch.set(_shopRef(clubId), {
+      state:'browsing', activeCycleId:cycleId, activeVoteId:null, activePurchaseId:null, updatedAt:_now()
     });
+    batch.update(_db().collection('clubs').doc(clubId), {'goal.target':initialTarget, updatedAt:_now()});
+    await batch.commit();
 
     // One policy for all clubs: open at the goal, close after purchase.
     if (typeof fbSaveClub === 'function') {
@@ -695,6 +698,7 @@ function _startNextGoalCycleTx(tx, clubId, oldCycle, lifetimeSpentAtCycleStart, 
     metric: oldCycle.metric || 'minutes', target, startBaseline: lifetimeSpentAtCycleStart || 0,
     startedAt: now, reachedAt: null, status: 'active', eventId: null,
   });
+  tx.update(_db().collection('clubs').doc(clubId), {'goal.target':target, updatedAt:now});
   tx.set(_shopRef(clubId), {
     state: 'browsing', activeCycleId: nextCycleRef.id, activeVoteId: null,
     activePurchaseId: purchaseId, updatedAt: now,
@@ -835,7 +839,14 @@ async function fbStartNextGoalCycle(clubId, nextGoalTarget) {
 async function fbUpdateGoalCycleTarget(clubId, cycleId, target) {
   if (!_db() || !clubId || !cycleId || !(target > 0)) return false;
   try {
-    await _cyclesRef(clubId).doc(cycleId).update({ target: Math.round(target) });
+    await _db().runTransaction(async tx => {
+      const shopRef = _shopRef(clubId);
+      const shop = await tx.get(shopRef);
+      if (!shop.exists || shop.data().activeCycleId !== cycleId) throw new Error('Goal cycle changed');
+      tx.update(_cyclesRef(clubId).doc(cycleId), {target:Math.round(target)});
+      tx.update(_db().collection('clubs').doc(clubId), {'goal.target':Math.round(target),updatedAt:_now()});
+      tx.update(shopRef, {updatedAt:_now()});
+    });
     return true;
   } catch (e) {
     console.warn('[firebase-shop] fbUpdateGoalCycleTarget error:', e.message);
@@ -882,4 +893,5 @@ Object.assign(window, {
   fbConfirmPurchase,
   fbStartNextGoalCycle,
 });
+
 

@@ -296,11 +296,24 @@ async function fbApplyFixedClubPolicy(club) {
   } catch (e) { console.warn('[booki] club defaults could not be saved:',e); return club; }
 }
 
+// The active shop cycle is authoritative; the club goal is used only before activation.
+async function fbResolveClubGoal(club) {
+  if (!club) return null;
+  const ref = _db().collection('clubs').doc(club.id);
+  const shop = await ref.collection('shop').doc('state').get();
+  const cycleId = shop.exists ? shop.data().activeCycleId : null;
+  if (!cycleId) return club;
+  const cycle = await ref.collection('goalCycles').doc(cycleId).get();
+  const target = cycle.exists ? Number(cycle.data().target) : 0;
+  if (!(target > 0)) throw new Error('Active goal is unavailable');
+  return {...club, goal:{...club.goal, target}, activeGoalCycleId:cycleId};
+}
+
 async function fbLoadClub(clubId) {
   if (!_db()) return null;
   try {
     const snap = await _db().collection('clubs').doc(clubId).get();
-    return snap.exists ? await fbApplyFixedClubPolicy({ id: snap.id, ...snap.data() }) : null;
+    return snap.exists ? await fbResolveClubGoal(await fbApplyFixedClubPolicy({ id: snap.id, ...snap.data() })) : null;
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadClub error:', e);
     return null;
@@ -1029,4 +1042,5 @@ Object.assign(window, {
   computeMemberStats,
   fbBootstrapClubs,
 });
+
 

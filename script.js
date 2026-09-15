@@ -1316,8 +1316,10 @@ function showClassView() {
 
   if (isLegacy) {
     // מועדון מקורי — נתונים בזמן אמת מ-Firebase
-    classViewUnsubscribe = fbWatchClass(fbStudents => {
-      _renderClassContent(fbStudents);
+    fbLoadClub(clubId).then(club => {
+      if (window.currentClubId !== clubId) return;
+      if (!club) { contentEl.textContent='לא הצלחנו לטעון את היעד. נסו שוב.'; return; }
+      classViewUnsubscribe = fbWatchClass(fbStudents => _renderClassContent(fbStudents,club.goal?.target || CLASS_GOAL));
     });
   } else {
     // מועדון חדש — נתוני חברים מ-Firebase
@@ -1350,7 +1352,8 @@ async function _renderNewClubView(clubId) {
   // Sprint 9: פעם ש-Shop מופעל, ה"יעד הכיתתי" האמיתי הוא ה-goalCycle הפעיל (אותו מקור
   // בדיוק שמסך המורה משתמש בו) — לא club.goal הישן, שאין לו יותר עורך משלו ועלול
   // להישאר תקוע/לא מעודכן. כשאין Shop, ההתנהגות זהה ב-1:1 להיום (club.goal + totalMins).
-  let goalTarget = club?.goal?.target || 1500;
+  if (!club) { contentEl.textContent='לא הצלחנו לטעון את היעד. נסו שוב.'; return; }
+  let goalTarget = club.goal?.target || 1500;
   let cycleProgress = null;
   if (shopState?.activeCycleId) {
     const [cycle, econ] = await Promise.all([
@@ -1467,7 +1470,7 @@ async function _renderNewClubView(clubId) {
     ${progressBlock}`;
 }
 
-function _renderClassContent(fbStudents) {
+function _renderClassContent(fbStudents, goalTarget = CLASS_GOAL) {
   // בנה מפה מלאה: id → נתונים (Firebase ראשי, localStorage גיבוי)
   const byId = {};
   fbStudents.forEach(s => {
@@ -1487,8 +1490,8 @@ function _renderClassContent(fbStudents) {
   const bookMins  = students.reduce((a, s) => a + (s.bookMinutes  || 0), 0);
   const leaves    = Math.floor(totalMins / 100);
   const fruits    = Math.floor(totalMins / 500);
-  const blooming  = totalMins >= CLASS_GOAL;
-  const pct       = Math.min(100, Math.round((totalMins / CLASS_GOAL) * 100));
+  const blooming  = totalMins >= goalTarget;
+  const pct       = Math.min(100, Math.round((totalMins / goalTarget) * 100));
 
   const sorted   = [...students].sort((a, b) => (b.points||0) - (a.points||0)).slice(0, 10);
   const posIcons = ['🥇','🥈','🥉'];
@@ -1517,7 +1520,7 @@ function _renderClassContent(fbStudents) {
       <div class="class-stat"><span>🍎</span><strong>${fruits}</strong><span>פירות</span></div>
     </div>
     <div class="goal-section">
-      <p>יעד הכיתה: ${CLASS_GOAL} דקות · ${pct}% הושלמו</p>
+      <p>יעד הכיתה: ${goalTarget} דקות · ${pct}% הושלמו</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
@@ -1627,4 +1630,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showScreen('screen-splash');
   }
 });
+
 

@@ -65,7 +65,9 @@ async function _renderShopManagement(clubId) {
   let statusHtml;
 
   if (!shopState) {
-    statusHtml = _enableShopSetupHtml(clubId);
+    const club = await fbLoadClub(clubId);
+    if (!club) { container.textContent='לא הצלחנו לטעון את היעד. נסו שוב.'; return; }
+    statusHtml = _enableShopSetupHtml(clubId, club.goal?.target || 300);
   } else {
     if (shopState.state === 'purchase_complete') {
       const resumed = await fbStartNextGoalCycle(clubId);
@@ -109,10 +111,7 @@ async function _renderGoalSettingsScreen(clubId) {
   container.innerHTML = '<div style="text-align:center;padding:3rem;font-size:2rem">⏳</div>';
 
   const shopState = typeof fbLoadShopState === 'function' ? await fbLoadShopState(clubId) : null;
-  if (!shopState) {
-    container.innerHTML = `<p class="class-empty" style="padding:2rem 1rem;text-align:center">יש להפעיל קודם את החנות דרך מסך "ניהול פרסים".</p>`;
-    return;
-  }
+  if (!shopState) { showShopManagement(); return; }
 
   const [club, cycle, econ] = await Promise.all([
     typeof fbLoadClub === 'function' ? fbLoadClub(clubId) : Promise.resolve(null),
@@ -121,15 +120,16 @@ async function _renderGoalSettingsScreen(clubId) {
     typeof fbLoadEconomy === 'function' ? fbLoadEconomy(clubId) : Promise.resolve(null),
   ]);
 
-  container.innerHTML = _goalSettingsHtml(clubId, cycle, econ, club?.shopSettings || {});
+  if (!club || !cycle) { container.textContent='לא הצלחנו לטעון את היעד. נסו שוב.'; return; }
+  container.innerHTML = _goalSettingsHtml(clubId, cycle, econ, club.shopSettings || {});
 }
 
-function _enableShopSetupHtml(clubId) {
+function _enableShopSetupHtml(clubId, target = 300) {
   return `
     <div class="shop-setup-card">
       <h3><label for="shop-setup-target">הגדרת יעד בדקות קריאה</label></h3>
       <div class="shop-setup-row">
-        <input id="shop-setup-target" type="number" class="input-field" value="300" min="10" step="10" />
+        <input id="shop-setup-target" type="number" class="input-field" value="${Number(target) || 300}" min="10" step="1" />
         <span>דקות</span>
       </div>
       <button class="btn-giant btn-green" onclick="submitEnableShop('${clubId}')">הפעלת החנות</button>
@@ -195,8 +195,8 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
         <span class="goal-slider-target-num" id="goal-slider-target-num">${target.toLocaleString('he-IL')}</span>
         <span class="goal-slider-target-lbl">דקות יעד</span>
       </div>
-      <input type="range" id="goals-target-input" class="goal-slider"
-             min="10" max="${sliderMax}" step="${sliderStep}" value="${target}"
+      <input type="number" id="goals-target-input" class="input-field"
+             min="10" step="1" value="${target}"
              oninput="_onGoalSliderInput(${progress})" />
       <div class="goal-slider-stats">
         <div class="goal-slider-stat"><strong>${progress.toLocaleString('he-IL')}</strong><span>יתרה נוכחית</span></div>
@@ -973,7 +973,8 @@ async function checkHomeShopTeaser(clubId) {
     typeof fbLoadShopState === 'function' ? fbLoadShopState(clubId) : Promise.resolve(null),
   ]);
 
-  let goalTarget = club?.goal?.target || 1500;
+  if (!club) { if (card) card.style.display='none'; if (goalCard) goalCard.style.display='none'; return; }
+  let goalTarget = club.goal?.target || 1500;
   let goalProgress = null;
   let isPointsGoal = false;
   if (shopState?.activeCycleId) {
@@ -1365,4 +1366,5 @@ Object.assign(window, {
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
   checkHomeShopTeaser,
 });
+
 

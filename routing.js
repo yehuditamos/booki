@@ -1776,7 +1776,8 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
   const content = document.getElementById('class-content');
   if (!content) return;
 
-  const goalTarget      = club?.goal?.target || 1500;
+  if (!club) { content.innerHTML = '<p>לא הצלחנו לטעון את היעד. נסו שוב.</p>'; return; }
+  const goalTarget = club.goal?.target || 1500;
   const now        = new Date();
   const active     = memberships.filter(m => m.status !== 'left');
   const sorted     = [...active].sort((a, b) =>
@@ -2116,14 +2117,9 @@ async function removeClubMember(clubId, userId, name) {
   showTeacherClassScreen();
 }
 
-async function editClubGoal(clubId, currentTarget) {
-  const raw = prompt(`יעד קריאה חדש (דקות):\nנוכחי: ${currentTarget}`, currentTarget);
-  if (!raw || isNaN(Number(raw)) || Number(raw) <= 0) return;
-  const target = Math.round(Number(raw));
-  if (typeof fbSaveClub === 'function') {
-    await fbSaveClub(clubId, { goal: { type: 'minutes', target, period: 'year' } });
-  }
-  showTeacherClassScreen();
+async function editClubGoal(clubId) {
+  window.currentClubId = clubId;
+  showGoalSettings();
 }
 
 async function setProgressDisplayMode(clubId, mode) {
@@ -2187,4 +2183,5 @@ Object.assign(window, {
   sendAnnouncementAction,
   openEncouragementModal, closeEncouragementModal, _pickEncouragementPreset, sendEncouragementAction,
 });
+
 
