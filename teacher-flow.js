@@ -82,7 +82,7 @@
       const minutes = members.reduce((sum,m) => sum + Math.max(0,Number(m.cachedStats?.totalMinutes)||0),0);
       summary.textContent = members.length ? members.length + ' כרטיסים · ' + Math.round(minutes).toLocaleString('he-IL') + ' דקות קריאה' : 'הכיתה מוכנה לצירוף ילדים';
       action.textContent = members.length ? '📊 קריאה ועידוד' : 'לצרף ילדים';
-      action.onclick = members.length ? () => window.showTeacherEncouragement() : () => openTeacherClubShare();
+      action.onclick = members.length ? () => window.showTeacherEncouragement() : () => showClubStudents();
       action.disabled = false;
     } catch (_) {
       if (!current()) return;
@@ -186,6 +186,7 @@
     if (!t || t.uid !== teacher()?.uid) { showTeacherAuth('login'); return; }
     window._currentTeacher = t;
     const name = $('td-teacher-name'); if (name) name.textContent = t.name || t.email;
+    const heading = document.querySelector('#screen-teacher-dashboard h2'); if (heading) heading.textContent = t.name || 'המועדונים שלי';
     const list = $('td-clubs-list');
     if (list) { list.replaceChildren(element('p', 'טוען את המועדונים שלך…', 'td-loading')); list.setAttribute('aria-busy', 'true'); }
     setNavVisible(false); showScreen('screen-teacher-dashboard');
@@ -280,7 +281,7 @@
       const count = _createdCardsCount;
       note.textContent = count === _newClub.members.length && count > 0
         ? `נפתחו ${count} כרטיסי תלמידים. העתיקי את ההודעה והקישור ושלחי להורים.`
-        : `נפתחו ${count} כרטיסי תלמידים. להוספת שמות, חזרי למועדון ובחרי ״לצרף ילדים״ ואז ״צרף תלמידים״. עד להוספת השמות, ההורים יראו שהמועדון עדיין בהכנה.`;
+        : `נפתחו ${count} כרטיסי תלמידים. להוספת שמות, בחרי ״שמות הילדים״ במועדון.`;
       if (args[0]?.invitationCreated === false) note.append(' קוד ההצטרפות לא נוצר — נסי לשתף שוב מתוך מסך המועדון.');
     }
   };

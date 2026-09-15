@@ -102,7 +102,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherFlow() {
   if (document.querySelector('script[data-booki-teacher-flow]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-flow.js?v=20260914-all-cards';
+  s.src = 'teacher-flow.js?v=20260915-names';
   s.async = false;
   s.dataset.bookiTeacherFlow = '1';
   s.onerror = () => console.warn('[booki] teacher flow extension did not load');
@@ -113,7 +113,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherWorkspace() {
   if (document.querySelector('script[data-booki-teacher-workspace]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-workspace.js?v=20260909-1';
+  s.src = 'teacher-workspace.js?v=20260915-names';
   s.async = false;
   s.dataset.bookiTeacherWorkspace = '1';
   s.onerror = () => console.warn('[booki] teacher workspace did not load');
@@ -124,7 +124,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadPilotRelease20260910() {
   if (document.querySelector('script[data-booki-pilot-loader-20260910]')) return;
   const s = document.createElement('script');
-  s.src = 'pilot-loader-2026-09-10.js?v=4';
+  s.src = 'pilot-loader-2026-09-10.js?v=20260915-names';
   s.async = false;
   s.dataset.bookiPilotLoader20260910 = '1';
   s.onerror = () => console.warn('[booki] pilot release loader did not load');

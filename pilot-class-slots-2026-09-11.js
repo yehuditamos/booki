@@ -113,7 +113,10 @@
     panel.className = 'booki-class-size-step';
     panel.innerHTML = `
       <div class="booki-class-size-icon">🎒</div>
-      <h3>כמה ילדים יש בכיתה?</h3>
+      <h3><label for="booki-setup-names">שמות הילדים</label></h3>
+      <textarea id="booki-setup-names" rows="6" maxlength="3000" placeholder="שם אחד בכל שורה" class="input-field"></textarea>
+      <p id="booki-setup-names-error" role="status"></p>
+      <label for="booki-class-size-input">כמה ילדים בכיתה?</label>
       <p>זה כל מה שצריך. בוקי יכין מראש כרטיס צבעוני לכל ילד.</p>
       <div class="booki-class-size-control">
         <button type="button" class="booki-size-minus" aria-label="הפחיתי ילד">−</button>
@@ -132,6 +135,15 @@
     input.addEventListener('input', () => set(input.value));
     panel.querySelector('.booki-size-minus').addEventListener('click', () => set(Number(input.value)-1));
     panel.querySelector('.booki-size-plus').addEventListener('click', () => set(Number(input.value)+1));
+    $('booki-setup-names').addEventListener('input', () => {
+      const names = $('booki-setup-names').value.split(/\r?\n/).map(n=>n.trim()).filter(Boolean);
+      const countInput = $('booki-class-size-input');
+      if (names.length) { countInput.value = String(names.length); countInput.dispatchEvent(new Event('input')); }
+    });
+    const later = document.createElement('button');
+    later.type='button'; later.className='booki-names-later'; later.textContent='הוספת שמות מאוחר יותר';
+    later.onclick=()=>window.reviewClubWithoutChildren();
+    continueBtn.insertAdjacentElement('afterend',later);
     continueBtn.textContent = 'לסיכום ⬅️';
   }
 
@@ -139,6 +151,8 @@
     const originalSubmitClubName = window.submitClubName;
     window.submitClubName = function(){
       newClubClassSize = 0;
+      $('booki-class-size-step')?.remove();
+      document.querySelector('.booki-names-later')?.remove();
       const result = originalSubmitClubName.apply(this, arguments);
       requestAnimationFrame(renderClassSizeStep);
       return result;
@@ -147,16 +161,28 @@
 
   if (typeof window.goToReview === 'function') {
     const originalGoToReview = window.goToReview;
+    window.reviewClubWithoutChildren = function(){
+      _newClub.members = [];
+      return originalGoToReview();
+    };
     window.goToReview = function(){
+      const names = ($('booki-setup-names')?.value || '').split(/\r?\n/).map(n=>n.trim().replace(/\s+/g,' ')).filter(Boolean);
+      const error = $('booki-setup-names-error');
+      if (names.length > MAX_CLASS_SIZE || names.some(n=>n.length>50 || isOpenName(n)) || new Set(names.map(norm)).size !== names.length) {
+        if(error)error.textContent='עד 50 שמות, שם אחד בכל שורה. לשמות זהים הוסיפו שם משפחה.';
+        return;
+      }
+      if(error)error.textContent='';
       const input = $('booki-class-size-input');
       const count = Math.max(1, Math.min(MAX_CLASS_SIZE, Number(input?.value || newClubClassSize || 30)));
       newClubClassSize = count;
       try {
         if (typeof _newClub !== 'undefined' && _newClub) {
-          _newClub.members = Array.from({length:count},(_,i)=>slotName(i+1));
+          _newClub.members = [...names, ...Array.from({length:Math.max(0,count-names.length)},(_,i)=>slotName(i+1))];
         }
       } catch (_) {}
       const result = originalGoToReview.apply(this, arguments);
+      if (names.length) return result;
       requestAnimationFrame(() => {
         const countEl = $('review-count');
         if (countEl) countEl.textContent = `${count} כרטיסים צבעוניים יחכו לילדים`;

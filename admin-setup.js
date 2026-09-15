@@ -145,7 +145,7 @@ function goToReview() {
     : '';
   if (listEl) {
     listEl.innerHTML = _newClub.members.length
-      ? _newClub.members.map(n => `<span class="review-member">${n}</span>`).join('')
+      ? _newClub.members.map(n => `<span class="review-member">${String(n).replace(/[&<>"\']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</span>`).join('')
       : '<div style="color:#888;font-size:.9rem;padding:.5rem 0">ניתן להוסיף תלמידים גם לאחר יצירת המועדון</div>';
   }
   if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'צור מועדון! 🚀'; }

@@ -202,7 +202,7 @@
   }
   function install() {
     const body = document.querySelector('#screen-teacher-dashboard .td-body'); if (!body || $('tw-dashboard-actions')) return;
-    document.querySelector('#screen-teacher-dashboard h2').textContent = 'המרחב שלך בבוקי';
+    document.querySelector('#screen-teacher-dashboard h2').textContent = (typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.name : '') || 'המועדונים שלי';
     body.querySelectorAll('.teacher-management-only,.teacher-dashboard-guide,.btn-td-primary').forEach(node => node.remove());
     const actions = el('section', undefined, 'tw-dashboard-actions'); actions.id = 'tw-dashboard-actions'; actions.setAttribute('aria-label', 'פעולות למורה');
     const primary = el('div', undefined, 'tw-action-primary-group'); primary.append(el('p', 'מתחילות כאן', 'tw-eyebrow'), action('🌱', 'פתח מועדון קריאה', 'מוסיפים תלמידים ומזמינים אותם לקרוא יחד', () => showCreateClub(), true));

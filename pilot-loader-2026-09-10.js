@@ -17,10 +17,10 @@
     'pilot-reading-dial-2026-09-10.js?v=8',
     'pilot-home-clean-2026-09-10.js?v=2',
     'pilot-niqud-context-2026-09-10.js?v=1',
-    'pilot-class-slots-2026-09-11.js?v=20260914-simple',
+    'pilot-class-slots-2026-09-11.js?v=20260915-names',
     'pilot-class-slots-hardening-2026-09-11.js?v=1',
     'pilot-class-slots-safety-2026-09-11.js?v=20260914-simple',
-    'pilot-class-slots-copy-2026-09-11.js?v=20260914-simple',
+    'pilot-class-slots-copy-2026-09-11.js?v=20260915-names',
     'pilot-owner-whatsapp-2026-09-11.js?v=2'
   ];
   let i=0;
