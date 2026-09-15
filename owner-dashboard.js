@@ -8,7 +8,7 @@
  *   4. owner-stats/events
  *   5. owner-stats/stories
  *
- * שאר הרינדור הוא חישוב טהור (pure JS) — ללא קריאות Firestore נוספות.
+ * רשימות הסיכום מחושבות מקומית; תלמידי מועדון נטענים רק בעת פתיחתו.
  */
 
 // ─── Entry Point ─────────────────────────────────────────────────────────────
@@ -135,43 +135,84 @@ function _odRenderTeachers(teachers, clubs) {
 
 // ─── Club List — pure computation ────────────────────────────────────────────
 
+function _odBrowseClubs() {
+  const list = document.getElementById('od-clubs-list');
+  list?.scrollIntoView({behavior:'smooth',block:'start'});
+  list?.querySelector('button')?.focus({preventScroll:true});
+}
+function _odNode(tag, text, cls) {
+  const el=document.createElement(tag);
+  if(text!==undefined)el.textContent=String(text);
+  if(cls)el.className=cls;
+  return el;
+}
+function _odReadDate(value) {
+  if(!value)return 'עדיין לא קרא/ה';
+  const date=value.toDate?value.toDate():new Date(value);
+  return Number.isNaN(date.getTime())?'—':date.toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'});
+}
 function _odRenderClubs(clubs) {
-  const set    = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  const listEl = document.getElementById('od-clubs-list');
-
-  set('od-total-clubs', String(clubs.length));
-
-  if (!clubs.length) {
-    if (listEl) listEl.innerHTML = '<div class="od-empty">אין מועדונים</div>';
-    return;
+  const list=document.getElementById('od-clubs-list');
+  const total=document.getElementById('od-total-clubs');
+  if(total)total.textContent=String(clubs.length);
+  if(!list)return;
+  list.replaceChildren();
+  if(!clubs.length){list.appendChild(_odNode('div','אין מועדונים','od-empty'));return;}
+  for(const club of clubs){
+    const section=_odNode('div',undefined,'od-club-browser');
+    const row=_odNode('div',undefined,'od-row');
+    row.style.flexWrap='wrap';
+    const label=_odNode('div');label.style.flex='1';label.style.minWidth='150px';
+    label.appendChild(_odNode('strong',(club.emoji||'📚')+' '+(club.name||club.id),'od-row-label'));
+    label.appendChild(_odNode('div',club.teacherName||club.teacherEmail||'','od-lbl'));
+    if(club.hidden)label.appendChild(_odNode('span','מוסתר','od-hidden-badge'));
+    const open=_odNode('button','צפייה בתלמידים','od-btn-sm');open.type='button';
+    open.style.minHeight='44px';open.setAttribute('aria-expanded','false');
+    const panel=_odNode('div');panel.hidden=true;panel.id='od-members-'+encodeURIComponent(club.id);
+    open.setAttribute('aria-controls',panel.id);
+    let loaded=false,busy=false;
+    open.onclick=async()=>{
+      panel.hidden=!panel.hidden;open.setAttribute('aria-expanded',String(!panel.hidden));
+      open.textContent=panel.hidden?'צפייה בתלמידים':'סגירת התלמידים';
+      if(panel.hidden||loaded||busy)return;
+      busy=true;panel.textContent='טוען תלמידים…';panel.setAttribute('role','status');
+      try {
+        const user=typeof firebase!=='undefined'?firebase.auth().currentUser:null;
+        if(!user||user.isAnonymous)throw Error('owner-only');
+        const uid=user.uid,owner=await window.db.collection('users').doc(uid).get({source:'server'});
+        if(!owner.exists||owner.data().role!=='owner')throw Error('owner-only');
+        const snap=await window.db.collection('clubs').doc(club.id).collection('memberships').get({source:'server'});
+        if(firebase.auth().currentUser?.uid!==uid||!panel.isConnected)return;
+        const members=snap.docs.map(d=>({...d.data(),id:d.id})).filter(m=>m.status!=='left');
+        const isOpen=m=>!m.claimedByUid&&!m.personalized&&/^כרטיס פנוי\s+\d+$/.test(m.name||'');
+        members.sort((a,b)=>Number(isOpen(a))-Number(isOpen(b))||String(a.name||'').localeCompare(String(b.name||''),'he',{numeric:true}));
+        panel.replaceChildren();panel.removeAttribute('role');
+        const free=members.filter(isOpen).length;
+        panel.appendChild(_odNode('p',`${members.length-free} ילדים עם שם · ${free} כרטיסים פנויים`));
+        if(!members.length)panel.appendChild(_odNode('p','עדיין לא הוספו ילדים למועדון.'));
+        for(const m of members){
+          const card=_odNode('div',undefined,'od-row');card.style.flexWrap='wrap';
+          card.appendChild(_odNode('strong',(m.emoji||'📚')+' '+(m.name||'כרטיס ללא שם')));
+          const details=_odNode('span');details.style.fontSize='.85rem';
+          const n=Number(m.cachedStats?.totalMinutes);
+          details.textContent=isOpen(m)?'ממתין לבחירת ילד/ה':`${Number.isFinite(n)?Math.max(0,Math.round(n)):0} דקות · ${_odReadDate(m.cachedStats?.lastReadAt)}`;
+          card.appendChild(details);panel.appendChild(card);
+        }
+        loaded=true;
+      }catch(error){
+        panel.replaceChildren(_odNode('p',error.message==='owner-only'?'הצפייה זמינה מחשבון הניהול של יהודית.':'לא הצלחתי לטעון את התלמידים. נסי שוב.'));
+        const retry=_odNode('button','ניסיון נוסף','od-btn-sm');retry.type='button';retry.onclick=()=>{panel.hidden=true;open.onclick();};panel.appendChild(retry);
+      }finally{busy=false;}
+    };
+    row.append(label,open);
+    const maintenance=_odNode('details');maintenance.appendChild(_odNode('summary','אפשרויות'));
+    const toggle=_odNode('button',club.hidden?'שחזר':'הסתר','od-btn-sm');toggle.type='button';
+    toggle.onclick=()=>club.hidden?_odRestoreClub(club.id):_odMarkClubHidden(club.id);maintenance.appendChild(toggle);
+    if(club.id!=='mitarim-aleph-2025'){
+      const repair=_odNode('button','🔧 סרוק','od-btn-sm');repair.type='button';repair.onclick=()=>showCardRepairTool(club.id);maintenance.appendChild(repair);
+    }
+    row.appendChild(maintenance);section.append(row,panel);list.appendChild(section);
   }
-
-  const LEGACY_ID = 'mitarim-aleph-2025';
-  const rows = clubs.map(c => {
-    const memberCount  = c.memberCount ?? '?';
-    const teacherName  = c.teacherName || c.teacherEmail || c.teacherUid || '—';
-    const date         = (c.createdAt || '').slice(0, 10);
-    const hiddenBadge  = c.hidden ? ' <span class="od-hidden-badge">מוסתר</span>' : '';
-    const actionBtn    = c.hidden
-      ? `<button class="od-btn-sm" onclick="_odRestoreClub('${c.id}')">שחזר</button>`
-      : `<button class="od-btn-sm" onclick="_odMarkClubHidden('${c.id}')">הסתר</button>`;
-    const repairBtn = c.id !== LEGACY_ID
-      ? `<button class="od-btn-sm" onclick="showCardRepairTool('${c.id}')">🔧 סרוק</button>`
-      : '';
-    return `<div class="od-row${c.hidden ? ' od-row--hidden' : ''}">
-      <div style="flex:1;min-width:0">
-        <span class="od-row-label">${c.emoji || '📚'} ${c.name || c.id}${hiddenBadge}</span>
-        <span style="font-size:.8em;color:#888;display:block">${teacherName} · ${date}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="od-badge">${memberCount} תלמידים</span>
-        ${repairBtn}
-        ${actionBtn}
-      </div>
-    </div>`;
-  });
-
-  if (listEl) listEl.innerHTML = rows.join('');
 }
 
 // ─── Card Repair Tool — Scan, Dry-Run, Execute ───────────────────────────────
@@ -645,3 +686,4 @@ async function promoteCurrentTeacherToOwner() {
   console.log('[promoteToOwner] הושלם. רענן את הדף או הפעל showTeacherDashboard()');
 }
 window.promoteCurrentTeacherToOwner = promoteCurrentTeacherToOwner;
+

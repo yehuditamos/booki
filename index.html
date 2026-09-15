@@ -1376,7 +1376,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260915-consistent-goal"></script>
-<script src="owner-dashboard.js?v=4"></script>
+<script src="owner-dashboard.js?v=20260915-club-browser"></script>
 <script src="initial-setup.js?v=30260915-editorial"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1396,8 +1396,8 @@ window.addEventListener('pageshow', function (e) {
       <div class="od-section-title">📊 KPI</div>
       <div class="od-grid">
         <div class="od-metric"><span class="od-val" id="od-total-teachers">—</span><span class="od-lbl">מורות</span></div>
-        <div class="od-metric"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></div>
-        <div class="od-metric"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></div>
+        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></button>
+        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
         <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
       </div>
     </div>
@@ -1498,6 +1498,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="teacher-child-demo.js?v=20260915-single-tree"></script>
 </body>
 </html>
+
 
 
 
