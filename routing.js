@@ -1777,7 +1777,6 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
   if (!content) return;
 
   const goalTarget      = club?.goal?.target || 1500;
-  const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
   const now        = new Date();
   const active     = memberships.filter(m => m.status !== 'left');
   const sorted     = [...active].sort((a, b) =>
@@ -1869,11 +1868,6 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
     </div>`}
 
     <div class="tcd-quick-actions">
-      <div class="tcd-qa-view" title="מה התלמידים רואים במסך 'הכיתה שלנו' שלהם">
-        <span class="tcd-qa-view-lbl">תצוגה:</span>
-        <button class="tcd-qa-btn ${progressDisplay === 'leaderboard' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','leaderboard')" title="כיתה + טבלת מובילים">🏆</button>
-        <button class="tcd-qa-btn ${progressDisplay === 'progressOnly' ? 'active' : ''}" onclick="setProgressDisplayMode('${clubId}','progressOnly')" title="התקדמות כיתתית בלבד">🌳</button>
-      </div>
       <button class="tcd-qa-announce" onclick="toggleAnnounceComposer()">📢 הודעה לכיתה</button>
     </div>
 
@@ -1885,7 +1879,7 @@ function _renderTeacherClassContent(club, memberships, clubId, shopState) {
     </div>
 
     <div class="tcd-leaderboard">
-      <h3 class="tcd-lb-title">🏆 טבלת הקוראים</h3>
+      <h3 class="tcd-lb-title">קריאה ועידוד</h3>
       <div class="tcd-lb-scroll">
         ${membersHtml}
       </div>
@@ -2193,3 +2187,4 @@ Object.assign(window, {
   sendAnnouncementAction,
   openEncouragementModal, closeEncouragementModal, _pickEncouragementPreset, sendEncouragementAction,
 });
+

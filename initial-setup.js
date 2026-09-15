@@ -91,7 +91,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadClassDisplayModes() {
   if (document.querySelector('script[data-booki-class-display-modes]')) return;
   const s = document.createElement('script');
-  s.src = 'class-display-modes.js?v=1';
+  s.src = 'class-display-modes.js?v=20260915-today';
   s.async = false;
   s.dataset.bookiClassDisplayModes = '1';
   s.onerror = () => console.warn('[booki] class display modes extension did not load');
@@ -333,3 +333,4 @@ window.submitInitialSetup = submitInitialSetup;
     return true;
   };
 })();
+

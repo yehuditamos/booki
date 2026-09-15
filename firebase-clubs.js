@@ -280,11 +280,27 @@ async function fbCreateClub(club) {
   }
 }
 
+// Save the fixed product defaults only through the owning teacher's existing access.
+async function fbApplyFixedClubPolicy(club) {
+  const uid = typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null;
+  if (!club || !uid || club.teacherUid !== uid) return club;
+  if (club.shopSettings?.openMode === 'auto' && club.shopSettings?.afterPurchase === 'close'
+      && club.settings?.progressDisplay === 'todayReaders') return club;
+  try {
+    await _db().collection('clubs').doc(club.id).update({
+      'shopSettings.openMode':'auto', 'shopSettings.afterPurchase':'close',
+      'settings.progressDisplay':'todayReaders', updatedAt:_now()
+    });
+    return {...club,shopSettings:{...club.shopSettings,openMode:'auto',afterPurchase:'close'},
+      settings:{...club.settings,progressDisplay:'todayReaders'}};
+  } catch (e) { console.warn('[booki] club defaults could not be saved:',e); return club; }
+}
+
 async function fbLoadClub(clubId) {
   if (!_db()) return null;
   try {
     const snap = await _db().collection('clubs').doc(clubId).get();
-    return snap.exists ? { id: snap.id, ...snap.data() } : null;
+    return snap.exists ? await fbApplyFixedClubPolicy({ id: snap.id, ...snap.data() }) : null;
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadClub error:', e);
     return null;
@@ -479,7 +495,7 @@ async function fbLoadTeacherClubs(teacherUid) {
   if (!_db()) return [];
   try {
     const snap = await _db().collection('clubs').where('teacherUid', '==', teacherUid).get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return await Promise.all(snap.docs.map(d => fbApplyFixedClubPolicy({ id:d.id, ...d.data() })));
   } catch (e) {
     console.warn('[firebase-clubs] fbLoadTeacherClubs:', e.message);
     return [];
@@ -1013,3 +1029,4 @@ Object.assign(window, {
   computeMemberStats,
   fbBootstrapClubs,
 });
+

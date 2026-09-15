@@ -1325,6 +1325,17 @@ function showClassView() {
   }
 }
 
+function _todayReadersHtml(memberships) {
+  const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const today = new Date().toDateString();
+  const readers = (memberships || []).filter(m => m.status !== 'left'
+    && m.cachedStats?.lastReadAt && new Date(m.cachedStats.lastReadAt).toDateString() === today)
+    .sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'he'));
+  return `<section class="booki-student-mode"><h3>קראו היום</h3><div class="orbit">${readers.length
+    ? readers.map(m => `<span><b>${escape(m.name || 'קורא/ת')}</b></span>`).join('')
+    : '<p>עוד לא קראו היום 🌱</p>'}</div></section>`;
+}
+
 async function _renderNewClubView(clubId) {
   const contentEl = document.getElementById('class-content');
   if (!contentEl) return;
@@ -1399,19 +1410,7 @@ async function _renderNewClubView(clubId) {
   // מיותר עכשיו שהעץ עצמו כבר מציג מספר אחד מתואם. כיתות במצב progressOnly (המורה
   // כיבתה במפורש את הלוח המוביל התחרותי) לא מקבלות שום תחליף באותו מקום — זה עדיין
   // ההעדפה שלהן, רק בלי הרובריקה שהוסרה.
-  const progressDisplay = club?.settings?.progressDisplay || 'leaderboard';
-  const progressBlock = progressDisplay === 'progressOnly'
-    ? ''
-    : `<div class="leaderboard">
-      <h3>🏆 10 הקוראים המובילים</h3>
-      ${active.slice(0, 10).map((m, i) => `
-        <div class="leader-row ${rowCls[i] || ''}">
-          <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-          ${_avatarHtml(m.emoji || '📚', 'leader-avatar')}
-          <span class="leader-name">${m.name}</span>
-          <span class="leader-pts">${m.totalMinutes} דק׳</span>
-        </div>`).join('')}
-    </div>`;
+  const progressBlock = _todayReadersHtml(memberships);
 
   // כרטיס קריאה-לפעולה ליד העץ, לפי מצב החנות המדויק — לא רק כפתור גנרי:
   //  - GOAL_REACHED_PENDING_SHOP: הגיעו ליעד אבל אין עדיין הצבעה פתוחה (המורה טרם
@@ -1523,20 +1522,8 @@ function _renderClassContent(fbStudents) {
         <div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#27AE60,#8BC34A)"></div>
       </div>
     </div>
-    <div class="leaderboard">
-      <h3>🏆 10 הקוראים המובילים</h3>
-      ${sorted.map((s, i) => {
-        const r = getRank(s.totalMinutes || 0);
-        return `
-          <div class="leader-row ${rowCls[i] || ''}">
-            <span class="leader-pos">${posIcons[i] || (i + 1)}</span>
-            ${_avatarHtml(STUDENT_EMOJIS[s.id] || '📚', 'leader-avatar')}
-            <span class="leader-name">${s.name}</span>
-            <span class="leader-rank">${r.icon}</span>
-            <span class="leader-pts">${s.points || 0} נק׳</span>
-          </div>`;
-      }).join('')}
-    </div>
+    ${_todayReadersHtml(students.map(s => ({name:s.name, cachedStats:{lastReadAt:
+      (s.history || []).some(h => h.date === todayStr()) ? new Date().toISOString() : null}})))}
   `;
 }
 
@@ -1640,3 +1627,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showScreen('screen-splash');
   }
 });
+

@@ -62,16 +62,15 @@ async function _renderShopManagement(clubId) {
     typeof fbLoadShopState  === 'function' ? fbLoadShopState(clubId)  : Promise.resolve(null),
   ]);
 
-  // Redesign: הגדרות היעד עברו למסך נפרד (⚙️) — הכפתור מוצג רק אחרי שהחנות הופעלה,
-  // כי לפני זה אין עדיין cycle/shopSettings אמיתיים לערוך.
-  const gearBtn = document.getElementById('btn-goal-settings-gear');
-  if (gearBtn) gearBtn.style.display = shopState ? '' : 'none';
-
   let statusHtml;
 
   if (!shopState) {
     statusHtml = _enableShopSetupHtml(clubId);
   } else {
+    if (shopState.state === 'purchase_complete') {
+      const resumed = await fbStartNextGoalCycle(clubId);
+      if (resumed.ok) return _renderShopManagement(clubId);
+    }
     const cycle = shopState.activeCycleId && typeof fbLoadGoalCycle === 'function'
       ? await fbLoadGoalCycle(clubId, shopState.activeCycleId) : null;
 
@@ -84,13 +83,15 @@ async function _renderShopManagement(clubId) {
     } else if (shopState.state === 'purchase_complete') {
       statusHtml = await _purchaseCompleteTeacherHtml(clubId, shopState, cycle);
     } else {
-      const econ = typeof fbLoadEconomy === 'function' ? await fbLoadEconomy(clubId) : null;
-      statusHtml = _browsingProgressHtml(cycle, econ);
+      statusHtml = '';
     }
   }
 
+  if (shopState?.activeCycleId) {
+    const [cycle, econ] = await Promise.all([fbLoadGoalCycle(clubId, shopState.activeCycleId), fbLoadEconomy(clubId)]);
+    statusHtml = _browsingProgressHtml(cycle, econ) + statusHtml;
+  }
   _renderRewardGrid(clubId, rewards, statusHtml, shopState?.lastWinner?.rewardId || null);
-  renderTeacherTreeSettings(clubId, 'shop-teacher-content');
 }
 
 // ─── Goal Settings — מסך נפרד (Redesign) ──────────────────────────────────────
@@ -121,7 +122,6 @@ async function _renderGoalSettingsScreen(clubId) {
   ]);
 
   container.innerHTML = _goalSettingsHtml(clubId, cycle, econ, club?.shopSettings || {});
-  renderTeacherTreeSettings(clubId, 'goal-settings-content');
 }
 
 function _enableShopSetupHtml(clubId) {
@@ -164,11 +164,11 @@ function _browsingProgressHtml(cycle, econ) {
   const progress = Math.max(0, econ?.balance || 0);
   const pct      = target ? Math.min(100, Math.round((progress / target) * 100)) : 0;
   return `
-    <div class="shop-status-card">
+    <button type="button" class="shop-status-card" style="display:block;width:100%;text-align:inherit;font:inherit;cursor:pointer" onclick="showGoalSettings()" aria-label="עריכת היעד הנוכחי">
       <h3>🎯 היעד הנוכחי</h3>
       <p class="shop-status-nums">${progress.toLocaleString('he-IL')} <span>מתוך</span> ${target.toLocaleString('he-IL')} דקות</p>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-    </div>`;
+    </button>`;
 }
 
 // ─── Goal Settings screen content (Redesign — was _classroomGoalsCardHtml) ────
@@ -180,8 +180,6 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
   const target     = cycle?.target || 0;
   // Fix (goal/points unification): progress == economy.balance, same source everywhere.
   const progress   = Math.max(0, econ?.balance || 0);
-  const openMode      = shopSettings.openMode      || 'manual';
-  const afterPurchase = shopSettings.afterPurchase || 'close';
 
   // טווח הסליידר תמיד משאיר מקום כפול מהגדול מבין היעד/היתרה — כדי שאפשר תמיד
   // גם להקטין משמעותית וגם לראות "מצב שכבר עברו את היעד" בבירור באמצע הטווח.
@@ -209,22 +207,7 @@ function _goalSettingsHtml(clubId, cycle, econ, shopSettings) {
       <button type="button" class="btn-giant btn-green" onclick="saveGoalTargetAction('${clubId}','${cycle?.id || ''}')">✅ אישור שינוי היעד</button>
       <p id="goals-target-msg" class="goals-target-msg"></p>
     </div>
-
-    <div class="goals-row">
-      <span class="goals-row-label">מתי החנות נפתחת</span>
-      <div class="ui-toggle">
-        <button type="button" class="ui-toggle-opt ${openMode === 'auto' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','auto')">✅ אוטומטית</button>
-        <button type="button" class="ui-toggle-opt ${openMode === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','openMode','manual')">🧑‍🏫 ידנית</button>
-      </div>
-    </div>
-
-    <div class="goals-row">
-      <span class="goals-row-label">אחרי רכישה</span>
-      <div class="ui-toggle">
-        <button type="button" class="ui-toggle-opt ${afterPurchase === 'close' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','close')">🔒 נסגרת מיד</button>
-        <button type="button" class="ui-toggle-opt ${afterPurchase === 'manual' ? 'active' : ''}" onclick="saveShopSettingAction('${clubId}','afterPurchase','manual')">🧑‍🏫 ידנית</button>
-      </div>
-    </div>`;
+`;
 }
 
 /** תצוגה חיה בזמן גרירת הסליידר — לא כותב שום דבר, רק מעדכן את המספרים על המסך. */
@@ -257,14 +240,7 @@ async function saveGoalTargetAction(clubId, cycleId) {
 
   const ok = typeof fbUpdateGoalCycleTarget === 'function' ? await fbUpdateGoalCycleTarget(clubId, cycleId, target) : false;
   if (!ok) { if (msgEl) msgEl.textContent = 'שגיאה בשמירה — נסה/י שוב'; return; }
-  _renderGoalSettingsScreen(clubId);
-}
-
-async function saveShopSettingAction(clubId, key, value) {
-  if (typeof fbSaveClub === 'function') {
-    await fbSaveClub(clubId, { shopSettings: { [key]: value } });
-  }
-  _renderGoalSettingsScreen(clubId);
+  showShopManagement();
 }
 
 // ─── Next Goal quick-picks (Sprint 9 — Task 4) — shared between the immediate-purchase
@@ -505,8 +481,7 @@ async function _votingClosedTeacherHtml(clubId, voteId) {
   const suggestedTarget = oldCycle?.target || 300;
   // Task 3: במצב afterPurchase:'manual' היעד הבא נבחר מאוחר יותר במסך 'purchase_complete' —
   // הבורר כאן היה מטעה (הערך שלו לא באמת משמש), ולכן לא מוצג כאן במצב הזה.
-  const afterPurchase = club?.shopSettings?.afterPurchase || 'close';
-  const showPicker = afterPurchase !== 'manual';
+  const showPicker = true;
 
   return `
     <div class="shop-status-card shop-status-celebrate">
@@ -603,7 +578,8 @@ function _renderRewardGrid(clubId, rewards, statusHtml = '', lastWinnerRewardId 
   _rewardMgmtState = { clubId, rewards, search: '', sort: 'order', lastWinnerRewardId };
 
   container.innerHTML = statusHtml +
-    `<div class="mgmt-toolbar">
+    `<h3 class="shop-rewards-heading">הוסיפו פרסים כדי שהילדים יוכלו לבחור כשיגיעו ליעד</h3>
+     <div class="mgmt-toolbar">
        <input id="mgmt-search" class="mgmt-search-input" type="search" placeholder="🔍 חיפוש פרס..." oninput="_filterRewardList(this.value)" />
        <select id="mgmt-sort" class="mgmt-sort-select" onchange="_sortRewardList(this.value)">
          <option value="order">סדר תצוגה</option>
@@ -1384,58 +1360,9 @@ Object.assign(window, {
   openVotingAction, closeVotingAction, castVoteAction,
   _pickWinnerCandidate, confirmWinnerAction,
   confirmPurchaseAction,
-  saveGoalTargetAction, saveShopSettingAction, _onGoalSliderInput, _selectNextGoalQuickPick, startNextGoalAction,
+  saveGoalTargetAction, _onGoalSliderInput, _selectNextGoalQuickPick, startNextGoalAction,
   _rewardImgFallback,
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
   checkHomeShopTeaser,
 });
 
-/** Student tree display lives beside the goal, not in reading analytics. */
-async function renderTeacherTreeSettings(clubId, containerId) {
-  const container = document.getElementById(containerId);
-  const teacherUid = typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null;
-  if (!container || !teacherUid || !window.db || window.currentClubId !== clubId) return;
-  container.querySelector('.booki-tree-display')?.remove();
-  const panel = document.createElement('fieldset');
-  panel.className = 'booki-tree-display';
-  const legend = document.createElement('legend'); legend.textContent = 'מה הילדים יראו ליד העץ';
-  const status = document.createElement('p'); status.setAttribute('role','status'); status.textContent = 'טוען…';
-  panel.append(legend,status);
-  const anchor = container.querySelector('.mgmt-toolbar') || container.querySelector('.goals-row-target')?.nextElementSibling;
-  if (anchor) container.insertBefore(panel,anchor); else container.appendChild(panel);
-  const current = () => panel.isConnected && window.currentClubId === clubId && getCurrentTeacher()?.uid === teacherUid;
-  const ref = window.db.collection('clubs').doc(clubId);
-  let selected;
-  try {
-    const snap = await ref.get({source:'server'});
-    if (!current()) return;
-    if (!snap.exists || snap.metadata?.fromCache) throw new Error('unconfirmed-club');
-    selected = snap.data()?.settings?.progressDisplay || 'leaderboard';
-  } catch (_) {
-    if (!current()) return;
-    status.textContent = 'לא הצלחנו לטעון את ההגדרה';
-    const retry = document.createElement('button'); retry.type='button'; retry.textContent='לנסות שוב';
-    retry.onclick=()=>renderTeacherTreeSettings(clubId,containerId);panel.appendChild(retry);return;
-  }
-  const inputs=[];
-  for (const [value,text] of [['progressOnly','התקדמות הכיתה בלבד'],['leaderboard','התקדמות הכיתה וטבלת קוראים']]) {
-    const label=document.createElement('label'),input=document.createElement('input');
-    input.type='radio';input.name='tree-display-'+containerId;input.value=value;input.checked=value===selected;
-    label.append(input,document.createTextNode(text));panel.insertBefore(label,status);inputs.push(input);
-    input.addEventListener('change',async()=>{
-      if (!current() || !input.checked) return;
-      inputs.forEach(el=>el.disabled=true);status.textContent='שומר…';
-      try {
-        // Field-level update preserves every other class setting; failures propagate.
-        await ref.update({'settings.progressDisplay':value});
-        if (!current()) return;
-        selected=value;status.textContent='נשמר';
-      } catch (_) {
-        if (!current()) return;
-        inputs.forEach(el=>el.checked=el.value===selected);
-        status.textContent='השינוי לא נשמר. נסו שוב.';
-      } finally { if(current()) inputs.forEach(el=>el.disabled=false); }
-    });
-  }
-  status.textContent='';
-}
