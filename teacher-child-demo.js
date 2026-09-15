@@ -22,7 +22,7 @@ function install(){
 }
 function navigation(){
  const nav=el('nav',undefined,'bcd-nav');nav.setAttribute('aria-label','ניווט בהדגמה');
- nav.append(button('🏠 בית',()=>renderHome()),button('🌳 הכיתה שלנו',()=>renderTree()));
+ nav.append(button('🏠 בית',()=>renderHome()));
  return nav;
 }
 function body(){if(!current())return null;request++;const b=$('bcd-body');b.replaceChildren();return b;}
