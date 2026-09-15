@@ -8,7 +8,7 @@
     'pilot-niqud-exact-2026-09-10.js?v=1',
     'pilot-niqud-defective-2026-09-10.js?v=1',
     'pilot-niqud-logic-2026-09-10.js?v=1',
-    'pilot-editorial-01-2026-09-10.js?v=1',
+    'pilot-editorial-01-2026-09-10.js?v=20260915-jack',
     'pilot-editorial-02-2026-09-10.js?v=1',
     'pilot-editorial-03-2026-09-10.js?v=1',
     'pilot-editorial-04-2026-09-10.js?v=1',
