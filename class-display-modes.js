@@ -11,7 +11,7 @@
 // Ordered, isolated student release. No teacher-entry video is loaded here.
 (function(){
   if(document.querySelector('script[data-booki-student-holidays]'))return;
-  for(const src of ['content/stories-holidays-autumn-2026.js?v=1','student-holidays-release.js?v=1']){
+  for(const src of ['content/stories-holidays-autumn-2026.js?v=1','student-holidays-release.js?v=20260915-no-class-story']){
     const script=document.createElement('script');script.src=src;script.async=false;
     script.dataset.bookiStudentHolidays='1';
     script.onerror=()=>console.warn('[booki] holiday release file unavailable:',src);

@@ -947,20 +947,11 @@ function goReaderHome() {
 }
 
 async function showClassLibrary() {
-  if (!_activeClubId && !window.currentClubId) return;
-  setNavTab('class');
-  showScreen('screen-class-library');
-  if (typeof renderClassStoryShelf === 'function') {
-    await renderClassStoryShelf(_activeClubId || window.currentClubId);
-  }
+  return showClassView();
 }
 
 function showTeacherStoryLibrary() {
-  if (!_activeClubId && !window.currentClubId) return;
-  setNavVisible(false);
-  showScreen('screen-teacher-stories');
-  if (typeof initClassStoryCreator === 'function') initClassStoryCreator();
-  if (typeof renderTeacherClassStories === 'function') renderTeacherClassStories();
+  showScreen('screen-teacher-club');
 }
 
 /** בורר "איך רוצים לקרוא היום?" — נפתח מהכפתור הראשי היחיד במסך הבית.
@@ -1599,9 +1590,7 @@ async function _showTeacherClub(clubId) {
   const sharePanel = document.getElementById('tc-share-panel');
   if (sharePanel) sharePanel.style.display = 'none';
   const shareBtn = document.getElementById('tc-share-button');
-  const copyBtn = document.getElementById('tc-copy-button');
-  if (shareBtn) shareBtn.textContent = club?.joinLink ? 'שיתוף הקישור' : 'יצירת קישור שיתוף';
-  if (copyBtn) copyBtn.style.display = club?.joinLink ? '' : 'none';
+  if (shareBtn) shareBtn.textContent = 'שיתוף הקישור';
 }
 
 async function openTeacherClubShare() {
@@ -1653,7 +1642,6 @@ async function _ensureTeacherClubJoinLink() {
   if (!ok) return null;
   if (typeof fbSaveClub === 'function') await fbSaveClub(clubId, { joinCode:code, joinLink:link });
   window._currentTeacherClubData = { ...club, joinCode:code, joinLink:link };
-  const copyBtn = document.getElementById('tc-copy-button'); if (copyBtn) copyBtn.style.display = '';
   const shareBtn = document.getElementById('tc-share-button'); if (shareBtn) shareBtn.textContent = 'שיתוף הקישור';
   return window._currentTeacherClubData;
 }

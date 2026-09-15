@@ -122,18 +122,6 @@
       overlay.querySelector('.bhp-open').focus({preventScroll:true});
     }, 450);
   }
-  function addClassStoryComingSoon() {
-    if (window._classReturnScreen === 'screen-teacher-club') return;
-    const content = byId('class-content');
-    if (!content?.querySelector('.class-hero') || content.querySelector('.booki-class-story-soon')) return;
-    const button = document.createElement('button');
-    button.type = 'button'; button.disabled = true;
-    button.className = 'booki-class-story-soon'; button.setAttribute('aria-disabled', 'true');
-    button.innerHTML = `<span class="bcs-icon" aria-hidden="true">📖</span><span class="bcs-copy"><strong data-nk="הַסִּפּוּר הַכִּתָּתִי שֶׁלָּנוּ">הסיפור הכיתתי שלנו</strong><small data-nk="נִכְתֹּב וְנִקְרָא סִפּוּר יַחַד">נכתוב ונקרא סיפור יחד</small></span><b data-nk="בְּקָרוֹב">בקרוב</b>`;
-    const anchor = content.querySelector('.goal-section') || content.querySelector('.class-hero');
-    anchor.insertAdjacentElement('afterend', button);
-    applyLabels(button);
-  }
   function openStudentTree() {
     closePromo(false);
     if (typeof showClassView === 'function') return showClassView();
@@ -145,21 +133,6 @@
     const label = tab.querySelector('.btab-label');
     if (label) { label.dataset.plain = 'הכיתה שלנו'; label.dataset.nk = 'הַכִּתָּה שֶׁלָּנוּ'; label.textContent = label.dataset.plain; }
     applyLabels(tab);
-  }
-  const originalNewClass = window._renderNewClubView;
-  if (typeof originalNewClass === 'function') {
-    window._renderNewClubView = async function (clubId) {
-      const result = await originalNewClass.apply(this, arguments);
-      if (window.currentClubId === clubId) addClassStoryComingSoon();
-      return result;
-    };
-  }
-  const originalLegacyClass = window._renderClassContent;
-  if (typeof originalLegacyClass === 'function') {
-    window._renderClassContent = function () {
-      const result = originalLegacyClass.apply(this, arguments);
-      addClassStoryComingSoon(); return result;
-    };
   }
   const originalShowScreen = window.showScreen;
   if (typeof originalShowScreen === 'function') {
@@ -203,7 +176,7 @@
   `;
   document.head.appendChild(style);
   function init() {
-    configureLibrary(); wireStudentTab(); renderHolidayShortcut(); addClassStoryComingSoon();
+    configureLibrary(); wireStudentTab(); renderHolidayShortcut();
     if (byId('screen-main')?.classList.contains('active')) maybeShowHolidayPromo(lastReader);
   }
   window.addEventListener('booki:holiday-stories-ready', init);
