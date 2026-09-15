@@ -1624,7 +1624,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ניתוב ראשוני: בדוק אם מורה מחוברת לפני ניתוב רגיל
   if (typeof onTeacherAuthChange === 'function') {
     onTeacherAuthChange(teacher => {
-      if (teacher) {
+      const entry = new URLSearchParams(window.location.search);
+      const classInvite = !!(entry.get('club') || entry.get('join'));
+      if (classInvite) {
+        if (typeof routeOnLoad === 'function') routeOnLoad();
+      } else if (teacher) {
         if (typeof showTeacherDashboard === 'function') showTeacherDashboard(teacher);
       } else {
         if (typeof routeOnLoad === 'function') routeOnLoad();

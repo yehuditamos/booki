@@ -135,13 +135,6 @@ async function routeOnLoad() {
 
   const routeParams = new URLSearchParams(window.location.search);
 
-  // קישור מורה הוא נתיב נפרד לחלוטין. הוא קודם לזיכרון התלמיד האחרון
-  // במכשיר, כדי שקישור בדיקה/ניהול לעולם לא יפתח בטעות כרטיס של ילד.
-  if (routeParams.get('teacher') === '1') {
-    goToTeacherArea(false);
-    return;
-  }
-
   // קישור הצטרפות תמיד בעדיפות ראשונה (הורה לחץ על קישור)
   const clubParam = routeParams.get('club');
   if (clubParam && typeof showJoinClubDirect === 'function') {
@@ -153,6 +146,13 @@ async function routeOnLoad() {
   const joinCode = routeParams.get('join');
   if (joinCode && typeof showJoinClubWithCode === 'function') {
     showJoinClubWithCode(joinCode);
+    return;
+  }
+
+  // An explicit class invitation takes precedence over a remembered teacher session
+  // and over a teacher flag accidentally included in the invitation URL.
+  if (routeParams.get('teacher') === '1') {
+    goToTeacherArea(false);
     return;
   }
 
