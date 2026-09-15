@@ -91,7 +91,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadClassDisplayModes() {
   if (document.querySelector('script[data-booki-class-display-modes]')) return;
   const s = document.createElement('script');
-  s.src = 'class-display-modes.js?v=20260915-today';
+  s.src = 'class-display-modes.js?v=20260915-editorial';
   s.async = false;
   s.dataset.bookiClassDisplayModes = '1';
   s.onerror = () => console.warn('[booki] class display modes extension did not load');
@@ -124,7 +124,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadPilotRelease20260910() {
   if (document.querySelector('script[data-booki-pilot-loader-20260910]')) return;
   const s = document.createElement('script');
-  s.src = 'pilot-loader-2026-09-10.js?v=30260915-capacity';
+  s.src = 'pilot-loader-2026-09-10.js?v=20260915-editorial';
   s.async = false;
   s.dataset.bookiPilotLoader20260910 = '1';
   s.onerror = () => console.warn('[booki] pilot release loader did not load');
@@ -333,4 +333,5 @@ window.submitInitialSetup = submitInitialSetup;
     return true;
   };
 })();
+
 
