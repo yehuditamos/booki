@@ -79,11 +79,11 @@ async function renderTree(){
   b.append(el('div','🌳','bcd-tree'),el('h2','העץ של הכיתה שלנו'));
   const track=el('progress');track.max=target;track.value=Math.max(0,progress);track.setAttribute('aria-label','התקדמות ליעד הכיתתי');
   b.append(el('p',Math.round(progress)+' מתוך '+target+' דקות'),track);
-  if(club.settings?.progressDisplay!=='progressOnly'){
-   const list=el('div',undefined,'bcd-leaderboard');list.append(el('h3','קוראים יחד'));
-   active.filter(m=>!String(m.name||'').startsWith('כרטיס פנוי ')||m.claimedByUid).sort((a,c)=>(c.cachedStats?.totalMinutes||0)-(a.cachedStats?.totalMinutes||0)).forEach(m=>list.append(el('p',(m.name?.startsWith('כרטיס פנוי ')?'קורא/ת מהכיתה':m.name)+' · '+Math.round(Number(m.cachedStats?.totalMinutes)||0)+' דקות')));
-   b.append(list);
-  }
+  const readersHtml=_todayReadersHtml(await _resolveTodayReaderNames(active));
+  if(!current() || token!==request)return;
+  const readers=el('div',undefined,'bcd-today-readers');
+  readers.innerHTML=readersHtml;
+  b.append(readers);
   b.append(navigation());
  }catch(_){if(!current()||token!==request)return;b.replaceChildren(el('p','העץ לא נטען כרגע'),button('לנסות שוב',renderTree),navigation());}
 }
@@ -112,7 +112,8 @@ const style=el('style');style.textContent=`
 .bcd-story-text{white-space:pre-line;font-size:32px;line-height:1.9;padding:24px 16px;background:#fffdf6;border-radius:20px}
 .bcd-page-controls{display:flex;align-items:center;justify-content:space-between;gap:8px}.bcd-page-controls button:disabled{opacity:.4}
 .bcd-tree{font-size:140px}.bcd-body progress{width:100%;height:24px;accent-color:#37ac61}
-.bcd-leaderboard{background:#fff;padding:16px;border-radius:20px;margin-top:20px}
+.bcd-today-readers{background:#fff;padding:16px;border-radius:20px;margin-top:20px}
 `;document.head.appendChild(style);
-window.BookiChildDemo={version:'20260915'};
+window.BookiChildDemo={version:'20260915-today-readers'};
 })();
+

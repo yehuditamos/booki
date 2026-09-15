@@ -1333,7 +1333,7 @@ function _todayReadersHtml(memberships) {
   const readers = (memberships || []).filter(m => m.status !== 'left'
     && m.cachedStats?.lastReadAt && new Date(m.cachedStats.lastReadAt).toDateString() === today)
     .sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'he'));
-  return `<section class="booki-student-mode"><h3>קראו היום</h3><div class="orbit">${readers.length
+  return `<section class="booki-student-mode"><h3>קראו היום בבוקי עכשיו תורך!!!</h3><div class="orbit">${readers.length
     ? readers.map(m => `<span><b>${escape(m.name || 'קורא/ת')}</b></span>`).join('')
     : '<p>עוד לא קראו היום 🌱</p>'}</div></section>`;
 }
@@ -1644,6 +1644,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showScreen('screen-splash');
   }
 });
-
 
 

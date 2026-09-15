@@ -25,5 +25,20 @@ const script=source('script.js'),start=script.indexOf('function _todayReadersHtm
 const names=vm.createContext({fbLoadUserProfile:async()=>({name:'ילד בדיקה'})});vm.runInContext(script.slice(start,end),names);
 const rows=await names._resolveTodayReaderNames([{name:'כרטיס פנוי 01',claimedByUid:'reader',cachedStats:{lastReadAt:new Date().toISOString()}},{name:'אתמול',cachedStats:{lastReadAt:'2020-01-01'}}]);
 const html=names._todayReadersHtml(rows);assert(html.includes('ילד בדיקה'));assert(!html.includes('כרטיס פנוי'));assert(!html.includes('אתמול'));
+const today=new Date().toISOString();
+const readerHtml=names._todayReadersHtml([
+ {name:'קראה היום',cachedStats:{lastReadAt:today,totalMinutes:9876}},
+ {name:'עזבה',status:'left',cachedStats:{lastReadAt:today}},
+ {name:'טרם קרא',cachedStats:{totalMinutes:5432}},
+ {name:'קרא אתמול',cachedStats:{lastReadAt:'2020-01-01',totalMinutes:100}},
+ {name:'<ילד>',cachedStats:{lastReadAt:today}}
+]);
+assert(readerHtml.includes('קראו היום בבוקי עכשיו תורך!!!'));
+assert(readerHtml.includes('קראה היום'));assert(readerHtml.includes('&lt;ילד&gt;'));
+for(const hidden of ['עזבה','טרם קרא','קרא אתמול','9876','5432','דקות'])assert(!readerHtml.includes(hidden));
+assert(names._todayReadersHtml([]).includes('עוד לא קראו היום'));
+const demo=source('teacher-child-demo.js');
+assert(demo.includes('_todayReadersHtml(await _resolveTodayReaderNames(active))'));
+assert(!demo.includes('bcd-leaderboard'));assert(!demo.includes('progressDisplay'));
 console.log('PASS: atomic reading + wallet; duplicate retry; network failure; wrong owner; invalid duration; roster capacity + legacy repair; claimed-card protection; today reader profile name.');
 })().catch(e=>{console.error(e);process.exitCode=1});
