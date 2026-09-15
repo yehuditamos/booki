@@ -51,7 +51,8 @@
   // ── Preserve the child's chosen slot color after claim/personalization ──────
   function rememberSlots(memberships){
     (memberships || []).forEach(m => {
-      const n = slotNumber(m.name);
+      const stable = [...String(m.userId||'')].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,0);
+      const n = Number(m.cardNumber) || slotNumber(m.name) || (stable % PALETTE.length)+1;
       if (Number.isFinite(n)) slotByUser.set(String(m.userId),{number:n,claimed:!!m.claimedByUid});
     });
   }
@@ -90,6 +91,7 @@
     #booki-topup-action:disabled{opacity:.5!important;cursor:not-allowed!important}
     .booki-clear-open-slots{width:100%;margin-top:12px;padding:10px 12px;border:1px solid #e2c7c7;border-radius:12px;background:#fff8f8;color:#9b4c4c;font-weight:800}
     #who-reads-grid>.booki-slot-color-identity,#club-students-grid>.booki-slot-color-identity{background:linear-gradient(145deg,var(--booki-slot-a),var(--booki-slot-b))!important;border:3px solid rgba(255,255,255,.88)!important;box-shadow:0 7px 18px rgba(70,90,80,.14),inset 0 0 0 1px rgba(80,80,80,.05)!important;color:#365247!important}
+    .booki-slot-badge{display:none!important}
     #who-reads-grid>.booki-slot-owned-card,#club-students-grid>.booki-slot-owned-card{box-shadow:0 7px 18px rgba(70,90,80,.14),inset 0 0 0 1px rgba(80,80,80,.05),0 0 0 2px rgba(255,255,255,.72)!important}
   `;
   document.head.appendChild(style);

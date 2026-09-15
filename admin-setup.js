@@ -182,6 +182,7 @@ async function createClub() {
     teacherName:  _teacherName,
     teacherEmail: _teacherEmail,
     memberCount:  0,
+    rosterCapacity: _newClub.members.length,
     goal:      defaults.defaultGoal ?? { type: 'minutes', target: 1500, period: 'year' },
     settings: {
       countAllSessions: defaults.countAllSessions ?? true,

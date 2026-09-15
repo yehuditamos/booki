@@ -86,6 +86,31 @@ service cloud.firestore {
               && request.resource.data.userId == resource.data.userId
               && request.resource.data.clubId == resource.data.clubId)
           || isOwner()
+          // The owning teacher may assign a name or archive only an unused open card.
+          || (isClubTeacher(clubId)
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('claimedByUid', null) == null
+              && resource.data.get('personalized', false) == false
+              && resource.data.get('status', 'active') != 'left'
+              && resource.data.name.matches('כרטיס פנוי [0-9]+')
+              && resource.data.get('cachedStats', {}).get('totalMinutes', 0) == 0
+              && resource.data.get('cachedStats', {}).get('totalSessions', 0) == 0
+              && resource.data.get('cachedStats', {}).get('totalPoints', 0) == 0
+              && resource.data.get('cachedStats', {}).get('totalBooks', 0) == 0
+              && resource.data.get('cachedStats', {}).get('appMinutes', 0) == 0
+              && resource.data.get('cachedStats', {}).get('bookMinutes', 0) == 0
+              && resource.data.get('cachedStats', {}).get('lastReadAt', null) == null
+              && (
+                (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'cardNumber', 'updatedAt'])
+                  && request.resource.data.name is string
+                  && request.resource.data.name.size() > 0
+                  && request.resource.data.name.size() <= 50
+                  && request.resource.data.cardNumber is int
+                  && request.resource.data.cardNumber > 0
+                  && request.resource.data.cardNumber <= 50)
+                || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                  && request.resource.data.status == 'left')
+              ))
           // CLAIM: any signed-in session can personalize a teacher-created card not yet personalized
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true

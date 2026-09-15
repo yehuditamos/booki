@@ -113,33 +113,23 @@ async function members(id){
  return snap.docs.map(d=>({...d.data(),userId:d.id})).filter(m=>m.status!=='left');
 }
 async function saveExisting(d,status,id,uid){
+ if(!window.BookiRosterStore)throw Error('העדכון עדיין נטען. נסו שוב');
  const isCurrent=()=>clubId()===id && teacher()?.uid===uid && editUI?.root.isConnected;
- const ref=window.db.collection('clubs').doc(id);
- const club=await ref.get({source:'server'});
- if(!isCurrent() || !club.exists || club.metadata?.fromCache || club.data().teacherUid!==uid)throw Error('לא ניתן לשמור במועדון הזה כרגע');
- const before=await members(id);
- const names=plan(d,before);
- const resolved=await Promise.all(before.map(async m=>window.BookiClassSlots?.effectiveName?await window.BookiClassSlots.effectiveName(m):m.name));
- const known=new Set([...before.map(m=>norm(m.name)),...resolved.map(norm)]);
- let added=0,skipped=0;
- for(let i=0;i<names.length;i++){
-  const name=names[i];
-  if(!isCurrent())throw Error('המועדון התחלף. חזרו אליו להשלמת השמירה');
-  if(known.has(norm(name))){skipped++;continue;}
-  status.textContent='שומרת '+(i+1)+' מתוך '+names.length+'…';
-  const result=await fbTeacherAddStudent(id,{name});
-  if(!result?.ok && result?.reason!=='duplicate-name'){
-   if(d.mode!=='open'){d.text=names.slice(i).join('\n');d.single='';editUI.repaint();}
-   throw Error('השמירה נעצרה. השמות שכבר נשמרו נשארים, ואפשר לנסות שוב.');
-  }
-  if(result?.ok)added++;else skipped++;
-  known.add(norm(name));
+ if(!isCurrent())return;
+ status.textContent='שומרת את הכרטיסים…';
+ let result;
+ try{
+  result=await window.BookiRosterStore.save(id,d.mode==='open'?{target:count(d.count)}:{names:parse(d.text)},uid);
+ }catch(e){
+  if(e.code==='permission-denied')throw Error('שמירת השמות בכרטיסים הקיימים עדיין דורשת השלמת עדכון המערכת. לא נוספו כרטיסים.');
+  throw e;
  }
  if(!isCurrent())return;
- d.text='';d.single='';d.count='';editUI.repaint();
+ d.text='';d.single='';d.count=String(result.total);editUI.repaint();
  await window.showClubStudents();
- if(isCurrent())editUI.status.textContent=added?'נשמרו '+added+' כרטיסים'+(skipped?' · '+skipped+' כבר היו במועדון':''):'כל הכרטיסים כבר קיימים במועדון';
+ if(isCurrent())editUI.status.textContent='נשמר · '+result.total+' כרטיסים במועדון';
 }
+
 function mountExisting(){
  const screen=$('screen-club-students'),grid=$('club-students-grid'),id=clubId(),uid=teacher()?.uid;
  if(!screen||!grid||!id||!uid)return;
@@ -153,6 +143,21 @@ function mountExisting(){
   grid.addEventListener('click',e=>{if(e.target.closest('.profile-card')){e.preventDefault();e.stopImmediatePropagation();}},true);
  }
  grid.querySelectorAll('.profile-card').forEach(card=>{card.removeAttribute('onclick');card.removeAttribute('role');card.tabIndex=-1;});
+ if(!editUI.summary){
+  const summary=el('p',undefined,'br-capacity-summary');editUI.root.querySelector('h3').after(summary);editUI.summary=summary;
+ }
+ const ui=editUI;
+ Promise.all([window.db.collection('clubs').doc(id).get({source:'server'}),members(id)]).then(([club,rows])=>{
+  if(editUI!==ui || clubId()!==id || teacher()?.uid!==uid)return;
+  const limit=window.BookiRosterStore.capacity(club.data()||{},rows);
+  ui.summary.textContent=limit+' ילדים בכיתה · '+rows.length+' כרטיסים';
+  if(!existing.d.count)existing.d.count=String(limit||'');
+  ui.repair?.remove();ui.repair=null;
+  if(rows.length>limit && limit>0){
+   const repair=button('איחוד ל־'+limit+' כרטיסים',()=>{if(existing.d.busy)return;existing.d.mode='open';existing.d.count=String(limit);ui.repaint();ui.root.requestSubmit();});
+   ui.summary.after(repair);ui.repair=repair;
+  }
+ }).catch(()=>{if(editUI===ui)ui.summary.textContent='מספר הכרטיסים לא נטען';});
  const old=$('add-student-section');if(old)old.hidden=true;
  const title=screen.querySelector('h2');if(title)title.textContent='ילדי המועדון';
 }
