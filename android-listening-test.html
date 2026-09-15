@@ -8,7 +8,7 @@
 *{box-sizing:border-box}body{margin:0;padding:20px 14px 40px;background:#fff8e7;color:#29343a;font-family:Arial,sans-serif}main{max-width:760px;margin:auto}h1{text-align:center;font-size:clamp(27px,6vw,40px);margin:16px 0 8px}.sub,.badge{text-align:center;line-height:1.6}.badge{color:#6545a7;font-weight:bold;font-size:14px}.card{background:#fff;border:1px solid #e0e8df;border-radius:26px;padding:clamp(18px,4vw,32px);box-shadow:0 8px 28px #26354d0c;margin-top:20px}.story{font-size:clamp(28px,5.7vw,44px);line-height:1.95;margin:20px 0;overflow-wrap:break-word}.word{display:inline-block;position:relative;border-radius:12px;padding:0 .08em;color:#29343a}.word.done{color:#176a43;background:#e0f4e5;text-shadow:0 0 10px #6cdb944d}.word.current{background:#eee5ff;box-shadow:0 0 15px #b399de77;animation:glow 1.2s ease-in-out infinite alternate}.word.assisted{background:#fff0ca;color:#79511c}.word.current{color:#29343a!important;opacity:1!important;visibility:visible!important}@keyframes glow{to{box-shadow:0 0 22px #9774d5aa}}@media(prefers-reduced-motion:reduce){.word.current{animation:none}}button{font:inherit;cursor:pointer;border:0;border-radius:17px;min-height:48px;padding:14px 18px}button:focus-visible,summary:focus-visible{outline:3px solid #6845a9;outline-offset:4px}button:disabled{opacity:.55;cursor:default}.primary{background:#27835f;color:white;font-size:23px;font-weight:bold;width:100%}.secondary{background:#efe9f8;color:#604285}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1;min-width:130px}.status{min-height:52px;text-align:center;font-size:19px;line-height:1.5;margin:12px 0;color:#4e645a}.count{text-align:center;color:#685189;font-weight:bold}.privacy,details{font-size:15px;line-height:1.7;color:#59625c;margin-top:18px}summary{cursor:pointer;font-weight:bold}.notice{background:#f2ecfb;padding:12px 16px;border-radius:14px;line-height:1.6}.debug{white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f7f7;border-radius:12px;padding:12px;font-size:13px}[hidden]{display:none!important}
 </style></head>
 <body><main>
-<div class="badge">עמוד ניסוי עצמאי · גרסה 10</div>
+<div class="badge">עמוד ניסוי עצמאי · גרסה 11</div>
 <h1>📚 קוראים בקול עם בוקי</h1>
 <p class="sub">קוראים מהמילה הזוהרת — המילים שזוהו נצבעות בירוק.</p>
 <div id="support" class="notice" role="status"></div>
@@ -16,7 +16,7 @@
 <div id="count" class="count"></div><div id="story" class="story"></div>
 <p id="status" class="status" role="status" aria-live="polite">לוחצים ומאשרים שימוש במיקרופון</p>
 <button id="listen" class="primary" type="button">🎙️ מתחילים לקרוא</button>
-<div class="actions"><button id="next" class="primary" type="button" hidden>לעמוד הבא</button><button id="skip" class="secondary" type="button">המילה לא נקלטה</button><button id="reset" class="secondary" type="button">מתחילים מחדש</button></div>
+<div class="actions"><button id="next" class="primary" type="button" hidden>לעמוד הבא</button><button id="skip" class="secondary" type="button">המילה לא נקלטה</button></div>
 <p class="privacy">בדיקה בלבד, ללא שמירת דקות או נקודות. העמוד לא שומר קול או תמלול. שירות זיהוי הדיבור של הדפדפן עשוי לשלוח את הקול לעיבוד אצל ספק השירות.</p>
 </section>
 <details><summary>באיזה מכשיר ואיך פותחים?</summary>
@@ -36,11 +36,11 @@ function canonical(v){const n=norm(v);return aliases.get(n)||n;}
 function match(a,b){return canonical(a)===canonical(b);}
 // Consume only the next expected word, never skip an unread word through fuzzy matching.
 function advance(text,from,words){let p=from;for(const token of text.split(/\s+/)){if(p<words.length&&match(token,words[p]))p++;}return p;}
-let page=0,words=[],done=0,assisted=new Set(),active=false,recognition=null,generation=0,restartTimer=null,startTimer=null,idleEnds=0,lastError='—',lastHeard='—';
+let page=0,words=[],done=0,assisted=new Set(),active=false,ready=false,recognition=null,generation=0,restartTimer=null,startTimer=null,idleEnds=0,lastError='—',lastHeard='—';
 function info(text){$('status').textContent=text;}
 function diagnose(){ $('debug').textContent=`ממשק זיהוי: ${R?'קיים (לא מבטיח שירות זמין)':'לא נתמך'}\nחיבור מאובטח: ${window.isSecureContext?'כן':'לא'}\nהתקדמות: ${done}/${words.length}\nדילוגים בעזרה: ${assisted.size}\nשגיאה אחרונה: ${lastError}\nזוהה לאחרונה: ${lastHeard}`; }
-function paint(){Array.from($('story').children).forEach((el,i)=>{el.className='word'+(i<done?(assisted.has(i)?' assisted':' done'):i===done?' current':'');if(i===done)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});$('listen').textContent=active?'⏸ הפסקה':'🎙️ '+(done?'ממשיכים לקרוא':'מתחילים לקרוא');$('listen').disabled=!R||!window.isSecureContext||done===words.length;$('skip').disabled=done===words.length;diagnose();}
-function stop(){active=false;generation++;clearTimeout(restartTimer);clearTimeout(startTimer);const old=recognition;recognition=null;if(old){old.onend=null;try{old.abort();}catch(_){}}paint();}
+function paint(){Array.from($('story').children).forEach((el,i)=>{el.className='word'+(i<done?(assisted.has(i)?' assisted':' done'):i===done?' current':'');if(i===done)el.setAttribute('aria-current','true');else el.removeAttribute('aria-current');});$('listen').textContent=active?(ready?'⏸ הפסקת האזנה':'מתחברים למיקרופון…'):'🎙️ מתחילים לקרוא';$('listen').hidden=done===words.length;$('listen').disabled=!R||!window.isSecureContext||(active&&!ready);$('skip').disabled=done===words.length;diagnose();}
+function stop(){active=false;ready=false;generation++;clearTimeout(restartTimer);clearTimeout(startTimer);const old=recognition;recognition=null;if(old){old.onend=null;try{old.abort();}catch(_){}}paint();}
 function render(){words=PAGES[page].split(/\s+/);done=0;assisted=new Set();lastHeard='—';$('story').textContent='';for(const w of words){const s=document.createElement('span');s.textContent=w;$('story').appendChild(s);$('story').appendChild(document.createTextNode(' '));}$('count').textContent=`עמוד ${page+1} מתוך ${PAGES.length}`;$('next').hidden=true;$('next').textContent=page===0?'לעמוד הבא':'לקריאה נוספת';info('מתחילים מהמילה הזוהרת');paint();}
 function complete(){stop();$('next').hidden=false;info(assisted.size?'סיימת את העמוד! המילים שבעזרה מסומנות בצהוב 💛':'איזה יופי! כל העמוד נקרא 🎉');}
 const errors={
@@ -55,20 +55,19 @@ function launch(){
  const g=++generation,base=done;let received=false;const r=new R();recognition=r;
  r.lang='he-IL';r.continuous=true;r.interimResults=true;r.maxAlternatives=3;
  const valid=()=>active&&recognition===r&&generation===g;
- r.onstart=()=>{if(!valid())return;clearTimeout(startTimer);info('בוקי מקשיב — קוראים בקול רגיל');};
- r.onresult=e=>{if(!valid())return;let cursor=base; // Recompute cumulative results from their fixed origin: no double counting interim/final repeats.
+ r.onstart=()=>{if(!valid())return;clearTimeout(startTimer);ready=true;paint();info('🎙️ ההאזנה התחילה — אפשר לקרוא');};
+ r.onresult=e=>{if(!valid())return;ready=true;clearTimeout(startTimer);let cursor=base; // Recompute cumulative results from their fixed origin: no double counting interim/final repeats.
   for(let i=0;i<e.results.length;i++){const result=e.results[i];let best=cursor;for(let j=0;j<result.length;j++){best=Math.max(best,advance(String(result[j].transcript||''),cursor,words));}cursor=best;}
   const tail=e.results[e.results.length-1];lastHeard=tail?String(tail[0].transcript):'—';received=true;idleEnds=0;
   if(cursor>done){done=cursor;paint();if(done===words.length){complete();return;}info('יופי, ממשיכים 💚');}else{info('אפשר לקרוא שוב בקול רגיל מהמילה הזוהרת');diagnose();}
  };
  r.onerror=e=>{if(!valid())return;lastError=e.error;diagnose();if(e.error==='no-speech'){info('לא נקלט דיבור — אפשר לקרוא בקול רגיל');return;}stop();info(errors[e.error]||'ההאזנה נעצרה. לחצו על מתחילים לקרוא כדי לנסות שוב.');};
- r.onend=()=>{if(!valid())return;clearTimeout(startTimer);recognition=null;if(!received)idleEnds++;if(idleEnds>=3){stop();info('ההאזנה נעצרה ללא זיהוי. בדקו מיקרופון ולחצו כדי לנסות שוב.');return;}restartTimer=setTimeout(launch,500);};
- startTimer=setTimeout(()=>{if(valid()){lastError='start-timeout';stop();info('לא התקבל חיבור למיקרופון. בדקו את חלון ההרשאה ונסו שוב.');}},15000);
+ r.onend=()=>{if(!valid())return;clearTimeout(startTimer);recognition=null;ready=false;paint();info('מחברים מחדש את ההאזנה…');if(!received)idleEnds++;if(idleEnds>=3){stop();info('ההאזנה נעצרה ללא זיהוי. בדקו מיקרופון ולחצו כדי לנסות שוב.');return;}restartTimer=setTimeout(launch,500);};
+ startTimer=setTimeout(()=>{if(valid()){lastError='start-timeout';stop();info('לא התקבל חיבור למיקרופון. בדקו את חלון ההרשאה ונסו שוב.');}},30000);
  try{r.start();}catch(e){lastError=e.name;stop();info('לא ניתן להתחיל האזנה. בדקו הרשאות ולחצו שוב.');}
 }
-function start(){if(active||!R||!window.isSecureContext||done>=words.length)return;if(!navigator.onLine){info('נדרש חיבור לאינטרנט כדי להתחיל.');return;}active=true;idleEnds=0;lastError='—';paint();info('מתחברים למיקרופון…');launch();}
+function start(){if(!R||!window.isSecureContext||done>=words.length)return;stop();if(!navigator.onLine){info('נדרש חיבור לאינטרנט כדי להתחיל.');return;}active=true;idleEnds=0;lastError='—';paint();info('מתחברים למיקרופון…');launch();}
 $('listen').onclick=()=>{if(active){stop();info('הפסקה. אפשר להמשיך מאותה מילה.');}else start();};
-$('reset').onclick=()=>{stop();render();};
 $('next').onclick=()=>{stop();page=(page+1)%PAGES.length;render();start();};
 $('skip').onclick=()=>{if(done>=words.length)return;const resume=active;stop();assisted.add(done++);paint();if(done===words.length)complete();else{info('ממשיכים למילה הבאה. המילה שבעזרה נשארת בצהוב.');if(resume)start();}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&active){stop();info('ההאזנה הושהתה. לחצו כדי להמשיך.');}});
