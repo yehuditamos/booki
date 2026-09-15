@@ -84,6 +84,13 @@ jobs:
           console.log('Runtime syntax + dependency integrity: OK');
           NODE
 
+      - name: Reading, roster and release regression tests
+        run: |
+          node scripts/test-reading-safety.js
+          node scripts/test-omri-word-matcher.js
+          node scripts/test-booki-local-listening.js
+          node scripts/test-release-flows.js
+
       - name: Static server smoke check
         shell: bash
         run: |

@@ -1338,6 +1338,20 @@ function _todayReadersHtml(memberships) {
     : '<p>עוד לא קראו היום 🌱</p>'}</div></section>`;
 }
 
+async function _resolveTodayReaderNames(memberships) {
+  const today = new Date().toDateString();
+  return Promise.all((memberships || []).filter(m => m.status !== 'left'
+    && m.cachedStats?.lastReadAt && new Date(m.cachedStats.lastReadAt).toDateString() === today)
+    .map(async m => {
+      if (!/^כרטיס פנוי\s+\d+$/.test(m.name || '')) return m;
+      let profile = null;
+      if (m.claimedByUid && typeof fbLoadUserProfile === 'function') {
+        try { profile = await fbLoadUserProfile(m.claimedByUid); } catch (_) {}
+      }
+      return {...m, name:String(profile?.name || '').trim() || 'קורא/ת'};
+    }));
+}
+
 async function _renderNewClubView(clubId) {
   const contentEl = document.getElementById('class-content');
   if (!contentEl) return;
@@ -1413,7 +1427,7 @@ async function _renderNewClubView(clubId) {
   // מיותר עכשיו שהעץ עצמו כבר מציג מספר אחד מתואם. כיתות במצב progressOnly (המורה
   // כיבתה במפורש את הלוח המוביל התחרותי) לא מקבלות שום תחליף באותו מקום — זה עדיין
   // ההעדפה שלהן, רק בלי הרובריקה שהוסרה.
-  const progressBlock = _todayReadersHtml(memberships);
+  const progressBlock = _todayReadersHtml(await _resolveTodayReaderNames(memberships));
 
   // כרטיס קריאה-לפעולה ליד העץ, לפי מצב החנות המדויק — לא רק כפתור גנרי:
   //  - GOAL_REACHED_PENDING_SHOP: הגיעו ליעד אבל אין עדיין הצבעה פתוחה (המורה טרם
@@ -1630,5 +1644,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showScreen('screen-splash');
   }
 });
+
 
 
