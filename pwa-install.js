@@ -16,6 +16,13 @@
       history.replaceState(null, '', next.href);
     } catch (_) {}
   }
+  // Temporary Android install pause while Play Protect compatibility is investigated.
+  // Keep installed-app launch routing above intact; ordinary web use is unchanged.
+  const android = /Android/i.test(navigator.userAgent) || navigator.userAgentData?.platform === 'Android';
+  if (android) {
+    window.addEventListener('beforeinstallprompt', event => event.preventDefault());
+    return;
+  }
   let deferred = null, installed = false, busy = false, card, dialog, opener;
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const embedded = /FBAN|FBAV|Instagram|Line\/|WhatsApp/i.test(navigator.userAgent);
