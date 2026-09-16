@@ -21,7 +21,7 @@ function showOwnerDashboard(teacher) {
 
 // ─── Main Loader — 5 קריאות מקבילות ──────────────────────────────────────────
 
-let _odSnapshot=null, _odLoadVersion=0, _odPeriod='48h';
+let _odSnapshot=null, _odLoadVersion=0, _odPeriod='48h', _odShowAllTeachers=false;
 const _odIsTest=o=>o?.isTest===true||o?.isDemo===true||o?.demo===true||o?.test===true;
 function _odTimestamp(value){
  const ms=value?.toMillis?value.toMillis():value?.toDate?value.toDate().getTime():new Date(value||'').getTime();
@@ -40,6 +40,7 @@ async function _odLoad(){
  const version=++_odLoadVersion, status=document.getElementById('od-status');
  if(status)status.textContent='טוענת נתוני קריאה…';
  _odSnapshot=null;
+ document.getElementById('od-recent-teachers')?.replaceChildren(_odNode('p','טוענת מורות…'));
  ['od-reader-count','od-active-clubs','od-teacher-count','od-teacher-started','od-lifetime-minutes'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='—';});
  document.getElementById('od-clubs-list')?.replaceChildren(_odNode('p','טוענת מועדונים…'));
  try{
@@ -133,6 +134,7 @@ function _odRenderReading(){
  document.querySelectorAll('[data-od-period]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.odPeriod===_odPeriod)));
  const teacherList=teachers.filter(t=>t.role==='teacher'&&!_odIsTest(t));
  set('od-teacher-count',teacherList.length);
+ _odRenderRecentTeachers(teacherList,clubs);
  set('od-teacher-started',teacherList.filter(t=>clubs.some(c=>c.teacherUid===t.id)).length+' פתחו מועדון פעיל');
  const counts=new Map();let total=0,active=0;
  for(const c of clubs){const count=(memberships.get(c.id)||[]).filter(m=>_odReaderMatches(m,_odPeriod,now)).length;counts.set(c.id,count);total+=count;if(count)active++;}
@@ -149,6 +151,36 @@ function _odRenderReading(){
  });
  for(const t of teacherList.filter(t=>!clubs.some(c=>c.teacherUid===t.id))){
   const row=_odNode('div',undefined,'od-club-browser');row.append(_odNode('strong',t.name||'מורה ללא שם'),_odNode('p','עדיין אין מועדון פעיל'));_odContact(row,t);list.append(row);
+ }
+}
+
+// Most recent registration first; a login never changes this ordering.
+function _odRecentTeachers(teachers){
+ return teachers.filter(t=>t.role==='teacher'&&!_odIsTest(t)).slice().sort((a,b)=>{
+  const at=_odTimestamp(a.createdAt),bt=_odTimestamp(b.createdAt);
+  return (bt??-Infinity)-(at??-Infinity)||String(a.name||a.id).localeCompare(String(b.name||b.id),'he');
+ });
+}
+function _odRenderRecentTeachers(teachers,clubs){
+ const list=document.getElementById('od-recent-teachers');if(!list)return;
+ list.replaceChildren();
+ const sorted=_odRecentTeachers(teachers);
+ if(!sorted.length){list.append(_odNode('p','עדיין אין מורות רשומות.'));return;}
+ for(const t of (_odShowAllTeachers?sorted:sorted.slice(0,5))){
+  const card=_odNode('div',undefined,'od-club-browser');
+  const top=_odNode('div',undefined,'od-manager');
+  top.append(_odNode('strong',t.name||'מורה ללא שם'));_odContact(top,t);card.append(top);
+  const joined=_odTimestamp(t.createdAt);
+  const date=joined===null?'תאריך הצטרפות לא שמור':'הצטרפה ב־'+new Date(joined).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jerusalem'});
+  card.append(_odNode('p',date));
+  const owned=clubs.filter(c=>c.teacherUid===t.id);
+  card.append(_odNode('p',owned.length?'מועדון פעיל: '+owned.map(c=>c.name||'ללא שם').join(' · '):'עדיין לא פתחה מועדון פעיל','od-club-reading'));
+  list.append(card);
+ }
+ if(sorted.length>5){
+  const more=_odNode('button',_odShowAllTeachers?'הצגת 5 האחרונות':'כל המורות ('+sorted.length+')','od-btn-sm');more.type='button';
+  more.setAttribute('aria-expanded',String(_odShowAllTeachers));
+  more.onclick=()=>{_odShowAllTeachers=!_odShowAllTeachers;_odRenderRecentTeachers(teachers,clubs);list.querySelector('button')?.focus({preventScroll:true});};list.append(more);
  }
 }
 
