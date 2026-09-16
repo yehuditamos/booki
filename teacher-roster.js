@@ -46,12 +46,14 @@ function editor(root,d,onSave,isNew){
  const names=el('textarea');names.rows=6;names.maxLength=3000;names.placeholder='שם אחד בכל שורה';names.setAttribute('aria-label','שמות הילדים');
  names.oninput=()=>{d.text=names.value;};namesLabel.append(names);
  controls.append(countLabel,namesLabel);
+ const photo=window.BookiRosterPhoto?.attach(controls,{names,count:amount,parse,onChange:text=>{d.text=text;}});
  const submit=el('button',isNew?'המשך לסיכום':'שמירת הילדים','br-save');submit.type='submit';
  root.append(controls,status,submit);
  const repaint=()=>{amount.value=d.count;names.value=d.text;};
  const lock=busy=>{d.busy=busy;root.querySelectorAll('button,input,textarea').forEach(n=>n.disabled=busy);submit.textContent=busy?'שומרת…':isNew?'המשך לסיכום':'שמירת הילדים';};
  root.onsubmit=async e=>{
   e.preventDefault();if(d.busy)return;
+  if(photo?.pending()){status.textContent='אשרי את השמות מהצילום או בטלי את הצילום לפני ההמשך';return;}
   try{
    count(d.count);
    if(d.text.trim() && parse(d.text).length>Number(d.count))throw Error('מספר השמות גדול ממספר הילדים בכיתה');
@@ -149,6 +151,7 @@ const style=el('style');style.textContent=`
 .br-status:empty{display:none}.br-status{line-height:1.6}.booki-roster button:disabled{opacity:.5;cursor:default}
 #screen-club-students #add-student-section{display:none!important}
 `;document.head.appendChild(style);
-window.BookiRoster={parse,plan,version:'20260915-simple'};
+window.BookiRoster={parse,plan,version:'20260916-photo'};
 mountVisible();
 })();
+

@@ -17,7 +17,8 @@
     'pilot-class-slots-safety-2026-09-11.js?v=20260915-capacity',
     'pilot-class-slots-copy-2026-09-11.js?v=20260915-unified',
     'roster-store.js?v=20260915-capacity',
-    'teacher-roster.js?v=20260915-capacity',
+    'roster-photo.js?v=20260916-photo',
+    'teacher-roster.js?v=20260916-photo',
     'pilot-owner-whatsapp-2026-09-11.js?v=2'
   ];
   let i=0;
@@ -31,3 +32,4 @@
   window.BookiPilotLoader20260910={version:'2026-09-11.6',ready:false};
   next();
 })();
+
