@@ -207,7 +207,11 @@ function _odRenderClubs(clubs) {
         if(!members.length)panel.appendChild(_odNode('p','עדיין לא הוספו ילדים למועדון.'));
         for(const m of members){
           const card=_odNode('div',undefined,'od-row');card.style.flexWrap='wrap';
-          card.appendChild(_odNode('strong',(m.emoji||'📚')+' '+(m.name||'כרטיס ללא שם')));
+          const identity=_odNode('strong');identity.style.cssText='display:flex;align-items:center;gap:10px;min-width:0';
+          const icon=_odNode('span');icon.style.cssText='display:inline-flex;width:44px;height:44px;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:12px;font-size:30px';
+          _setAvatarEl(icon,m.emoji||m.avatar||'📚');
+          const img=icon.querySelector('img');if(img)img.style.cssText='width:100%;height:100%;object-fit:contain';
+          identity.append(icon,_odNode('span',m.name||'כרטיס ללא שם'));card.appendChild(identity);
           const details=_odNode('span');details.style.fontSize='.85rem';
           const n=Number(m.cachedStats?.totalMinutes);
           details.textContent=isOpen(m)?'ממתין לבחירת ילד/ה':`${Number.isFinite(n)?Math.max(0,Math.round(n)):0} דקות · ${_odReadDate(m.cachedStats?.lastReadAt)}`;

@@ -1331,23 +1331,27 @@ function _cvExport(canvasId) {
 
 // ─── Avatar display helpers ────────────────────────────────────────────────────
 
-function _isImgAvatar(av) { return typeof av === 'string' && av.startsWith('data:'); }
-
+function _isImgAvatar(av) {
+  return typeof av === 'string' && (/^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(av) || /^https:\/\//i.test(av));
+}
+function _avatarText(avatar) {
+  const s=String(avatar||'');
+  return !s || /^(?:data:|https?:|javascript:|blob:)/i.test(s) ? '📚' : s;
+}
 function _setAvatarEl(el, avatar) {
   if (!el) return;
+  el.replaceChildren();
   if (_isImgAvatar(avatar)) {
-    el.innerHTML = '<img src="' + avatar + '" class="av-img" alt="">';
-  } else {
-    el.innerHTML = '';
-    el.textContent = avatar || '📚';
-  }
+    const img=document.createElement('img');img.src=avatar;img.className='av-img';img.alt='הציור שלי';
+    img.onerror=()=>{el.textContent='📚';};
+    el.appendChild(img);
+  } else el.textContent=_avatarText(avatar);
 }
-
 function _avatarHtml(avatar, cls) {
-  if (_isImgAvatar(avatar)) {
-    return '<img src="' + avatar + '" class="' + cls + ' av-img" alt="">';
-  }
-  return '<span class="' + cls + '">' + (avatar || '📚') + '</span>';
+  const el=document.createElement(_isImgAvatar(avatar)?'img':'span');
+  el.className=cls+(_isImgAvatar(avatar)?' av-img':'');
+  if(_isImgAvatar(avatar)){el.src=avatar;el.alt='הציור שלי';}else el.textContent=_avatarText(avatar);
+  return el.outerHTML;
 }
 
 // ─── Change avatar after setup ────────────────────────────────────────────────

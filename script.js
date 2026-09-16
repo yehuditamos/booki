@@ -1220,10 +1220,7 @@ function _renderReaderCardContent(s) {
 
   // s.emoji is set for new students; STUDENT_EMOJIS[s.id] for legacy (numeric index)
   const avatar    = s.emoji || (typeof STUDENT_EMOJIS !== 'undefined' ? STUDENT_EMOJIS[s.id] : '') || '📚';
-  const isImgAv   = typeof avatar === 'string' && avatar.startsWith('data:');
-  const avatarTag = isImgAv
-    ? `<img src="${avatar}" class="card-avatar av-img" alt="">`
-    : `<div class="card-avatar">${avatar}</div>`;
+  const avatarTag = _avatarHtml(avatar, 'card-avatar');
   const changeBtn = window.currentClubId
     ? `<button class="btn-change-avatar" onclick="changeStudentAvatar()">✏️ שנה אווטאר</button>`
     : '';
