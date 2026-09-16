@@ -71,6 +71,25 @@
 </style><style>
 .od-reading-hero{text-align:center;background:#e4f3e7;border:1px solid #b9d9c2;border-radius:24px;padding:24px 16px;margin-bottom:16px;color:#26513b}.od-reading-hero #od-reader-count{display:block;font-size:76px;line-height:1.2}.od-reading-hero #od-reader-label{font-size:22px;font-weight:700}.od-reading-hero #od-count-note{font-size:13px;color:#536c5c}.od-periods{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}.od-periods button{font:inherit;border:1px solid #b9d9c2;border-radius:12px;padding:10px;background:white;color:#26513b;cursor:pointer}.od-periods button[aria-pressed=true]{background:#26714f;color:white}.od-club-browser{border:1px solid #d7e4d9;border-radius:18px;padding:16px;margin:12px 0;background:#fff}.od-club-reading{font-size:18px;font-weight:700;color:#26714f;margin:0 0 8px}.od-manager{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:12px}.od-contact summary{cursor:pointer;background:#e4f3e7;border-radius:12px;padding:12px;color:#26513b;font-weight:700}.od-contact a{display:block;margin-top:10px;color:#26714f;overflow-wrap:anywhere}.od-metric small{display:block;margin-top:6px}.od-section>summary{cursor:pointer;padding:12px;font-weight:700}
 </style>
+<style>
+/* Owner-only palette: readable text on every card, including expanded children. */
+#screen-owner-dashboard{background:#f4f8f4;color:#183e2a;font-family:Arial,sans-serif}
+#screen-owner-dashboard .od-header{background:#f4f8f4;border-color:#c4d8c9}
+#screen-owner-dashboard .od-club-browser,#screen-owner-dashboard .od-metric{background:#fff;color:#183e2a;border-color:#c4d8c9}
+#screen-owner-dashboard .od-row{color:#183e2a;border-color:#d7e4d9}
+#screen-owner-dashboard .od-row strong{color:#153b28}
+#screen-owner-dashboard .od-row-label{font-size:1rem;font-weight:700}
+#screen-owner-dashboard .od-lbl,#screen-owner-dashboard .od-status,#screen-owner-dashboard .od-empty,#screen-owner-dashboard .od-section-title,#screen-owner-dashboard .od-close{color:#31553e;font-size:.9rem}
+#screen-owner-dashboard .od-val{color:#185c3b}
+#screen-owner-dashboard .od-btn-sm,#screen-owner-dashboard .od-refresh{background:#e4f3e7;color:#214d34;border-color:#749780;min-height:40px}
+#screen-owner-dashboard .od-badge{background:#e4f3e7;color:#214d34}
+#screen-owner-dashboard .od-row--hidden{opacity:1}
+#screen-owner-dashboard #od-owner-name{color:#31553e!important}
+#screen-owner-dashboard .od-lifetime{background:#fff;border:1px solid #b9d9c2;border-radius:20px;text-align:center;padding:20px;margin-bottom:16px;color:#183e2a}
+#screen-owner-dashboard .od-lifetime>span{font-size:20px;font-weight:700}
+#screen-owner-dashboard #od-lifetime-minutes{display:block;font-size:44px;line-height:1.4;color:#185c3b}
+#screen-owner-dashboard #od-lifetime-note{font-size:14px;line-height:1.6;margin:6px 0 0;color:#31553e}
+</style>
 </head>
 <body>
 
@@ -1369,17 +1388,17 @@ window.addEventListener('pageshow', function (e) {
 <script src="stories.js?v=3"></script>
 
 <!-- Club System UI — routing, admin, onboarding -->
-<script src="routing.js?v=20260916-avatar"></script>
+<script src="routing.js?v=20260916-owner48"></script>
 <script src="admin-setup.js?v=20260915-capacity"></script>
 <script src="onboarding.js?v=6"></script>
 
-<script src="script.js?v=20260916-avatar"></script>
+<script src="script.js?v=20260916-owner48"></script>
 <script src="booki-local-listening.js?v=4"></script>
 <script src="motivation.js?v=7"></script>
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20260916-avatar"></script>
+<script src="owner-dashboard.js?v=20260916-owner48"></script>
 <script src="initial-setup.js?v=20260916-photo-first"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1397,17 +1416,22 @@ window.addEventListener('pageshow', function (e) {
 
     <div class="od-reading-hero">
       <div class="od-periods" aria-label="תקופת הקריאה">
-        <button type="button" data-od-period="24h" aria-pressed="true" onclick="_odSetPeriod('24h')">24 שעות</button>
+        <button type="button" data-od-period="48h" aria-pressed="true" onclick="_odSetPeriod('48h')">48 שעות</button>
         <button type="button" data-od-period="7d" aria-pressed="false" onclick="_odSetPeriod('7d')">7 ימים</button>
         <button type="button" data-od-period="all" aria-pressed="false" onclick="_odSetPeriod('all')">מאז ההתחלה</button>
       </div>
-      <p id="od-reader-label">ילדים שקראו ב־24 השעות האחרונות</p>
+      <p id="od-reader-label">ילדים שקראו ב־48 השעות האחרונות</p>
       <strong id="od-reader-count" aria-live="polite">—</strong>
       <p id="od-count-note">כל כרטיס ילד נספר פעם אחת בתקופה שנבחרה</p>
     </div>
+    <div class="od-lifetime" aria-live="polite">
+      <span>דקות קריאה מצטברות מאז ההתחלה</span>
+      <strong id="od-lifetime-minutes">—</strong>
+      <p id="od-lifetime-note">סך הדקות שנשמרו בכל תקופות הקריאה</p>
+    </div>
     <div class="od-grid">
       <div class="od-metric"><strong class="od-val" id="od-teacher-count">—</strong><span class="od-lbl">מורות רשומות</span><small id="od-teacher-started"></small></div>
-      <div class="od-metric"><strong class="od-val" id="od-active-clubs">—</strong><span class="od-lbl" id="od-active-label">מועדונים שבהם קראו ב־24 השעות האחרונות</span></div>
+      <div class="od-metric"><strong class="od-val" id="od-active-clubs">—</strong><span class="od-lbl" id="od-active-label">מועדונים שבהם קראו ב־48 השעות האחרונות</span></div>
     </div>
     <div class="od-section">
       <h3>המורות והמועדונים</h3>
