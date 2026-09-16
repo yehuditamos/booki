@@ -599,7 +599,7 @@ function _renderRewardList() {
   const { clubId, rewards, search, sort, lastWinnerRewardId } = _rewardMgmtState;
 
   if (!rewards.length) {
-    area.innerHTML = `<div class="reward-empty-banner">🛍️ החנות שלכם עדיין ריקה — הוסיפו את הפרס הראשון!</div>`;
+    area.innerHTML = _rewardIdeasHtml();
     return;
   }
 
@@ -737,6 +737,43 @@ async function _swapRewardOrder(clubId, rewardId, dir) {
 
 // ─── Add / Edit Modal ─────────────────────────────────────────────────────────
 
+const CLASS_REWARD_IDEAS = [
+  { name: 'שיעור משחקי קופסה', emoji: '🎲' },
+  { name: 'פיקניק כיתתי בחצר', emoji: '🧺' },
+  { name: 'יום פיג׳מות בכיתה', emoji: '🌙' },
+  { name: 'זמן יצירה חופשי', emoji: '🎨' },
+  { name: 'הפסקת ריקודים כיתתית', emoji: '🎵' },
+  { name: 'קריאה משותפת בחוץ', emoji: '📚' }
+];
+
+function _rewardIdeasHtml(inEditor = false) {
+  return `<div class="reward-ideas" style="margin:16px 0">
+    <p style="font-weight:700;margin:0 0 10px">רעיונות לצ׳ופרים לכיתה</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${CLASS_REWARD_IDEAS.map((idea, i) =>
+      `<button type="button" style="font:inherit;padding:10px 12px;border:1px solid #b9d1c0;border-radius:12px;background:#f2f8f2;color:#28543b;cursor:pointer" onclick="${inEditor ? '_rmUseIdea' : '_openRewardIdea'}(${i})">${idea.emoji} ${_escHtml(idea.name)}</button>`
+    ).join('')}</div>
+  </div>`;
+}
+
+function _openRewardIdea(index) {
+  if (!CLASS_REWARD_IDEAS[index] || !_rewardMgmtState.clubId) return;
+  openRewardEditor(_rewardMgmtState.clubId, null);
+  _rmUseIdea(index);
+}
+
+function _rmUseIdea(index) {
+  const idea = CLASS_REWARD_IDEAS[index];
+  if (!idea || !_rmState || _rmState.rewardId) return;
+  const name = document.getElementById('rm-name');
+  if (!name) return;
+  name.value = idea.name;
+  _rmState.emoji = idea.emoji;
+  const preview = document.getElementById('rm-emoji-preview');
+  if (preview) preview.textContent = idea.emoji;
+  document.querySelectorAll('#reward-modal .mini-emoji-btn').forEach(b => b.classList.toggle('selected', b.textContent === idea.emoji));
+  name.focus();
+}
+
 function openRewardEditor(clubId, rewardId) {
   _rmState = { clubId, rewardId, emoji: '🎁', existing: null };
   document.getElementById('reward-modal')?.remove();
@@ -764,6 +801,8 @@ function _buildRewardModal() {
       <button class="av-modal-close" onclick="closeRewardEditor()">✕</button>
       <p class="av-modal-title">${isNew ? '🎁 פרס חדש בחנות' : '✏️ עריכת פרס'}</p>
 
+      ${isNew ? _rewardIdeasHtml(true) : ''}
+
       <div class="reward-modal-emoji-preview" id="rm-emoji-preview">${_escHtml(emoji)}</div>
       <div class="mini-person-emojis reward-emoji-grid">
         ${REWARD_EMOJIS.map(e =>
@@ -775,10 +814,6 @@ function _buildRewardModal() {
       <input id="rm-name" class="input-field" maxlength="40"
              placeholder="לדוגמה: 30 דקות משחק חופשי"
              value="${_escHtml(existing?.name || '')}" />
-
-      <label class="reward-field-label" for="rm-desc">תיאור קצר (לא חובה)</label>
-      <textarea id="rm-desc" class="input-field textarea-field" maxlength="120"
-                placeholder="פרטים נוספים לתלמידים...">${_escHtml(existing?.description || '')}</textarea>
 
       <label class="reward-field-label">מחיר בנקודות</label>
       <div class="reward-cost-stepper">
@@ -792,10 +827,6 @@ function _buildRewardModal() {
         <input id="rm-active" type="checkbox" ${existing?.active === false ? '' : 'checked'} />
         פעיל בחנות (גלוי לתלמידים)
       </label>
-
-      <label class="reward-field-label" for="rm-image">קישור לתמונה (אופציונלי)</label>
-      <input id="rm-image" class="input-field" type="url" placeholder="https://..."
-             value="${_escHtml(existing?.imageUrl || '')}" />
 
       <p id="rm-error" class="auth-error"></p>
 
@@ -829,10 +860,8 @@ async function saveRewardEditor() {
   const { clubId, rewardId, emoji } = _rmState;
   const errEl = document.getElementById('rm-error');
   const name     = (document.getElementById('rm-name')?.value  || '').trim();
-  const desc     = (document.getElementById('rm-desc')?.value  || '').trim();
   const cost     = Number(document.getElementById('rm-cost')?.value) || 0;
   const active   = document.getElementById('rm-active')?.checked !== false;
-  const imageUrl = (document.getElementById('rm-image')?.value || '').trim();
 
   if (errEl) errEl.textContent = '';
   if (!name)    { if (errEl) errEl.textContent = 'יש לתת שם לפרס';            return; }
@@ -841,7 +870,7 @@ async function saveRewardEditor() {
   const btn = document.querySelector('#reward-modal .btn-green');
   if (btn) { btn.disabled = true; btn.textContent = 'שומר...'; }
 
-  const payload = { name, description: desc, cost, active, emoji, imageUrl: imageUrl || null };
+  const payload = { name, cost, active, emoji };
 
   let ok;
   if (rewardId) {
@@ -849,6 +878,8 @@ async function saveRewardEditor() {
   } else {
     const rewards = await fbLoadRewards(clubId);
     payload.displayOrder = rewards.length ? Math.max(...rewards.map(r => r.displayOrder ?? 0)) + 1 : 1;
+    payload.description = '';
+    payload.imageUrl = null;
     payload.createdBy    = (typeof getCurrentTeacher === 'function' ? getCurrentTeacher()?.uid : null) || null;
     ok = await fbCreateReward(clubId, payload);
   }
@@ -1366,5 +1397,6 @@ Object.assign(window, {
   checkShopCelebration, dismissShopCelebration, enterShopFromCelebration,
   checkHomeShopTeaser,
 });
+
 
 
