@@ -613,7 +613,7 @@ function requestReaderIdentity(card) {
   const title = document.getElementById('reader-confirm-title');
   const avatar = document.getElementById('reader-confirm-avatar');
   if (!overlay || !title || !avatar) return;
-  title.textContent = `אתה ${name}?`;
+  title.textContent = `${name}, זה הכרטיס שלך?`;
   avatar.replaceChildren();
   const sourceAvatar = card.querySelector('.profile-avatar');
   if (sourceAvatar) avatar.appendChild(sourceAvatar.cloneNode(true));
