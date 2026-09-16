@@ -41,15 +41,47 @@ function editor(root,d,onSave,isNew){
  const controls=el('div',undefined,'br-fields'),status=el('p',undefined,'br-status');status.setAttribute('role','status');
  const countLabel=el('label','מספר הילדים בכיתה');
  const amount=el('input');amount.type='number';amount.inputMode='numeric';amount.min='1';amount.max=String(MAX);amount.required=true;amount.placeholder='מספר הילדים';amount.setAttribute('aria-label','מספר הילדים בכיתה');
- amount.oninput=()=>{d.count=amount.value;};countLabel.append(amount);
- const namesLabel=el('label','הכנה עם שמות הילדים (לא חובה)');
- const names=el('textarea');names.rows=6;names.maxLength=3000;names.placeholder='שם אחד בכל שורה';names.setAttribute('aria-label','שמות הילדים');
- names.oninput=()=>{d.text=names.value;};namesLabel.append(names);
- controls.append(countLabel,namesLabel);
- const photo=window.BookiRosterPhoto?.attach(controls,{names,count:amount,parse,onChange:text=>{d.text=text;}});
+ countLabel.append(amount);
+ const manual=el('section',undefined,'br-manual');
+ const title=el('h3','או הכנסת שמות ידנית');
+ const list=el('div',undefined,'br-name-list');list.setAttribute('aria-label','שמות הילדים');
+ manual.append(title,list);
+ function renderNames(){
+  const values=d.text.split('\n');
+  const capacity=Math.min(MAX,Math.max(0,Number(d.count)||0));
+  const length=Math.max(capacity||3,values.length);
+  list.replaceChildren();
+  for(let i=0;i<length;i++){
+   const row=el('label',undefined,'br-name-row');
+   const number=el('span',String(i+1),'br-name-number');number.setAttribute('aria-hidden','true');
+   const input=el('input');input.type='text';input.maxLength=50;input.value=values[i]||'';input.placeholder='שם הילד/ה';input.autocomplete='off';input.setAttribute('aria-label','שם ילד/ה '+(i+1));
+   input.oninput=()=>{const current=d.text.split('\n');current[i]=input.value;d.text=current.join('\n');};
+   input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const next=list.querySelectorAll('input')[i+1];if(next)next.focus();}};
+   input.onpaste=e=>{
+    const text=e.clipboardData?.getData('text');if(!text||!/[\r\n]/.test(text))return;
+    e.preventDefault();
+    const pasted=text.split(/\r?\n/).map(n=>n.trim()).filter(Boolean);
+    const current=d.text.split('\n');
+    // Replace this row; retain later names rather than overwriting them.
+    while(current.length<i)current.push('');
+    current.splice(i,1,...pasted);
+    while(current.length&&!current[current.length-1].trim())current.pop();
+    if(current.length>MAX || current.length>(capacity||MAX) || pasted.some(n=>n.length>50)){
+     status.textContent='הרשימה ארוכה ממספר הילדים בכיתה או מכילה שם ארוך מדי';return;
+    }
+    d.text=current.join('\n');status.textContent='';renderNames();
+   };
+   row.append(number,input);list.append(row);
+  }
+ }
+ const names={get value(){return d.text;},set value(text){d.text=text;renderNames();},focus(){list.querySelector('input')?.focus();}};
+ amount.oninput=()=>{d.count=amount.value;renderNames();};
+ controls.append(countLabel);
+ const photo=window.BookiRosterPhoto?.attach(controls,{names,count:amount,parse,onChange:text=>{d.text=text;renderNames();}});
+ controls.append(manual);
  const submit=el('button',isNew?'המשך לסיכום':'שמירת הילדים','br-save');submit.type='submit';
  root.append(controls,status,submit);
- const repaint=()=>{amount.value=d.count;names.value=d.text;};
+ const repaint=()=>{amount.value=d.count;renderNames();};
  const lock=busy=>{d.busy=busy;root.querySelectorAll('button,input,textarea').forEach(n=>n.disabled=busy);submit.textContent=busy?'שומרת…':isNew?'המשך לסיכום':'שמירת הילדים';};
  root.onsubmit=async e=>{
   e.preventDefault();if(d.busy)return;
@@ -148,10 +180,22 @@ const style=el('style');style.textContent=`
 .br-draft{display:flex;flex-wrap:wrap;gap:8px}.br-chip{display:flex;gap:12px;align-items:center;background:#eef6ee;border-radius:12px;padding:4px 12px}.br-chip button{border:0;background:none}
 .booki-roster .br-save{display:block;width:100%;background:#26714f;color:white;margin-top:16px;padding:14px;font-size:18px}
 .booki-roster .br-later{display:block;border:0;background:none;text-decoration:underline;margin:10px auto 0}
+.br-manual{margin-top:24px}.booki-roster .br-manual h3{font-size:16px;margin:0 0 10px;color:#52695c}
+.br-name-list{display:flex;flex-direction:column;gap:8px;max-height:330px;overflow-y:auto;padding:2px}
+.br-fields .br-name-row{display:flex;align-items:center;border:1px solid #c5d8cb;border-radius:12px;background:white;overflow:hidden;flex-shrink:0}
+.br-name-number{width:38px;text-align:center;color:#65816d;font-size:14px;flex-shrink:0}
+.br-fields .br-name-row input{border:0;border-radius:0;margin:0;padding:8px 10px;min-width:0;line-height:1.5}
+.br-name-row:focus-within{outline:2px solid #2f8d60;outline-offset:1px}
+.booki-roster .br-photo-pick{display:flex;align-items:center;gap:16px;width:100%;text-align:right;padding:20px;margin:12px 0 0;border:2px solid #8bc5a1;border-radius:20px;background:linear-gradient(125deg,#effbea,#d7f1e4);box-shadow:0 5px 14px #26714f15;color:#20543b}
+.br-photo-icon{display:grid;place-items:center;width:68px;height:68px;border-radius:18px;background:#fff9df;font-size:42px;flex-shrink:0}
+.br-photo-title{font-size:20px;line-height:1.45}.br-photo-arrow{margin-right:auto;font-size:25px}
+.booki-roster .br-photo-pick:hover{background:#d3efdc}.booki-roster .br-photo-pick:focus-visible{outline:3px solid #26714f;outline-offset:3px}
+@media(max-width:380px){.booki-roster .br-photo-pick{padding:14px;gap:10px}.br-photo-icon{width:52px;height:58px;font-size:34px}.br-photo-title{font-size:18px}}
 .br-status:empty{display:none}.br-status{line-height:1.6}.booki-roster button:disabled{opacity:.5;cursor:default}
 #screen-club-students #add-student-section{display:none!important}
 `;document.head.appendChild(style);
-window.BookiRoster={parse,plan,version:'20260916-photo'};
+window.BookiRoster={parse,plan,version:'20260916-photo-first'};
 mountVisible();
 })();
+
 

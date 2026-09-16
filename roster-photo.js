@@ -22,7 +22,10 @@ function lines(text){
 function node(tag,text){const n=document.createElement(tag);if(text)n.textContent=text;return n;}
 function attach(root,{names,count,onChange,parse}){
  const box=node('div');box.className='br-photo';
- const pick=node('button','📷 צילום או העלאת רשימת שמות');pick.type='button';
+ const pick=node('button');pick.type='button';pick.className='br-photo-pick';
+ const icon=node('span','📷');icon.className='br-photo-icon';icon.setAttribute('aria-hidden','true');
+ const title=node('span','צילום או העלאת רשימת שמות');title.className='br-photo-title';
+ const arrow=node('span','←');arrow.className='br-photo-arrow';arrow.setAttribute('aria-hidden','true');pick.append(icon,title,arrow);
  const input=node('input');input.type='file';input.accept='image/*';input.hidden=true;
  const panel=node('section');panel.hidden=true;panel.setAttribute('aria-label','אישור שמות מהצילום');
  const heading=node('h3','בדיקת השמות מהצילום');
@@ -90,3 +93,4 @@ function attach(root,{names,count,onChange,parse}){
 }
 window.BookiRosterPhoto={attach,lines};
 })();
+
