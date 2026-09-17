@@ -355,6 +355,9 @@
       const row = document.createElement('tr');
       const name = String(m.name || 'תלמיד/ה');
       const nameCell = element('th', name); nameCell.scope = 'row';
+      if (!(name.startsWith('כרטיס פנוי ') && !m.claimedByUid)) {
+        nameCell.replaceChildren(button(name + ' 📖', () => openStoryRecommendation(id, m.userId, name), 'booki-recommend-name'));
+      }
       const minutes = Number(m.cachedStats?.totalMinutes);
       const heart = button('💙', () => openEncouragementModal(id, m.userId, name), 'booki-encouragement-heart');
       heart.title = 'שליחת עידוד ל' + name; heart.setAttribute('aria-label', heart.title);

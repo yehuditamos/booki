@@ -71,7 +71,10 @@ async function fbMarkMessagesSeen(clubId, userId, messageIds) {
 
 // ─── UI: באנר "יש הודעה" בעמוד הבית — פעם אחת, בלי תיבת הודעות ────────────────
 
+let _messageCheckVersion = 0;
 async function checkNewMessages(clubId, userId) {
+  const version = ++_messageCheckVersion;
+  document.getElementById('booki-story-recommendations')?.replaceChildren();
   const banner = document.getElementById('booki-message-banner');
   const wants = () => { window._homeBannerWants.message = false; if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); };
   if (!clubId || !userId) { wants(); return; }
@@ -81,8 +84,12 @@ async function checkNewMessages(clubId, userId) {
     typeof fbLoadClubMembership === 'function' ? fbLoadClubMembership(clubId, userId) : Promise.resolve(null),
   ]);
 
+  if (version !== _messageCheckVersion) return;
+  const reader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  if (!reader || reader.clubId !== clubId || reader.userId !== userId) return;
   const seen = new Set(membership?.seenMessageIds || []);
-  const unseen = messages.filter(m => !seen.has(m.id));
+  if (typeof renderStoryRecommendations === 'function') renderStoryRecommendations(clubId, userId, messages, seen);
+  const unseen = messages.filter(m => m.type !== 'story-recommendation' && !seen.has(m.id));
 
   if (!unseen.length) { wants(); return; }
 

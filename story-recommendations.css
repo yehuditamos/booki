@@ -1,0 +1,10 @@
+.booki-recommend-name{font:inherit;color:#1e593b;background:#edf7ef;border:1px solid #9abd9f;border-radius:10px;padding:10px;cursor:pointer;text-align:right}
+.booki-recommend-dialog{font-family:Arial,sans-serif;color:#183e2a;background:#fff;border:1px solid #b9d9c2;border-radius:22px;padding:20px;width:min(540px,calc(100vw - 32px));max-height:85dvh;box-sizing:border-box}
+.booki-recommend-dialog::backdrop{background:rgb(20 45 30 / .45)}
+.booki-recommend-dialog button,.booki-recommend-dialog input{font:inherit;color:#183e2a;border:1px solid #9abd9f;border-radius:12px;padding:12px;min-height:44px;margin:5px 0;background:#f0f8f1;cursor:pointer;white-space:normal}
+.booki-recommend-dialog input{width:100%;box-sizing:border-box;background:#fff;cursor:text}
+.booki-recommend-dialog button:disabled{opacity:.6;cursor:wait}
+.booki-recommend-stories{display:grid;gap:6px;max-height:55dvh;overflow:auto}
+.booki-recommend-stories button{text-align:right;background:white}
+.booki-recommend-home{display:block;box-sizing:border-box;width:100%;font:700 18px/1.6 Arial,sans-serif;white-space:pre-line;text-align:right;color:#183e2a;background:#e4f3e7;border:2px solid #7fa98b;border-radius:18px;padding:18px;margin:12px 0;cursor:pointer}
+.booki-recommend-dialog button:focus-visible,.booki-recommend-home:focus-visible{outline:3px solid #26714f;outline-offset:2px}
