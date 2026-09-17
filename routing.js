@@ -881,6 +881,7 @@ function _enterPersonalHome(userId, profile) {
   if (typeof checkNewMessages === 'function') checkNewMessages(_activeClubId, userId);
   if (typeof checkHomeShopTeaser === 'function') checkHomeShopTeaser(_activeClubId);
   showScreen('screen-main');
+  _recordReaderEntry(userId, _activeClubId);
   if (typeof _initHomeMagic === 'function') _initHomeMagic();
   if (typeof maybeShowBackToSchoolPromo === 'function') maybeShowBackToSchoolPromo(userId);
   _updateBugLabel();
@@ -2177,3 +2178,16 @@ Object.assign(window, {
 });
 
 
+
+async function _recordReaderEntry(userId,clubId){
+ try{
+  const user=typeof firebase!=='undefined'?firebase.auth().currentUser:null;
+  if(!user?.isAnonymous||!clubId||!userId||!window.db)return;
+  const ref=window.db.collection('clubs').doc(clubId).collection('memberships').doc(userId);
+  const snap=await ref.get();if(!snap.exists)return;
+  const m=snap.data();
+  if(m.status==='left'||m.isDemo||m.isTest||m.demo||m.test||['teacher','owner'].includes(m.role))return;
+  if(m.claimedByUid!==user.uid&&userId!==user.uid)return;
+  await ref.update({'cachedStats.lastEnteredAt':new Date().toISOString()});
+ }catch(e){console.warn('[reader-entry] Could not save activity:',e.code||'unavailable');}
+}
