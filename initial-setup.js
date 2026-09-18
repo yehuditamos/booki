@@ -113,7 +113,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherWorkspace() {
   if (document.querySelector('script[data-booki-teacher-workspace]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-workspace.js?v=20260918-teacher-home';
+  s.src = 'teacher-workspace.js?v=20260918-library-copy';
   s.async = false;
   s.dataset.bookiTeacherWorkspace = '1';
   s.onerror = () => console.warn('[booki] teacher workspace did not load');

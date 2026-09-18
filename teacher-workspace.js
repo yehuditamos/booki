@@ -225,7 +225,7 @@
       text.append(el('strong',title),el('small',copy));
       card.append(art,text,el('span','←','tw-library-arrow'));return card;
     };
-    pair.append(shelf('סיפורי בוקי', 'לגלות סיפור לכיתה', openLibrary, false), shelf('הסיפורים שלי', 'להוסיף, לערוך ולבחור ספרייה', () => window.BookiPrivateLibrary?.open(), true));
+    pair.append(shelf('סיפורי בוקי', 'לעיון בסיפורים של בוקי', openLibrary, false), shelf('הספרייה הפרטית שלי', 'להוסיף, לערוך ולבחור ספרייה', () => window.BookiPrivateLibrary?.open(), true));
     actions.append(pair); body.append(actions);
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
