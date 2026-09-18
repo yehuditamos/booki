@@ -8,7 +8,7 @@
  const auth=()=>typeof firebase!=='undefined'?firebase.auth().currentUser:null;
  const teacher=()=>{const a=auth();return a&&!a.isAnonymous?a:null;};
  const ref=uid=>window.db.collection('teacherLibraries').doc(uid).collection('stories');
- let state={clubId:null,userId:null,mode:'loading',items:[]},version=0,dialog=null,ocrPromise;
+ let state={clubId:null,userId:null,mode:'loading',items:[]},version=0,dialog=null;
  const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'');
  function validate(title,text){
   title=clean(title).trim();text=clean(text).trim();
@@ -80,24 +80,16 @@
    $('library-screen-title').textContent='סיפורי המורה';$('library-category-view').style.display='none';$('library-story-view').style.display='';filterLibrary('teacher-private');
   });b.className='library-category-card';$('library-category-grid')?.append(b);
  }
- function loadOCR(){
-  if(window.Tesseract)return Promise.resolve(window.Tesseract);
-  if(!ocrPromise)ocrPromise=new Promise((resolve,reject)=>{
-   const s=el('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
-   const timer=setTimeout(()=>reject(Error('טעינת זיהוי הטקסט ארכה מדי. נסי שוב.')),30000);
-   s.onload=()=>{clearTimeout(timer);window.Tesseract?resolve(window.Tesseract):reject(Error('לא ניתן לטעון זיהוי טקסט.'));};s.onerror=()=>{clearTimeout(timer);reject(Error('לא ניתן לטעון זיהוי טקסט.'));};document.head.append(s);
-  }).catch(e=>{ocrPromise=null;throw e;});return ocrPromise;
- }
  async function open(){
   const a=teacher();if(!a)return;
   dialog?.close();const d=el('dialog');dialog=d;d.dir='rtl';d.className='private-library-dialog';
   const title=el('h2','הספרייה הפרטית שלי');title.id='private-library-title';d.setAttribute('aria-labelledby',title.id);
   const close=btn('סגירה',()=>d.close()),body=el('div');d.append(close,title,body);document.body.append(d);d.showModal();
-  let dirty=false,worker=null,uploadVersion=0;
+  let dirty=false,uploadVersion=0;
   const valid=()=>d.isConnected&&auth()?.uid===a.uid;
   d.addEventListener('cancel',e=>{if(dirty&&!confirm('לסגור בלי לשמור את השינויים?'))e.preventDefault();});
   close.onclick=()=>{if(!dirty||confirm('לסגור בלי לשמור את השינויים?'))d.close();};
-  d.addEventListener('close',()=>{uploadVersion++;worker?.terminate().catch(()=>{});d.remove();if(dialog===d)dialog=null;});
+  d.addEventListener('close',()=>{uploadVersion++;d.remove();if(dialog===d)dialog=null;});
   const status=el('p');status.setAttribute('role','status');
   async function list(){
    dirty=false;body.replaceChildren(el('p','טוענת את הספרייה…'));
@@ -105,7 +97,7 @@
     // This read is denied until the new privacy rules are deployed. No unsafe fallback.
     await window.db.collection('libraryConfig').doc('availability').get({source:'server'});
     const [ss,cs]=await Promise.all([ref(a.uid).get({source:'server'}),window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'})]);
-    if(!valid())return;body.replaceChildren(el('p','הסיפורים שייכים לחשבון שלך וזמינים רק לתלמידים במועדונים שלך שבחרת עבורם ספרייה פרטית או גם וגם.'),btn('📷 הוספת סיפור מצילום, קובץ או טקסט',()=>edit(null)));
+    if(!valid())return;body.replaceChildren(el('p','הסיפורים שייכים לחשבון שלך וזמינים רק לתלמידים במועדונים שלך שבחרת עבורם ספרייה פרטית או גם וגם.'),btn('📝 הוספת סיפור מטקסט',()=>edit(null)));
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
     const clubs=el('section');clubs.append(el('h3','איזו ספרייה הילדים יראו?'));
     if(!cs.docs.length)clubs.append(el('p','אפשר להכין סיפורים עכשיו ולבחור ספרייה לאחר פתיחת מועדון.'));
@@ -128,12 +120,12 @@
    const heading=el('input');heading.value=record.title||'';heading.maxLength=120;heading.setAttribute('aria-label','שם הסיפור');heading.placeholder='שם הסיפור';
    const text=el('textarea');text.value=record.text||'';text.rows=12;text.maxLength=20000;text.setAttribute('aria-label','טקסט הסיפור לעריכה ולניקוד');text.placeholder='מדביקים או כותבים כאן את הסיפור. שורה ריקה מפרידה בין עמודים.';
    heading.oninput=text.oninput=()=>{dirty=true;preview.textContent=text.value;};
-   const file=el('input');file.type='file';file.accept='image/*,.txt,text/plain';file.multiple=true;file.hidden=true;
-   const upload=btn('📷 צילום או העלאת סיפור',()=>file.click());upload.className='private-library-upload';
+   const file=el('input');file.type='file';file.accept='.txt,text/plain';file.multiple=true;file.hidden=true;
+   const upload=btn('📄 העלאת קובץ טקסט (TXT)',()=>file.click());upload.className='private-library-upload';
    const info=el('div');info.className='private-library-text-tip';
    const badge=el('strong','מומלץ');badge.className='private-library-recommended';
    const paste=btn('כתיבה או הדבקת טקסט',()=>{text.focus();text.scrollIntoView?.({block:'center',behavior:'smooth'});});
-   info.append(badge,paste,el('p','העתיקי מהמסמך והדביקי בתוכן הסיפור — הטקסט והניקוד נשמרים כפי שהועתקו. אפשר גם להעלות תמונה או קובץ TXT.'));
+   info.append(badge,paste,el('p','העתיקי מהמסמך והדביקי בתוכן הסיפור — הטקסט והניקוד נשמרים כפי שהועתקו. אפשר גם להעלות קובץ טקסט (TXT).'));
    const palette=el('div');palette.className='private-library-niqud';palette.append(el('p','ניקוד: מקמי את הסמן אחרי אות ולחצי על הסימן.'));
    let selected=text;
    for(const input of [heading,text])input.onfocus=()=>{selected=input;};
@@ -152,24 +144,17 @@
    file.onchange=async()=>{
     const token=++uploadVersion;const files=[...file.files];if(!files.length)return;
     if(files.some(f=>f.size>15*1024*1024)){status.textContent='בחרי קבצים שגודלם עד 15MB כל אחד.';return;}
-    upload.disabled=draft.disabled=publish.disabled=back.disabled=true;status.textContent='מזהה את הטקסט…';
-    try{let output='',confidence=100,hasPhoto=false;for(const f of files){
-      if(f.type==='text/plain'||/\.txt$/i.test(f.name))output+=(output?'\n\n':'')+await f.text();
-      else if(f.type.startsWith('image/')){
-       if(!window.BookiStoryPhoto)throw Error('רענני את העמוד כדי להפעיל בחירת אזור צילום.');
-       const image=await window.BookiStoryPhoto.crop(f,d);if(image===null){status.textContent='ההעלאה בוטלה. הסיפור לא השתנה.';return;}
-       const T=await loadOCR();if(!valid()||token!==uploadVersion)return;
-       worker=await T.createWorker('heb',1,{logger:()=>{}});
-       try{await worker.setParameters({preserve_interword_spaces:'1'});const result=await worker.recognize(image);hasPhoto=true;confidence=Math.min(confidence,Number(result.data.confidence)||0);output+=(output?'\n\n':'')+result.data.text;}finally{await worker.terminate();worker=null;}
-      }else throw Error('בחרי תמונה או קובץ TXT.');
+    upload.disabled=draft.disabled=publish.disabled=back.disabled=true;status.textContent='טוענת את הטקסט…';
+    try{let output='';for(const f of files){
+      if(!/\.txt$/i.test(f.name))throw Error('אפשר להעלות קובץ TXT בלבד. ממסמך Word אפשר להעתיק ולהדביק את הטקסט.');
+      output+=(output?'\n\n':'')+await f.text();
      }
      if(!valid()||token!==uploadVersion)return;
-     if(hasPhoto){output=await window.BookiStoryPhoto.review(clean(output).trim(),d,confidence);if(output===null){status.textContent='ההעלאה בוטלה. הסיפור לא השתנה.';return;}if(!valid()||token!==uploadVersion)return;}
      const combined=(text.value.trim()?text.value.trim()+'\n\n':'')+clean(output).trim();
-     if(!output.trim())throw Error('לא זוהה טקסט. נסי צילום חד יותר או הדביקי טקסט.');
+     if(!output.trim())throw Error('הקובץ ריק. בחרי קובץ טקסט אחר או הדביקי טקסט.');
      if(combined.length>20000)throw Error('הטקסט ארוך מדי. העלי סיפור קצר יותר.');
      text.value=combined;text.dispatchEvent(new Event('input'));status.textContent='הטקסט מוכן לבדיקה ולניקוד. הוא עדיין לא פורסם.';
-    }catch(e){if(valid())status.textContent=e.message||'לא הצלחתי לזהות טקסט. נסי שוב או הדביקי אותו.';}
+    }catch(e){if(valid())status.textContent=e.message||'לא הצלחתי לקרוא את הקובץ. נסי שוב או הדביקי את הטקסט.';}
     finally{upload.disabled=draft.disabled=publish.disabled=back.disabled=false;file.value='';}
    };
    actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),text,palette,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
