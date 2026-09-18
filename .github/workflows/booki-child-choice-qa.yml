@@ -55,7 +55,7 @@ jobs:
             const results=[];
             try{
               for(const viewport of [{width:390,height:844},{width:1280,height:900}]){
-                const page=await browser.newPage();await page.setViewport(viewport);
+                const page=await browser.newPage();await page.setViewport(viewport);await page.setCacheEnabled(false);
                 const errors=[],external=[];
                 page.on('pageerror',e=>errors.push(e.message));
                 await page.setRequestInterception(true);
@@ -86,6 +86,11 @@ jobs:
             }finally{await browser.close();}
           })().catch(e=>{console.error(e);process.exitCode=1;});
           NODE
+      - name: Verify existing no-login review link
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://yehuditamos.github.io/booki/child-choice-test.html > verification/published-demo.html
+          grep -q 'child-choice-demo.js' verification/published-demo.html
+          echo 'Public no-login demo URL: HTTP success; child-choice entry confirmed'
       - name: Archive exact tested public source
         if: always()
         run: |

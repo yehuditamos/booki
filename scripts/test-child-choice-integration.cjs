@@ -21,6 +21,9 @@ function fixture(options={}){
  w.startStory=async id=>{state.opens.push(id);if(state.openResult!==false)w.showScreen('screen-reader');return state.openResult;};
  w.fbMarkMessagesSeen=async(c,u,ids)=>{state.seen.push({c,u,ids:Array.from(ids)});return true;};
  w.openReadingChooser=()=>w.showScreen('screen-reader');
+ state.saved=null;state.resumes=0;
+ w._loadPausedAppStory=()=>state.saved;
+ w.resumePausedAppStory=()=>{state.resumes++;w.showScreen('screen-reader');return true;};
  w.eval(code('child-choice.js'));w.eval(code('story-recommendations.js'));
  if(options.missingHeader)w.document.querySelector('.home-header').remove();
  w.eval(code('child-choice-app.js'));
@@ -58,4 +61,14 @@ test('A stale recommendation callback cannot update another child',async()=>{
 });
 test('Changed app markup leaves legacy UI intact instead of partially mounting',()=>{
  const f=fixture({missingHeader:true});try{assert(!f.w.document.querySelector('#cc-home'));assert(!f.w.document.querySelector('#screen-choice-library'));assert.equal(f.w.document.head.querySelectorAll('style').length,0);}finally{f.close();}
+});
+
+test('Compact resume reuses the existing session and does not start a new story',async()=>{
+ const f=fixture();try{f.state.saved={storyId:'private-a',story:f.state.catalog[0],pageIndex:2};await f.enter();const b=f.w.document.querySelector('#cc-app-resume');assert(!b.hidden);await b.onclick();assert.equal(f.state.resumes,1);assert.equal(f.state.opens.length,0);assert(f.w.document.querySelector('#screen-reader').classList.contains('active'));}finally{f.close();}
+});
+test('Resume is hidden when the paused story is outside the current library',async()=>{
+ const f=fixture();try{f.state.saved={storyId:'other-class',story:story('other-class'),pageIndex:0};await f.enter();assert(f.w.document.querySelector('#cc-app-resume').hidden);assert.equal(f.state.resumes,0);}finally{f.close();}
+});
+test('A pending resume cannot follow the child into another screen or identity',async()=>{
+ const f=fixture();try{f.state.saved={storyId:'private-a',story:f.state.catalog[0],pageIndex:2};await f.enter();const d=deferred();f.state.refresh=()=>d.promise;const pending=f.w.document.querySelector('#cc-app-resume').onclick();f.w.showScreen('screen-teacher');d.resolve(true);await pending;assert.equal(f.state.resumes,0);assert(f.w.document.querySelector('#screen-teacher').classList.contains('active'));}finally{f.close();}
 });
