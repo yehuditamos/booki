@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <title>בוקי · מה מעניין אותך?</title>
 <link rel="icon" href="favicon.ico">
-<link rel="stylesheet" href="child-choice.css?v=colors-20260918">
+<link rel="stylesheet" href="child-choice.css?v=folder-markers-20260918-v2">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#faf7ec;color:#244b3d;font-family:Arial,sans-serif}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit}button:focus-visible,a:focus-visible{outline:3px solid #245d8f;outline-offset:5px}[hidden]{display:none!important}
 .demo-note{padding:10px 18px;background:#eef0e6;text-align:center;font-size:13px;color:#526351}.shell{max-width:980px;margin:auto;padding:0 24px 32px}.topbar{display:flex;align-items:center;justify-content:space-between;padding:21px 0 15px;border-bottom:1px solid #dce3d5}.brand{font-size:29px;font-weight:800;letter-spacing:-1px}.topbar span:last-child{font-size:16px;color:#5d715e}.hero{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:24px 0 28px}.hero h1{font-size:clamp(28px,4.3vw,40px);line-height:1.5;margin:0 0 6px;outline:none}.hero p{font-size:18px;margin:0;color:#5c715f;line-height:1.6}.mascot{width:112px;height:130px;object-fit:contain;flex:none}
@@ -14,6 +14,41 @@
 @media(max-width:600px){.shell{padding:0 16px 24px}.topbar{padding:16px 0 12px}.brand{font-size:26px}.hero{gap:5px;margin:20px 0 23px}.hero h1{font-size:28px}.hero p{font-size:16px;max-width:230px}.mascot{width:78px;height:105px}.folders{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px;padding-top:10px}.folder{min-height:159px;padding:12px 7px}.folder:before{width:61px}.folder-art{width:74px;height:65px;font-size:44px;margin-bottom:7px;border-radius:18px}.folder-title{font-size:18px;line-height:1.5}.folder-count{font-size:12px}.all-stories{margin-top:23px}.small-note{font-size:13px}.shelf-head h1{font-size:27px}.shelf-view .cc-grid{grid-template-columns:1fr}.cc-badge{white-space:normal}}
 @media(max-width:350px){.hero h1{font-size:25px}.mascot{width:60px}.folder-title{font-size:16px}.folder-art{font-size:39px}.shell{padding-inline:12px}}
 @media(prefers-reduced-motion:reduce){.folder{transition:none}.folder:hover{transform:none}}
+/* Folder-demo markers live with this entry point so an older cached theme cannot hide them.
+   Every marker retains its text/shape label; the colors describe text, never children. */
+.shelf-view .cc-chip[data-format="word"]{--cc-color:#F5C518}
+.shelf-view .cc-chip[data-format="sentence"]{--cc-color:#20AD57}
+.shelf-view .cc-chip[data-format="several"]{--cc-color:#2678E5}
+.shelf-view .cc-chip[data-format="paragraph"]{--cc-color:#9954D8}
+.shelf-view .cc-chip[data-format]{display:inline-flex;align-items:center;gap:9px;min-height:48px;white-space:normal;text-align:right}
+.shelf-view .cc-chip[data-format]:not([data-format="all"])::before{
+ content:'';display:block;flex:0 0 26px;width:26px;min-width:26px;height:26px;
+ box-sizing:border-box;border-radius:50%;background:var(--cc-color);border:2px solid #fff;
+ box-shadow:0 0 0 1px #526b59;opacity:1;
+}
+.shelf-view .cc-cover-seal{
+ position:absolute;display:grid;place-items:center;left:10px;top:12px;
+ width:48px;min-width:48px;height:48px;min-height:48px;box-sizing:border-box;
+ border-radius:50%;border:3px solid #fff;background:var(--cc-color);color:#18392d;
+ box-shadow:0 0 0 1px #526b59,0 3px 8px #18392d26;font-size:17px;z-index:2;opacity:1;
+}
+.shelf-view .cc-badge,.cc-dialog .cc-badge{
+ display:inline-flex;align-items:center;gap:9px;max-width:100%;padding:7px 10px;
+ border:1px solid #c9d6cc;border-radius:14px;background:#fff;color:#284637;
+ font-size:15px;line-height:1.5;white-space:normal;
+}
+.shelf-view .cc-badge::before,.cc-dialog .cc-badge::before{
+ content:'';display:block;flex:0 0 30px;width:30px;min-width:30px;height:30px;
+ box-sizing:border-box;border-radius:50%;border:2px solid #fff;
+ background:var(--cc-color);box-shadow:0 0 0 1px #526b59;opacity:1;
+}
+@media(max-width:600px){
+ .shelf-view .cc-card-copy{padding:14px;min-width:0}
+ .shelf-view .cc-cover-seal{width:46px;min-width:46px;height:46px;min-height:46px;font-size:16px}
+ .shelf-view .cc-badge{font-size:14px;gap:8px;padding:6px 8px}
+ .shelf-view .cc-badge::before{flex-basis:28px;width:28px;min-width:28px;height:28px}
+ .shelf-view .cc-chips{gap:9px}
+}
 </style>
 </head>
 <body>
@@ -55,7 +90,7 @@
 <script src="content/stories-one-word.js"></script>
 <script src="content/stories-bookworms.js"></script>
 <script src="stories.js"></script>
-<script src="child-choice.js?v=colors-20260918"></script>
+<script src="child-choice.js?v=folder-markers-20260918-v2"></script>
 <script>
 /* Standalone public-catalog demo. No auth, analytics, database, microphone or persistent storage.
    Topics describe interests only. Source story text and production UI are not modified. */
