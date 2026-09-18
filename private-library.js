@@ -130,7 +130,10 @@
    heading.oninput=text.oninput=()=>{dirty=true;preview.textContent=text.value;};
    const file=el('input');file.type='file';file.accept='image/*,.txt,text/plain';file.multiple=true;file.hidden=true;
    const upload=btn('📷 צילום או העלאת סיפור',()=>file.click());upload.className='private-library-upload';
-   const info=el('p','תמונה או קובץ טקסט (TXT). אפשר גם להדביק טקסט מנוקד. לאחר הזיהוי בדקי ותקני את הטקסט.');
+   const info=el('div');info.className='private-library-text-tip';
+   const badge=el('strong','מומלץ');badge.className='private-library-recommended';
+   const paste=btn('כתיבה או הדבקת טקסט',()=>{text.focus();text.scrollIntoView?.({block:'center',behavior:'smooth'});});
+   info.append(badge,paste,el('p','העתיקי מהמסמך והדביקי בתוכן הסיפור — הטקסט והניקוד נשמרים כפי שהועתקו. אפשר גם להעלות תמונה או קובץ TXT.'));
    const palette=el('div');palette.className='private-library-niqud';palette.append(el('p','ניקוד: מקמי את הסמן אחרי אות ולחצי על הסימן.'));
    let selected=text;
    for(const input of [heading,text])input.onfocus=()=>{selected=input;};

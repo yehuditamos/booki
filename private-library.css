@@ -9,3 +9,5 @@
 .private-library-dialog :focus-visible{outline:3px solid #26714f;outline-offset:2px}
 
 .story-photo-dialog{max-width:650px}.story-photo-canvas{display:block;max-width:100%;max-height:52dvh;width:auto;height:auto;margin:auto;touch-action:none;cursor:crosshair;border:1px solid #9abca5}
+
+.private-library-text-tip{background:#edf7ef;border:1px solid #9abca5;border-radius:12px;padding:12px;margin:12px 0}.private-library-recommended{display:inline-block;background:#206043;color:#fff;padding:3px 12px;border-radius:20px}.private-library-text-tip p{margin:6px 0}
