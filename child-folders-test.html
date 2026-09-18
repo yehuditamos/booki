@@ -68,6 +68,9 @@
  .folder-format-dot{flex-basis:30px;width:30px;height:30px;font-size:13px}
 }
 @media(max-width:350px){.folder-formats{gap:4px}.folder-format-dot{flex-basis:26px;width:26px;height:26px;font-size:12px}}
+/* Topic cards: remove the paper-folder tab; preserve content and format colors. */
+.folder{border-radius:24px}
+.folder::before{content:none;display:none}
 </style>
 </head>
 <body>
