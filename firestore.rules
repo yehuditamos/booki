@@ -318,6 +318,46 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
+    // Account-owned story libraries. No public reads, including direct URLs.
+    function libraryMember(teacherUid, access) {
+      let club = get(/databases/$(database)/documents/clubs/$(access.clubId)).data;
+      let member = get(/databases/$(database)/documents/clubs/$(access.clubId)/memberships/$(access.memberId)).data;
+      return isSignedIn() && club.teacherUid == teacherUid
+        && club.get('libraryMode', 'public') in ['private', 'both']
+        && member.get('status', 'active') != 'left'
+        && (member.get('claimedByUid', null) == request.auth.uid || access.memberId == request.auth.uid);
+    }
+    function canReadTeacherLibrary(teacherUid) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/teacherLibraryAccess/$(teacherUid)/readers/$(request.auth.uid))
+        && libraryMember(teacherUid, get(/databases/$(database)/documents/teacherLibraryAccess/$(teacherUid)/readers/$(request.auth.uid)).data);
+    }
+    match /libraryConfig/availability {
+      allow read: if isTeacher();
+      allow write: if false;
+    }
+    match /teacherLibraryAccess/{teacherUid}/readers/{readerUid} {
+      allow read: if isMe(readerUid);
+      allow create, update: if isMe(readerUid)
+        && request.resource.data.keys().hasOnly(['clubId', 'memberId'])
+        && request.resource.data.clubId is string && request.resource.data.memberId is string
+        && libraryMember(teacherUid, request.resource.data);
+      allow delete: if isMe(readerUid) || (isTeacher() && isMe(teacherUid));
+    }
+    match /teacherLibraries/{teacherUid}/stories/{storyId} {
+      allow read: if (isTeacher() && isMe(teacherUid))
+        || (resource.data.status == 'published' && canReadTeacherLibrary(teacherUid));
+      allow create, update: if isTeacher() && isMe(teacherUid)
+        && request.resource.data.keys().hasOnly(['teacherUid','title','text','status','createdAt','updatedAt'])
+        && request.resource.data.teacherUid == teacherUid
+        && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+        && !request.resource.data.title.matches('.*[<>].*')
+        && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 20000
+        && request.resource.data.status in ['draft','published']
+        && request.resource.data.createdAt is string && request.resource.data.updatedAt is string;
+      allow delete: if isTeacher() && isMe(teacherUid);
+    }
+
     // ─── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if true;

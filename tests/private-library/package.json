@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "node catalog.cjs && node editor.cjs && firebase emulators:exec --only firestore --project demo-booki-private --config firebase.json \"node rules.cjs\""
+  },
+  "devDependencies": {
+    "firebase": "12.19.0",
+    "firebase-tools": "13.35.1",
+    "@firebase/rules-unit-testing": "5.0.2",
+    "jsdom": "30.1.0"
+  }
+}

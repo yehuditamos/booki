@@ -1,0 +1,10 @@
+const {JSDOM}=require('jsdom'),fs=require('fs'),assert=require('assert/strict');
+const w=new JSDOM('',{runScripts:'outside-only'}).window;
+w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.dispatchEvent(new w.Event('close'))};w.confirm=()=>true;
+let saved=[],mode='public';const storyRef={set:async d=>saved.push(d)};
+const clubDoc={id:'c',data:()=>({teacherUid:'t',name:'כיתה א',libraryMode:mode}),ref:{update:async v=>{mode=v.libraryMode}}};
+w.firebase={auth:()=>({currentUser:{uid:'t',isAnonymous:false}})};
+w.db={collection:name=>({doc:()=>({get:async()=>({exists:false}),collection:()=>({doc:()=>storyRef,get:async()=>({docs:saved.length?[{id:'s',data:()=>saved.at(-1),ref:storyRef}]:[]})})}),where:()=>({get:async()=>({docs:[clubDoc]})})})};
+w.eval(fs.readFileSync(__dirname+'/../../private-library.js','utf8'));
+const flush=()=>new Promise(r=>setTimeout(r,0));const click=t=>{const b=[...w.document.querySelectorAll('button')].find(b=>b.textContent.includes(t));assert(b,t);b.click();};
+(async()=>{await w.BookiPrivateLibrary.open();click('הוספת סיפור');const title=w.document.querySelector('input[aria-label="שם הסיפור"]'),text=w.document.querySelector('textarea');title.value='סיפור שלי';text.value='אב בא';text.focus();text.setSelectionRange(1,1);w.document.querySelector('button[aria-label="קמץ"]').click();assert.equal(text.value,'אָב בא');assert(w.document.querySelector('pre').textContent.includes('אָב'));click('שמירת טיוטה');await flush();assert.equal(saved[0].status,'draft');click('עריכה וניקוד');click('שמירה ופרסום');await flush();assert.equal(saved[1].status,'published');const select=w.document.querySelector('select');select.value='private';select.dispatchEvent(new w.Event('change'));await flush();assert.equal(mode,'private');console.log('PASS editor, niqqud insertion and preview, draft/publish, account story persistence, class mode selection');})().catch(e=>{console.error(e);process.exitCode=1});

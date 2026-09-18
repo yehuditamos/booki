@@ -813,7 +813,10 @@ async function selectProfile(userId, clubIdHint) {
   }
 }
 
-function _enterPersonalHome(userId, profile) {
+async function _enterPersonalHome(userId, profile) {
+  const libraryEntry = window._privateLibraryHomeRequest = (window._privateLibraryHomeRequest || 0) + 1;
+  if (window.BookiPrivateLibrary) await window.BookiPrivateLibrary.prepare(_activeClubId, userId);
+  if (libraryEntry !== window._privateLibraryHomeRequest) return;
   // לאחר שהילד בחר את שמו, הקישור מילא את תפקידו. מנקים את פרמטר המועדון
   // כדי שרענון הבא יחזיר לאותו ילד ולא ידרוש בחירה מחדש.
   const entryParams = new URLSearchParams(window.location.search);
@@ -2191,3 +2194,4 @@ async function _recordReaderEntry(userId,clubId){
   await ref.update({'cachedStats.lastEnteredAt':new Date().toISOString()});
  }catch(e){console.warn('[reader-entry] Could not save activity:',e.code||'unavailable');}
 }
+

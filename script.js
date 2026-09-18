@@ -331,7 +331,8 @@ function _isStoryNew(story, now = Date.now()) {
   return Number.isFinite(until) && now < until;
 }
 
-function showLibrary() {
+async function showLibrary() {
+  if (window.BookiPrivateLibrary) await window.BookiPrivateLibrary.refresh();
   showScreen('screen-library');
   const forYou = document.getElementById('for-you-section'); if (forYou) forYou.style.display = 'none';
   showLibraryCategories();
@@ -343,12 +344,14 @@ function showLibraryCategories() {
   document.getElementById('library-screen-title').textContent = 'ספריית הסיפורים';
   document.getElementById('library-category-view').style.display = '';
   document.getElementById('library-story-view').style.display = 'none';
+  if (window.BookiPrivateLibrary?.privateCategories()) return;
   const stories = typeof getAllStories === 'function' ? getAllStories() : [];
   document.getElementById('library-category-grid').innerHTML = BOOKI_LIBRARY_SHELVES.map(shelf => {
     const count = stories.filter(s => _storyBelongsToShelf(s, shelf)).length;
     const empty = count === 0;
     return `<button class="library-category-card library-category-${shelf.id}${empty ? ' library-category-coming-soon' : ''}" ${empty ? 'disabled aria-disabled="true"' : `onclick="openLibraryShelf('${shelf.id}')"`}><span class="library-category-emoji">${shelf.emoji}</span>${empty ? '<span class="library-coming-soon-label">בקרוב</span>' : ''}<span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${empty ? 'סיפורים חדשים בדרך' : `${count} סיפורים ←`}</b></span></button>`;
   }).join('');
+  window.BookiPrivateLibrary?.appendPrivateCategory();
 }
 
 function openLibraryShelf(id) {
@@ -375,6 +378,7 @@ function filterLibrary(filter, resetCount = true) {
     let stories = allStories;
     const shelf = BOOKI_LIBRARY_SHELVES.find(x => x.id === filter);
     if (shelf) stories = stories.filter(s => _storyBelongsToShelf(s, shelf));
+    else if (filter === 'teacher-private') stories = stories.filter(s => s.libraryId === 'teacher-private');
     else if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
     else if (filter === 'short') stories = stories.filter(s => (s.pages || []).length <= 7);
     else if (filter === 'recommended') {
@@ -688,10 +692,11 @@ function _storyNiqudSummary(history = []) {
   };
 }
 
-function startStory(storyId) {
+async function startStory(storyId) {
+  if (window.BookiPrivateLibrary && !await window.BookiPrivateLibrary.refresh()) { alert('לא ניתן לטעון את ספריית הכיתה. בדקו חיבור ונסו שוב.'); return false; }
   _clearPausedAppStory();
   currentStory = getStoryById(storyId);
-  if (!currentStory) return;
+  if (!currentStory) { alert('הסיפור אינו זמין בספרייה שהמורה בחרה.'); return false; }
   currentPageIndex = 0;
   if (typeof track === 'function') {
     track('story_selected',  { storyId, storyTitle: currentStory.title });
@@ -702,6 +707,7 @@ function startStory(storyId) {
   _storyNiqudSession = _newStoryNiqudSession(_loadStoryNiqudPreference());
   renderReaderPage();
   openNiqudModeChooser();
+  return true;
 }
 
 // ─── כפתור ביטחון: הפסקה בטוחה והמשך מאותו עמוד ───────────────────
@@ -1641,5 +1647,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else showScreen('screen-splash');
   }
 });
+
 
 

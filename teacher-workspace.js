@@ -209,6 +209,7 @@
     const secondary = el('div', undefined, 'tw-action-secondary-group'); secondary.append(el('p', 'לרשותך בכל שלב', 'tw-eyebrow'));
     const pair = el('div', undefined, 'tw-secondary-pair');
     pair.append(action('📚', 'ספריית בוקי', 'להכיר את הסיפורים שהילדים קוראים', openLibrary), action('💬', 'עזרי לנו לשפר את בוקי', 'הצעות מקצועיות ובקשות מיוחדות', () => openFeedback())); secondary.append(pair);
+    secondary.append(action('📖', 'הספרייה הפרטית שלי', 'העלאת סיפורים וניקוד · בחירת הספרייה לכיתה', () => window.BookiPrivateLibrary?.open()));
     actions.append(primary, secondary); body.prepend(actions);
     const clubNotice = document.querySelector('#screen-teacher-club .teacher-management-only');
     if (clubNotice) clubNotice.replaceWith(btn('📚 ספריית בוקי — לעיון בתכנים', openLibrary, 'tw-text-button'));
@@ -252,3 +253,4 @@
   window.showTeacherFeedback = openFeedback;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true }); else install();
 })();
+
