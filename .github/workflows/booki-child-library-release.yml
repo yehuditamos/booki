@@ -1,0 +1,58 @@
+name: Booki Child Library Release QA
+on:
+  push:
+    branches: ['release/child-library-20260918']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release-check:
+    if: github.ref == 'refs/heads/release/child-library-20260918'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/child-library-20260918
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Integrate approved UI into the maintained production entry
+        run: node scripts/enable-child-library.cjs
+      - name: Syntax and existing reading regressions
+        run: |
+          node --check script.js
+          node --check child-library.js
+          node --check child-library-topics.js
+          node scripts/test-reading-safety.js
+          node scripts/test-omri-word-matcher.js
+          node scripts/test-booki-local-listening.js
+          node scripts/test-release-flows.js
+          git diff --exit-code cd87c67346d8d1c2a6dbce9be9e7c972c7d5e876 -- firestore.rules firebase-clubs.js firebase-messages.js private-library.js story-recommendations.js teacher-workspace.js routing.js content
+      - name: Install browser test driver
+        run: python -m pip install playwright==1.57.0
+      - name: Native child journeys with isolated synthetic data
+        run: |
+          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium)"
+          python scripts/test-child-library-browser.py
+      - name: Save tested integration on release branch only
+        run: |
+          git config user.name 'Booki Release'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html script.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Enable approved child library in production entry [cache-bust-done]'
+            git push origin HEAD:refs/heads/release/child-library-20260918
+          fi
+          git rev-parse HEAD > verification/tested-commit.txt
+          git diff --stat cd87c67346d8d1c2a6dbce9be9e7c972c7d5e876 HEAD > verification/release-diff.txt
+          git archive --format=tar HEAD > verification/tested-source.tar
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: child-library-production-review
+          path: verification/
+          retention-days: 3
