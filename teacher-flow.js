@@ -186,7 +186,7 @@
     if (!t || t.uid !== teacher()?.uid) { showTeacherAuth('login'); return; }
     window._currentTeacher = t;
     const name = $('td-teacher-name'); if (name) name.textContent = t.name || t.email;
-    const heading = document.querySelector('#screen-teacher-dashboard h2'); if (heading) heading.textContent = t.name || 'המועדונים שלי';
+    const heading = document.querySelector('#screen-teacher-dashboard h2'); if (heading) heading.textContent = t.name ? 'היי, ' + t.name : 'טוב לראות אותך';
     const list = $('td-clubs-list');
     if (list) { list.replaceChildren(element('p', 'טוען את המועדונים שלך…', 'td-loading')); list.setAttribute('aria-busy', 'true'); }
     setNavVisible(false); showScreen('screen-teacher-dashboard');

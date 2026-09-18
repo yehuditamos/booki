@@ -102,7 +102,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherFlow() {
   if (document.querySelector('script[data-booki-teacher-flow]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-flow.js?v=20260917-recommend';
+  s.src = 'teacher-flow.js?v=20260918-teacher-home';
   s.async = false;
   s.dataset.bookiTeacherFlow = '1';
   s.onerror = () => console.warn('[booki] teacher flow extension did not load');
@@ -113,7 +113,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherWorkspace() {
   if (document.querySelector('script[data-booki-teacher-workspace]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-workspace.js?v=20260918-private-library';
+  s.src = 'teacher-workspace.js?v=20260918-teacher-home';
   s.async = false;
   s.dataset.bookiTeacherWorkspace = '1';
   s.onerror = () => console.warn('[booki] teacher workspace did not load');
@@ -333,7 +333,6 @@ window.submitInitialSetup = submitInitialSetup;
     return true;
   };
 })();
-
 
 
 
