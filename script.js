@@ -144,6 +144,7 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
+  if (window.BookiChildLibrary) window.BookiChildLibrary.onScreenChange(id);
   _handleAppReaderScreenChange(id);
   if (id !== 'screen-reader' && window.BookiLocalListening) window.BookiLocalListening.stop();
   window.scrollTo(0, 0);
@@ -332,6 +333,7 @@ function _isStoryNew(story, now = Date.now()) {
 }
 
 async function showLibrary() {
+  if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.open();
   if (window.BookiPrivateLibrary) await window.BookiPrivateLibrary.refresh();
   showScreen('screen-library');
   const forYou = document.getElementById('for-you-section'); if (forYou) forYou.style.display = 'none';
@@ -339,6 +341,7 @@ async function showLibrary() {
 }
 
 function showLibraryCategories() {
+  if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.folders();
   _libraryFilter = null; _libraryQuery = ''; _libraryVisibleCount = 6;
   const input = document.getElementById('library-search-input'); if (input) input.value = '';
   document.getElementById('library-screen-title').textContent = 'ספריית הסיפורים';
@@ -365,6 +368,7 @@ function openLibraryShelf(id) {
 }
 
 function libraryGoBack() {
+  if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.back();
   const categoryView = document.getElementById('library-category-view');
   if (categoryView && categoryView.style.display === 'none') showLibraryCategories();
   else showScreen('screen-main');
@@ -692,8 +696,15 @@ function _storyNiqudSummary(history = []) {
   };
 }
 
-async function startStory(storyId) {
+async function startStory(storyId, options = {}) {
+  const readerKey = () => {
+    const r = typeof getActiveReader === 'function' ? getActiveReader() : null;
+    const uid = typeof firebase !== 'undefined' ? firebase.auth().currentUser?.uid : null;
+    return JSON.stringify([r?.clubId ?? null, r?.userId ?? null, uid ?? null]);
+  };
+  const expectedReader = readerKey();
   if (window.BookiPrivateLibrary && !await window.BookiPrivateLibrary.refresh()) { alert('לא ניתן לטעון את ספריית הכיתה. בדקו חיבור ונסו שוב.'); return false; }
+  if (readerKey() !== expectedReader || (typeof options.isCurrent === 'function' && !options.isCurrent())) return false;
   _clearPausedAppStory();
   currentStory = getStoryById(storyId);
   if (!currentStory) { alert('הסיפור אינו זמין בספרייה שהמורה בחרה.'); return false; }
