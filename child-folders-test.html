@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>בוקי · מה מעניין אותך?</title>
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="child-choice.css?v=colors-20260918">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#faf7ec;color:#244b3d;font-family:Arial,sans-serif}button,a{-webkit-tap-highlight-color:transparent}button{font:inherit}button:focus-visible,a:focus-visible{outline:3px solid #245d8f;outline-offset:5px}[hidden]{display:none!important}
+.demo-note{padding:10px 18px;background:#eef0e6;text-align:center;font-size:13px;color:#526351}.shell{max-width:980px;margin:auto;padding:0 24px 32px}.topbar{display:flex;align-items:center;justify-content:space-between;padding:21px 0 15px;border-bottom:1px solid #dce3d5}.brand{font-size:29px;font-weight:800;letter-spacing:-1px}.topbar span:last-child{font-size:16px;color:#5d715e}.hero{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:24px 0 28px}.hero h1{font-size:clamp(28px,4.3vw,40px);line-height:1.5;margin:0 0 6px;outline:none}.hero p{font-size:18px;margin:0;color:#5c715f;line-height:1.6}.mascot{width:112px;height:130px;object-fit:contain;flex:none}
+.folders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 22px;padding-top:14px}.folder{position:relative;isolation:isolate;border:1px solid #d6ddcd;border-radius:8px 24px 24px 24px;background:#fffef9;box-shadow:0 5px 0 #ede9db,0 10px 22px #2b493508;min-height:186px;padding:18px 12px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:#244b3d;transition:transform .16s,box-shadow .16s}.folder:before{content:'';position:absolute;top:-13px;right:-1px;width:78px;height:20px;border:1px solid #d6ddcd;border-bottom:0;border-radius:13px 13px 0 0;background:#fffef9;z-index:-1}.folder:hover{transform:translateY(-4px);box-shadow:0 5px 0 #e4e3d5,0 13px 25px #2b493514}.folder-art{display:grid;place-items:center;width:98px;height:90px;border-radius:24px;background:#f4f2e9;font-size:56px;line-height:1;transform:rotate(-4deg);margin:0 0 12px}.folder:nth-child(even) .folder-art{transform:rotate(4deg)}.folder-title{font-size:22px;font-weight:bold;line-height:1.6;text-align:center}.folder-count{font-size:13px;color:#59705c;margin-top:2px}.all-stories{display:block;margin:28px auto 0;min-width:195px}.small-note{text-align:center;color:#5d715e;font-size:14px;line-height:1.7;margin:20px 0 0}.back{margin-top:20px}.shelf-head{margin:22px 0 10px}.shelf-head h1{font-size:30px;line-height:1.5;margin:12px 0 2px;outline:none}.shelf-head p{font-size:17px;color:#5d715e;margin:5px 0}.shelf-icon{font-size:36px;margin-left:10px}.shelf-view .cc-root{padding:0 0 24px}.shelf-view .cc-heading,.shelf-view .cc-suggestions,.shelf-view .cc-actions{display:none}.shelf-view .cc-browse{border-top:0;padding-top:0}.shelf-view .cc-browse>h3:first-child,.shelf-view .cc-chips[aria-label="בחירה לפי נושא"]{display:none}.shelf-view .cc-browse>h3{font-size:17px;margin-top:18px}.shelf-view .cc-chip{font-size:14px}.shelf-view .cc-chips{gap:7px;margin:12px 0 18px}.demo-reader{max-width:650px;margin:auto;padding-top:20px}.demo-reader h1{font-size:28px;line-height:1.5;outline:none}.demo-reader .cc-sample{margin:18px 0}.demo-reader nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:15px}.reader-support{display:flex;gap:10px;flex-wrap:wrap}.resume{display:block;max-width:100%;margin:20px 0 10px;white-space:normal}.cc-dialog{box-sizing:border-box;max-width:calc(100vw - 24px)}.cc-card-copy{min-width:0}
+@media(max-width:600px){.shell{padding:0 16px 24px}.topbar{padding:16px 0 12px}.brand{font-size:26px}.hero{gap:5px;margin:20px 0 23px}.hero h1{font-size:28px}.hero p{font-size:16px;max-width:230px}.mascot{width:78px;height:105px}.folders{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px;padding-top:10px}.folder{min-height:159px;padding:12px 7px}.folder:before{width:61px}.folder-art{width:74px;height:65px;font-size:44px;margin-bottom:7px;border-radius:18px}.folder-title{font-size:18px;line-height:1.5}.folder-count{font-size:12px}.all-stories{margin-top:23px}.small-note{font-size:13px}.shelf-head h1{font-size:27px}.shelf-view .cc-grid{grid-template-columns:1fr}.cc-badge{white-space:normal}}
+@media(max-width:350px){.hero h1{font-size:25px}.mascot{width:60px}.folder-title{font-size:16px}.folder-art{font-size:39px}.shell{padding-inline:12px}}
+@media(prefers-reduced-motion:reduce){.folder{transition:none}.folder:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="demo-note">דמו לבחירת נושאים · ללא התחברות · הקריאה כאן לא נשמרת</div>
+<div class="shell">
+<header class="topbar"><span class="brand">בּוֹקִי</span><span>הַסִּפְרִיָּה שֶׁלִּי 📚</span></header>
+<button id="resume" class="cc-secondary resume" type="button" hidden></button>
+<main>
+<section id="folders-view" aria-labelledby="folders-title">
+<div class="hero"><div><h1 id="folders-title" tabindex="-1">עַל מָה בָּא לְךָ לִקְרֹא?</h1><p>בוחרים נושא שמסקרן אותך,<br>ומוצאים סיפור בתוכו.</p></div><img class="mascot" src="assets/booki/core/states/booki-welcome.png" width="112" height="130" alt="בוקי מחייך ומנופף"></div>
+<div id="folders" class="folders"></div>
+<button id="all-stories" type="button" class="cc-secondary all-stories">לְכָל הַסִּפּוּרִים ←</button>
+<p class="small-note">אפשר לבחור כל נושא. תמיד אפשר לחזור ולבחור משהו אחר.</p>
+</section>
+<section id="shelf-view" class="shelf-view" hidden aria-labelledby="shelf-title">
+<button id="back-folders" type="button" class="cc-secondary back">→ לכל הנושאים</button>
+<header class="shelf-head"><h1 id="shelf-title" tabindex="-1"></h1><p>איזה סיפור מסקרן אותך? לוחצים ומציצים.</p></header>
+<div id="choice"></div>
+</section>
+<section id="demo-reader" class="demo-reader" hidden aria-label="קוראים סיפור לדוגמה"></section>
+</main>
+<noscript><p>כדי לפתוח את התיקיות צריך להפעיל JavaScript בדפדפן.</p></noscript>
+</div>
+<script src="content/stories-familiar.js"></script>
+<script src="content/stories-original.js"></script>
+<script src="content/stories-long.js"></script>
+<script src="content/stories-tanakh.js"></script>
+<script src="content/stories-folk.js"></script>
+<script src="content/stories-holidays.js"></script>
+<script src="content/stories-school.js"></script>
+<script src="content/stories-chazal.js"></script>
+<script src="content/stories-science.js"></script>
+<script src="content/stories-animals.js"></script>
+<script src="content/stories-history.js"></script>
+<script src="content/stories-adventure.js"></script>
+<script src="content/stories-booki.js"></script>
+<script src="content/stories-reading.js"></script>
+<script src="content/stories-beginner.js"></script>
+<script src="content/stories-one-word.js"></script>
+<script src="content/stories-bookworms.js"></script>
+<script src="stories.js"></script>
+<script src="child-choice.js?v=colors-20260918"></script>
+<script>
+/* Standalone public-catalog demo. No auth, analytics, database, microphone or persistent storage.
+   Topics describe interests only. Source story text and production UI are not modified. */
+(function(){
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
+ const button=(text,fn,cls='cc-secondary')=>{const b=el('button',text,cls);b.type='button';b.onclick=fn;return b;};
+ const plain=s=>String(s||'').normalize('NFC').replace(/[\u0591-\u05BD\u05BF-\u05C2\u05C4-\u05C5\u05C7]/g,'');
+ const tags=s=>plain((s.tags||[]).join(' '));
+ if(!window.BookiChoice||typeof getAllStories!=='function'){
+  $('folders').append(el('p','הסיפורים לא נטענו. כדאי לרענן את הדף.'),button('רענון',()=>location.reload()));return;
+ }
+ const all=getAllStories().filter(s=>s.id!=null&&BookiChoice.profile(s).format);
+ // Curated topic rules for this demo; no inference about an individual child's ability.
+ const topics=[
+  {id:'animals',label:'חַיּוֹת וְטֶבַע',icon:'🦊',match:s=>s.libraryId==='animals'||/חיות|טבע|יער|ירקות|חתול/.test(tags(s))||['familiar-fisherman-goldfish','familiar-frog-prince','long-bear-birthday','long-puppy-learns-read'].includes(s.id)},
+  {id:'friends',label:'חֲבֵרִים וּמִשְׁפָּחָה',icon:'🏡',match:s=>/חבר|משפחה|שייכות|אח ואחות|אהבת אם|אחים/.test(tags(s))||['one-word','back-to-school'].includes(s.libraryId)||['beginner-i-eat','beginner-letter-alef'].includes(s.id)},
+  {id:'imagine',label:'דִּמְיוֹן וְהַרְפַּתְקָאוֹת',icon:'⛵',match:s=>['familiar','adventure','booki'].includes(s.libraryId)||/הרפתקה|תעלומה|מסתורין|פנטזיה|קסם|חלומות/.test(tags(s))},
+  {id:'discover',label:'מְגַלִּים דְּבָרִים',icon:'🔭',match:s=>['science','history'].includes(s.libraryId)||/שאלות|חלל|המצאות|יצירה/.test(tags(s))||s.id==='bookworms-fourth-grade-contest'},
+  {id:'celebrate',label:'חַגִּים וַחֲגִיגוֹת',icon:'🍎',match:s=>s.libraryId==='holidays'||s.id==='long-bear-birthday'},
+  {id:'tanakh',label:'סִפּוּרֵי תַּנַ״ךְ',icon:'📜',match:s=>s.libraryId==='tanakh'}
+ ];
+ const everything={id:'all',label:'כָּל הַסִּפּוּרִים',icon:'📚',match:()=>true};
+ let active=everything,chooser=null,story=null,page=0,paused=null,withNiqqud=true,lastFolder='all',returnFocus=null;
+ // Mix available text formats within every topic; never label or gate the child.
+ const visible=()=>{
+  const items=all.filter(active.match),queues=BookiChoice.formats.map(f=>items.filter(s=>BookiChoice.profile(s).format.id===f.id));
+  const mixed=[];while(queues.some(q=>q.length))for(const q of queues)if(q.length)mixed.push(q.shift());
+  return mixed;
+ };
+ const navigate=hash=>{if(location.hash===hash)route();else location.hash=hash;};
+ function display(id){
+  for(const v of ['folders-view','shelf-view','demo-reader'])$(v).hidden=v!==id;
+  $('resume').hidden=!paused||id==='demo-reader';
+  if(paused)$('resume').textContent='ממשיכים בסיפור: '+all.find(s=>String(s.id)===String(paused.id))?.title;
+  window.scrollTo(0,0);
+ }
+ function folders(){
+  chooser?.destroy();chooser=null;story=null;display('folders-view');
+  const target=returnFocus?document.querySelector('[data-folder="'+returnFocus+'"]'):$('folders-title');
+  target?.focus({preventScroll:true});
+ }
+ function shelf(id){
+  active=topics.find(t=>t.id===id)||everything;lastFolder=active.id;returnFocus=active.id;
+  chooser?.destroy();chooser=null;story=null;
+  $('shelf-title').textContent=active.icon+' '+active.label;display('shelf-view');
+  chooser=BookiChoice.mount($('choice'),{browse:true,catalog:visible,context:()=>active.id,open:async id=>{
+   if(!visible().some(s=>String(s.id)===String(id)))return false;
+   page=0;withNiqqud=true;navigate('#'+active.id+'/read/'+encodeURIComponent(String(id)));return true;
+  },refresh:()=>shelf(active.id)});
+  $('shelf-title').focus({preventScroll:true});
+ }
+ function drawReader(){
+  display('demo-reader');const reader=$('demo-reader');reader.replaceChildren();
+  reader.append(button('→ לסיפורים בנושא הזה',()=>navigate('#'+lastFolder)));
+  const heading=el('h1',story.title);heading.tabIndex=-1;reader.append(heading,el('p','עמוד '+(page+1)+' מתוך '+story.pages.length,'cc-count'));
+  const sample=el('div',null,'cc-sample'),p=story.pages[page];
+  if(p.illustration)sample.append(el('div',p.illustration,'cc-sample-art'));
+  sample.append(el('p',withNiqqud?p.text:plain(p.text)));reader.append(sample);
+  const nav=el('nav');nav.setAttribute('aria-label','עמודי הסיפור');
+  const prev=button('→ העמוד הקודם',()=>{page--;drawReader();});prev.disabled=page===0;
+  nav.append(prev,button(page===story.pages.length-1?'סיימנו ✨':'לעמוד הבא ←',()=>{if(page<story.pages.length-1){page++;drawReader();}else finish();},'cc-primary'));
+  const support=el('div',null,'reader-support');support.append(button(withNiqqud?'להסתיר ניקוד':'להציג ניקוד',()=>{withNiqqud=!withNiqqud;drawReader();}),button('הפסקה — נמשיך אחר כך',()=>{paused={id:story.id,topic:lastFolder,page,withNiqqud};navigate('#'+lastFolder);}));
+  reader.append(nav,support);heading.focus({preventScroll:true});
+ }
+ function finish(){
+  if(paused?.id===story.id)paused=null;
+  $('demo-reader').replaceChildren(el('h1','איזה כיף שקראנו! ✨'),button('לעוד סיפור בנושא הזה',()=>navigate('#'+lastFolder),'cc-primary'),button('לבחור נושא אחר',()=>navigate('#topics')));window.scrollTo(0,0);
+ }
+ function route(){
+  // Hashes only control this public demo; no child/class identifiers are used.
+  const parts=location.hash.slice(1).split('/');
+  document.querySelectorAll('.cc-dialog').forEach(d=>d.close());
+  if(!parts[0]||parts[0]==='topics'){folders();return;}
+  active=topics.find(t=>t.id===parts[0])||everything;lastFolder=active.id;
+  if(parts[1]==='read'){
+   let id;try{id=decodeURIComponent(parts[2]||'');}catch(_){shelf(active.id);return;}
+   story=visible().find(s=>String(s.id)===id);if(!story){shelf(active.id);return;}
+   page=Math.max(0,Math.min(page,story.pages.length-1));drawReader();return;
+  }
+  shelf(active.id);
+ }
+ for(const t of topics){
+  const count=all.filter(t.match).length;if(!count)continue;
+  const b=button('',()=>navigate('#'+t.id),'folder');b.dataset.folder=t.id;
+  const art=el('span',t.icon,'folder-art');art.setAttribute('aria-hidden','true');
+  b.append(art,el('span',t.label,'folder-title'),el('span',count+' סיפורים','folder-count'));$('folders').append(b);
+ }
+ $('all-stories').dataset.folder='all';$('all-stories').onclick=()=>navigate('#all');
+ $('back-folders').onclick=()=>navigate('#topics');
+ $('resume').onclick=()=>{if(!paused)return;page=paused.page;withNiqqud=paused.withNiqqud;navigate('#'+paused.topic+'/read/'+encodeURIComponent(String(paused.id)));};
+ window.addEventListener('hashchange',route);route();
+})();
+</script>
+</body>
+</html>
