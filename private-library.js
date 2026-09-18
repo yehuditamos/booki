@@ -9,6 +9,35 @@
  const teacher=()=>{const a=auth();return a&&!a.isAnonymous?a:null;};
  const ref=uid=>window.db.collection('teacherLibraries').doc(uid).collection('stories');
  let state={clubId:null,userId:null,mode:'loading',items:[]},version=0,dialog=null;
+ const MODE_COPY={
+  public:{title:'סיפורי בוקי בלבד',note:'הסיפורים שכתבת שמורים אצלך, אבל כרגע אינם מוצגים לילדים.'},
+  private:{title:'הסיפורים שלי בלבד',note:'הילדים רואים את הסיפורים שפרסמת בספרייה שלך.'},
+  both:{title:'סיפורי בוקי + הסיפורים שלי',note:'הילדים רואים גם את סיפורי בוקי וגם את הסיפורים שפרסמת.'}
+ };
+ function ensureTeacherLibraryStyles(){
+  if(document.getElementById('booki-private-library-status-styles'))return;
+  const style=el('style');style.id='booki-private-library-status-styles';style.textContent=`
+   .private-library-dialog .pl-intro{margin:0 0 12px;line-height:1.55;color:#365445}
+   .private-library-dialog .pl-add{width:100%;margin:4px 0 18px;padding:12px 16px;border-radius:14px}
+   .private-library-dialog .pl-section{margin:18px 0 22px}
+   .private-library-dialog .pl-section>h3{margin:0 0 10px}
+   .private-library-dialog .pl-mode-card{border:2px solid #c6d9cc;background:#f7fbf8;border-radius:18px;padding:15px;margin:10px 0}
+   .private-library-dialog .pl-mode-club{font-size:.92rem;font-weight:700;color:#587064;margin:0 0 5px}
+   .private-library-dialog .pl-mode-label{font-size:.92rem;margin:0;color:#587064}
+   .private-library-dialog .pl-mode-title{display:block;font-size:1.13rem;color:#174f35;margin:4px 0 5px}
+   .private-library-dialog .pl-mode-note{margin:0 0 10px;line-height:1.45}
+   .private-library-dialog .pl-mode-card[data-mode="public"]{border-color:#e0b96d;background:#fffaf0}
+   .private-library-dialog .pl-mode-card[data-mode="both"]{border-color:#83b99c;background:#f1faf5}
+   .private-library-dialog .pl-change{background:#eef5f0;border:1px solid #9ebcab;color:#214e39;border-radius:12px;padding:9px 13px}
+   .private-library-dialog .pl-mode-picker{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+   .private-library-dialog .pl-mode-picker button{flex:1;min-width:120px;border:1px solid #a9c3b4;background:#fff;color:#214e39;border-radius:12px;padding:9px}
+   .private-library-dialog .pl-mode-picker button[aria-pressed="true"]{background:#245f43;color:#fff;border-color:#245f43}
+   .private-library-dialog .pl-alert{border:2px solid #e0b96d;background:#fff8e8;border-radius:16px;padding:13px 15px;margin:12px 0;line-height:1.5}
+   .private-library-dialog .pl-story{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #d9e5dd;padding:12px 0}
+   .private-library-dialog .pl-story strong{flex:1;min-width:150px}
+   .private-library-dialog .pl-story-state{font-size:.9rem;color:#5f7469}
+  `;document.head.append(style);
+ }
  const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'');
  function validate(title,text){
   title=clean(title).trim();text=clean(text).trim();
@@ -85,7 +114,8 @@
   dialog?.close();const d=el('dialog');dialog=d;d.dir='rtl';d.className='private-library-dialog';
   const title=el('h2','הספרייה הפרטית שלי');title.id='private-library-title';d.setAttribute('aria-labelledby',title.id);
   const close=btn('סגירה',()=>d.close()),body=el('div');d.append(close,title,body);document.body.append(d);d.showModal();
-  let dirty=false,uploadVersion=0;
+  ensureTeacherLibraryStyles();
+  let dirty=false,uploadVersion=0,savedNotice='';
   const valid=()=>d.isConnected&&auth()?.uid===a.uid;
   d.addEventListener('cancel',e=>{if(dirty&&!confirm('לסגור בלי לשמור את השינויים?'))e.preventDefault();});
   close.onclick=()=>{if(!dirty||confirm('לסגור בלי לשמור את השינויים?'))d.close();};
@@ -97,22 +127,58 @@
     // This read is denied until the new privacy rules are deployed. No unsafe fallback.
     await window.db.collection('libraryConfig').doc('availability').get({source:'server'});
     const [ss,cs]=await Promise.all([ref(a.uid).get({source:'server'}),window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'})]);
-    if(!valid())return;body.replaceChildren(el('p','הסיפורים שייכים לחשבון שלך וזמינים רק לתלמידים במועדונים שלך שבחרת עבורם ספרייה פרטית או גם וגם.'),btn('📝 הוספת סיפור מטקסט',()=>edit(null)));
+    if(!valid())return;
+    const intro=el('p','כאן מנהלים את הסיפורים שכתבת ובוחרים בפשטות מה הילדים רואים.');intro.className='pl-intro';
+    const add=btn('📝 הוספת סיפור',()=>edit(null));add.className='pl-add';
+    body.replaceChildren(intro,add);
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
-    const clubs=el('section');clubs.append(el('h3','איזו ספרייה הילדים יראו?'));
-    if(!cs.docs.length)clubs.append(el('p','אפשר להכין סיפורים עכשיו ולבחור ספרייה לאחר פתיחת מועדון.'));
-    for(const c of cs.docs.filter(c=>!c.data().hidden)){
-     const row=el('label',c.data().name||'מועדון');const select=el('select');select.setAttribute('aria-label','הספרייה של '+(c.data().name||'המועדון'));
-     for(const [value,text] of [['public','ציבורית — סיפורי בוקי'],['private','פרטית — סיפורי המורה'],['both','גם וגם — כל הסיפורים']]){const o=el('option',text);o.value=value;select.append(o);}select.value=c.data().libraryMode||'public';
-     select.onchange=async()=>{const old=select.dataset.savedMode||c.data().libraryMode||'public',mode=select.value;
-      if(mode==='private'&&!publishedCount){select.value=old;status.textContent='פרסמי קודם לפחות סיפור אחד בספרייה הפרטית.';return;}
-      select.disabled=true;try{if(!valid())return;await c.ref.update({libraryMode:mode});select.dataset.savedMode=mode;status.textContent='הבחירה נשמרה. תופיע בפתיחה הבאה של הספרייה אצל הילדים.';}catch(e){select.value=old;status.textContent='הבחירה לא נשמרה. נסי שוב.';}finally{select.disabled=false;}
-     };row.append(select);clubs.append(row);
-    }body.append(clubs,el('h3','הסיפורים שלי'));
-    if(!ss.docs.length)body.append(el('p','כאן תופיע הספרייה שלך. מתחילים מסיפור אחד.'));
+    const visibleClubs=cs.docs.filter(c=>!c.data().hidden);
+    const exposing=visibleClubs.filter(c=>['private','both'].includes(c.data().libraryMode||'public'));
+    if(savedNotice){const notice=el('div',savedNotice);notice.className='pl-alert';body.append(notice);savedNotice='';}
+    if(publishedCount&&visibleClubs.length&&!exposing.length){
+     const warning=el('div');warning.className='pl-alert';
+     warning.append(el('strong','⚠️ יש לך סיפורים שפורסמו, אבל הילדים עדיין לא רואים אותם.'),el('p','כרגע כל הכיתות שלך מציגות סיפורי בוקי בלבד. אפשר לשנות זאת כאן למטה.'));
+     body.append(warning);
+    }
+    const clubs=el('section');clubs.className='pl-section';clubs.append(el('h3','👀 מה הילדים רואים עכשיו?'));
+    if(!visibleClubs.length)clubs.append(el('p','עדיין אין כיתה פעילה. אפשר לכתוב סיפורים עכשיו ולבחור מה הילדים יראו לאחר פתיחת כיתה.'));
+    function renderModeCard(c){
+     const card=el('article');card.className='pl-mode-card';
+     let mode=c.data().libraryMode||'public';card.dataset.mode=mode;
+     const clubName=el('p',c.data().name||'הכיתה');clubName.className='pl-mode-club';
+     const label=el('p','הילדים בכיתה הזאת רואים עכשיו:');label.className='pl-mode-label';
+     const modeTitle=el('strong');modeTitle.className='pl-mode-title';
+     const note=el('p');note.className='pl-mode-note';
+     const change=btn('שינוי מה הילדים רואים',()=>{picker.hidden=!picker.hidden;});change.className='pl-change';
+     const picker=el('div');picker.className='pl-mode-picker';picker.hidden=true;
+     const choices=[['public','סיפורי בוקי'],['private','הסיפורים שלי'],['both','גם וגם']];
+     const choiceButtons=[];
+     function sync(){
+      const copy=MODE_COPY[mode]||MODE_COPY.public;card.dataset.mode=mode;modeTitle.textContent=copy.title;note.textContent=copy.note;
+      choiceButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
+     }
+     for(const [value,text] of choices){
+      const b=btn(text,async()=>{
+       if(value===mode){picker.hidden=true;return;}
+       if(value==='private'&&!publishedCount){status.textContent='כדי לבחור רק את הסיפורים שלך, פרסמי קודם לפחות סיפור אחד.';return;}
+       choiceButtons.forEach(x=>x.disabled=true);status.textContent='שומרת…';
+       try{if(!valid())return;await c.ref.update({libraryMode:value});mode=value;sync();picker.hidden=true;status.textContent='נשמר ✓ הילדים יראו את הבחירה בפתיחה הבאה של הספרייה.';}
+       catch(e){status.textContent='הבחירה לא נשמרה. נסי שוב.';}
+       finally{choiceButtons.forEach(x=>x.disabled=false);}
+      });b.dataset.mode=value;choiceButtons.push(b);picker.append(b);
+     }
+     sync();card.append(clubName,label,modeTitle,note,change,picker);return card;
+    }
+    visibleClubs.forEach(c=>clubs.append(renderModeCard(c)));
+    body.append(clubs);
+    const stories=el('section');stories.className='pl-section';stories.append(el('h3','📖 הסיפורים שלי'+(ss.docs.length?' ('+ss.docs.length+')':'')));
+    if(!ss.docs.length)stories.append(el('p','כאן תופיע הספרייה שלך. מתחילים מסיפור אחד.'));
     for(const s of ss.docs.sort((x,y)=>String(y.data().updatedAt).localeCompare(String(x.data().updatedAt)))){
-     const row=el('article');row.append(el('strong',s.data().title),el('span',s.data().status==='published'?' · מוצג לתלמידים':' · טיוטה'),btn('עריכה וניקוד',()=>edit(s)));body.append(row);
-    }status.textContent='';body.append(status);
+     const row=el('article');row.className='pl-story';
+     const storyState=el('span',s.data().status==='published'?'פורסם בספרייה שלי':'טיוטה — הילדים לא רואים');storyState.className='pl-story-state';
+     row.append(el('strong',s.data().title),storyState,btn('עריכה וניקוד',()=>edit(s)));stories.append(row);
+    }
+    body.append(stories);status.textContent='';body.append(status);
    }catch(e){if(valid())body.replaceChildren(el('p','הספרייה הפרטית עדיין אינה זמינה. נדרשת הפעלת הרשאות הפרטיות במערכת.'),btn('ניסיון נוסף',list));}
   }
   function edit(doc){
@@ -137,7 +203,13 @@
    const actions=el('div'),draft=btn('שמירת טיוטה',()=>save('draft')),publish=btn('שמירה ופרסום לתלמידים שלי',()=>save('published')),back=btn('חזרה לספרייה',()=>{if(!dirty||confirm('לחזור בלי לשמור?'))list();});
    async function save(statusValue){
     draft.disabled=publish.disabled=true;status.textContent='שומרת…';
-    try{const v=validate(heading.value,text.value);if(!valid())return;await storyRef.set({teacherUid:a.uid,...v,status:statusValue,createdAt:record.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});dirty=false;if(valid())await list();}
+    try{const v=validate(heading.value,text.value);if(!valid())return;await storyRef.set({teacherUid:a.uid,...v,status:statusValue,createdAt:record.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});dirty=false;
+     if(statusValue==='published'){
+      try{const clubs=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=clubs.docs.filter(c=>!c.data().hidden),shown=active.some(c=>['private','both'].includes(c.data().libraryMode||'public'));
+       savedNotice=shown?'הסיפור פורסם 💛 הוא זמין בכיתות שבחרת להן “הסיפורים שלי” או “גם וגם”.':'הסיפור פורסם 💛 שימי לב: הילדים עדיין לא רואים את הסיפורים שלך. בחרי למטה “הסיפורים שלי” או “גם וגם”.';
+      }catch(_){savedNotice='הסיפור פורסם 💛 בדקי למטה מה הילדים רואים עכשיו.';}
+     }
+     if(valid())await list();}
     catch(e){status.textContent=e.message?.startsWith('כתבי')||e.message?.startsWith('הסיפור')?e.message:'לא הצלחתי לשמור. הטקסט נשאר כאן; נסי שוב.';}
     finally{draft.disabled=publish.disabled=false;}
    }
