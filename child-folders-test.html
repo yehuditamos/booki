@@ -49,6 +49,25 @@
  .shelf-view .cc-badge::before{flex-basis:28px;width:28px;min-width:28px;height:28px}
  .shelf-view .cc-chips{gap:9px}
 }
+
+/* Folder covers summarize the actual text formats inside, before opening a shelf. */
+.folder{min-height:235px}
+.folder-format-hint{font-size:15px;line-height:1.6;color:#526b59;margin:0 0 22px}
+.folder-formats{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:5px 8px;margin-top:12px;border:1px solid #d6ddcd;border-radius:30px;background:#fff;max-width:100%}
+.folder-format-dot{display:inline-grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border:2px solid #fff;border-radius:50%;background:var(--folder-format-color);color:#18392d;box-shadow:0 0 0 1px #526b59;font-size:15px;line-height:1}
+.folder-format-key{margin:22px 0 0;border:1px solid #d6ddcd;border-radius:16px;background:#fffef9;padding:0 14px}
+.folder-format-key summary{min-height:46px;display:list-item;align-content:center;cursor:pointer;font-size:15px;font-weight:bold;padding:12px 0}
+.folder-format-key summary:focus-visible{outline:3px solid #245d8f;outline-offset:4px;border-radius:5px}
+.folder-format-legend{display:flex;gap:12px 20px;flex-wrap:wrap;padding:4px 0 16px}
+.folder-format-legend-item{display:inline-flex;align-items:center;gap:9px;font-size:15px;line-height:1.5}
+.folder-format-legend .folder-format-dot{flex-basis:30px;width:30px;height:30px;font-size:13px}
+@media(max-width:600px){
+ .folder{min-height:193px}.folder-art{height:55px;margin-bottom:6px}
+ .folder-format-hint{font-size:14px;margin-bottom:18px}
+ .folder-formats{gap:6px;padding:4px;margin-top:10px}
+ .folder-format-dot{flex-basis:30px;width:30px;height:30px;font-size:13px}
+}
+@media(max-width:350px){.folder-formats{gap:4px}.folder-format-dot{flex-basis:26px;width:26px;height:26px;font-size:12px}}
 </style>
 </head>
 <body>
@@ -59,7 +78,9 @@
 <main>
 <section id="folders-view" aria-labelledby="folders-title">
 <div class="hero"><div><h1 id="folders-title" tabindex="-1">עַל מָה בָּא לְךָ לִקְרֹא?</h1><p>בוחרים נושא שמסקרן אותך,<br>ומוצאים סיפור בתוכו.</p></div><img class="mascot" src="assets/booki/core/states/booki-welcome.png" width="112" height="130" alt="בוקי מחייך ומנופף"></div>
+<p class="folder-format-hint">הצבעים שעל התיקייה מראים אילו סוגי טקסט יש בפנים.</p>
 <div id="folders" class="folders"></div>
+<details class="folder-format-key"><summary>מה אומרים הצבעים?</summary><div id="folder-format-legend" class="folder-format-legend"></div></details>
 <button id="all-stories" type="button" class="cc-secondary all-stories">לְכָל הַסִּפּוּרִים ←</button>
 <p class="small-note">אפשר לבחור כל נושא. תמיד אפשר לחזור ולבחור משהו אחר.</p>
 </section>
@@ -174,11 +195,26 @@
   }
   shelf(active.id);
  }
+ // Use the same story set and shared format palette as the shelf, not a level per folder.
+ const formatOf=new Map(all.map(s=>[s.id,BookiChoice.profile(s).format.id]));
+ function formatDot(f){
+  const dot=el('span',f.symbol,'folder-format-dot');dot.dataset.format=f.id;
+  dot.style.setProperty('--folder-format-color',f.color);dot.title=f.label;
+  dot.setAttribute('aria-hidden','true');return dot;
+ }
  for(const t of topics){
-  const count=all.filter(t.match).length;if(!count)continue;
+  const items=all.filter(t.match),count=items.length;if(!count)continue;
+  const available=BookiChoice.formats.filter(f=>items.some(s=>formatOf.get(s.id)===f.id));
   const b=button('',()=>navigate('#'+t.id),'folder');b.dataset.folder=t.id;
+  b.setAttribute('aria-label',t.label+' · '+count+' סיפורים. בפנים: '+available.map(f=>f.label).join(', '));
   const art=el('span',t.icon,'folder-art');art.setAttribute('aria-hidden','true');
-  b.append(art,el('span',t.label,'folder-title'),el('span',count+' סיפורים','folder-count'));$('folders').append(b);
+  const markers=el('span',null,'folder-formats');markers.setAttribute('aria-hidden','true');
+  available.forEach(f=>markers.append(formatDot(f)));
+  b.append(art,el('span',t.label,'folder-title'),el('span',count+' סיפורים','folder-count'),markers);$('folders').append(b);
+ }
+ for(const f of BookiChoice.formats){
+  const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));
+  $('folder-format-legend').append(item);
  }
  $('all-stories').dataset.folder='all';$('all-stories').onclick=()=>navigate('#all');
  $('back-folders').onclick=()=>navigate('#topics');
