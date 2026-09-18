@@ -44,7 +44,7 @@ REPORT=[]
 with sync_playwright() as pw:
     browser=pw.chromium.launch(executable_path=os.environ.get('BOOKI_CHROME','/usr/bin/chromium'),args=['--no-sandbox'])
     def fresh(width):
-        ctx=browser.new_context(viewport={'width':width,'height':900},reduced_motion='reduce')
+        ctx=browser.new_context(viewport={'width':width,'height':667 if width <= 390 else 900},reduced_motion='reduce')
         p=ctx.new_page(); errors=[]
         p.on('pageerror',lambda e:errors.append(str(e)))
         p.route('**/*',lambda r:r.fulfill(status=200,body=''))
@@ -58,6 +58,21 @@ with sync_playwright() as pw:
         p.wait_for_timeout(400)
         return ctx,p,errors
     def geometry(p,selector,width):
+        if selector.startswith('#who-reads-grid'):
+            search = p.locator('#who-reads-search')
+            assert search.count() == 1
+            position = search.evaluate('''n=>{
+                const r=n.getBoundingClientRect(),grid=document.getElementById('who-reads-grid');
+                const first=grid.querySelector('.profile-card'),area=n.closest('.who-reads-footer');
+                return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,
+                    beforeGrid:!!(n.compareDocumentPosition(grid)&Node.DOCUMENT_POSITION_FOLLOWING),
+                    firstTop:first?.getBoundingClientRect().top,areaBottom:area.getBoundingClientRect().bottom,
+                    height:innerHeight,viewportWidth:innerWidth};
+            }''')
+            assert position['beforeGrid'] and 0 <= position['top'] < position['bottom'] <= position['height'], position
+            assert 0 <= position['left'] < position['right'] <= position['viewportWidth'], position
+            assert position['firstTop'] is None or position['areaBottom'] <= position['firstTop'], position
+            assert not search.get_attribute('autofocus'), 'Do not open the phone keyboard on entry'
         results=p.locator(selector).evaluate_all('''nodes=>nodes.filter(n=>!n.hidden).map(n=>{
            const r=n.getBoundingClientRect(),s=getComputedStyle(n),name=n.querySelector('.profile-name');
            const a=n.querySelector('.profile-avatar'),ar=a.getBoundingClientRect(),nr=name.getBoundingClientRect();

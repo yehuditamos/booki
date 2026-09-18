@@ -140,8 +140,10 @@
   box-sizing: border-box;
   max-width: 980px;
   margin: auto;
-  padding: 8px 24px calc(30px + env(safe-area-inset-bottom));
+  padding: 18px 24px 4px;
 }
+/* The native search region now precedes the cards in the document. */
+#screen-who-reads .who-reads-footer:empty { display: none; }
 #screen-who-reads .who-reads-search-label { color: #244b3d; font: 700 17px/1.5 Arial, sans-serif; }
 #screen-who-reads .who-reads-search {
   box-sizing: border-box;
