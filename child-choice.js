@@ -3,10 +3,10 @@
 (function () {
   'use strict';
   const formats = [
-    {id:'word',label:'מילה בכל עמוד',color:'#e7bd46',symbol:'●'},
-    {id:'sentence',label:'משפטים קצרים',color:'#75a787',symbol:'◆'},
-    {id:'several',label:'כמה משפטים',color:'#7aa5cb',symbol:'■'},
-    {id:'paragraph',label:'פסקאות לקריאה',color:'#ae91bc',symbol:'✦'}
+    {id:'word',label:'מילה בכל עמוד',color:'#F5C518',symbol:'●'},
+    {id:'sentence',label:'משפטים קצרים',color:'#20AD57',symbol:'◆'},
+    {id:'several',label:'כמה משפטים',color:'#2678E5',symbol:'■'},
+    {id:'paragraph',label:'פסקאות לקריאה',color:'#9954D8',symbol:'✦'}
   ];
   const plain = text => String(text || '').normalize('NFC').replace(/[\u0591-\u05BD\u05BF-\u05C2\u05C4-\u05C5\u05C7]/g,'');
   const words = text => plain(text).match(/[\p{L}\p{N}]+/gu) || [];

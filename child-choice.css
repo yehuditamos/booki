@@ -3,3 +3,25 @@
 /* Keep the preview border box inside small viewports, independent of browser defaults. */
 .cc-dialog{box-sizing:border-box;max-width:calc(100vw - 24px)}
 .cc-card-copy{min-width:0}.cc-card h3,.cc-excerpt{overflow-wrap:anywhere}
+
+/* Vivid text-format markers: color describes the story, never ranks its reader. */
+.cc-cover-seal{
+ width:46px;height:46px;border:3px solid #fff;font-size:17px;
+ background:var(--cc-color);color:#18392d;z-index:1;
+ box-shadow:0 0 0 1px #28463745,0 3px 8px #18392d26;
+}
+.cc-badge{
+ display:inline-flex;align-items:center;gap:9px;max-width:100%;
+ padding:6px 10px;border:1px solid #d1dbd2;border-radius:14px;
+ background:#fff;color:#284637;line-height:1.5;
+}
+.cc-badge::before{
+ content:'';display:block;flex:0 0 22px;width:22px;height:22px;
+ border-radius:50%;background:var(--cc-color);border:2px solid #fff;
+ box-shadow:0 0 0 1px #28463755;
+}
+@media(max-width:600px){
+ .cc-cover-seal{width:40px;height:40px;left:10px;top:12px;font-size:16px}
+ .cc-badge{gap:7px;padding:5px 8px;font-size:13px}
+ .cc-badge::before{flex-basis:21px;width:21px;height:21px}
+}
