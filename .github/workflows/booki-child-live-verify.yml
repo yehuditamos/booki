@@ -1,0 +1,41 @@
+name: Booki Child Library Live Verification
+on:
+  push:
+    branches: ['verify/child-library-live-20260918']
+permissions:
+  contents: read
+jobs:
+  public-static-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 911552c63afe990646049a0e7eafbb6353cc7772
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare public deployed entry and assets to the tested release
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict'),crypto=require('node:crypto');
+          const files=['index.html','script.js','child-choice.js','child-choice.css','child-library.js','child-library.css','child-library-topics.js'];
+          (async()=>{
+            const results=[];
+            for(const file of files){
+              let text,status;
+              for(let attempt=0;attempt<5;attempt++){
+                const response=await fetch('https://yehuditamos.github.io/booki/'+(file==='index.html'?'':file)+'?release=911552c&check='+attempt,{signal:AbortSignal.timeout(20000)});
+                status=response.status;text=await response.text();
+                if(status===200&&text===fs.readFileSync(file,'utf8'))break;
+                if(attempt<4)await new Promise(r=>setTimeout(r,4000));
+              }
+              assert.equal(status,200,file+' HTTP status');
+              assert.equal(text,fs.readFileSync(file,'utf8'),file+' public content must equal tested source');
+              results.push({file,status,sha256:crypto.createHash('sha256').update(text).digest('hex'),exactMatch:true});
+            }
+            console.log(JSON.stringify({release:'911552c63afe990646049a0e7eafbb6353cc7772',results},null,2));
+            console.log('PASS: production URL and all seven runtime assets exactly match tested release. No Firebase/auth/student data requests.');
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
