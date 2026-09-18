@@ -46,46 +46,7 @@ jobs:
           server_pid=$!
           trap 'kill $server_pid 2>/dev/null || true' EXIT
           export BOOKI_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          node <<'NODE'
-          const puppeteer=require('puppeteer-core');
-          const assert=require('node:assert/strict');
-          const fs=require('node:fs');
-          (async()=>{
-            const browser=await puppeteer.launch({executablePath:process.env.BOOKI_CHROME,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
-            const results=[];
-            try{
-              for(const viewport of [{width:390,height:844},{width:1280,height:900}]){
-                const page=await browser.newPage();await page.setViewport(viewport);await page.setCacheEnabled(false);
-                const errors=[],external=[];
-                page.on('pageerror',e=>errors.push(e.message));
-                await page.setRequestInterception(true);
-                page.on('request',r=>{if(new URL(r.url()).hostname!=='127.0.0.1'){external.push(r.url());r.abort();}else r.continue();});
-                const response=await page.goto('http://127.0.0.1:8089/child-choice-test.html',{waitUntil:'networkidle0'});
-                assert.equal(response.status(),200);
-                assert.equal(await page.$$eval('#choice .cc-suggestions .cc-card',a=>a.length),3);
-                assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow');
-                await page.screenshot({path:`verification/child-choice-${viewport.width}.png`,fullPage:true});
-                await page.click('#choice .cc-card');
-                assert(await page.$eval('dialog',d=>d.open));
-                assert(await page.$eval('dialog .cc-sample p',p=>p.textContent.trim().length>0));
-                await page.screenshot({path:`verification/child-preview-${viewport.width}.png`,fullPage:true});
-                assert(await page.$eval('#demo-reader',n=>n.hidden),'Preview must not start reading');
-                await page.click('dialog .cc-primary');
-                assert(await page.$eval('#demo-reader',n=>!n.hidden));
-                await page.click('#demo-reader nav .cc-primary');
-                await page.evaluate(()=>[...document.querySelectorAll('#demo-reader button')].find(b=>b.textContent.includes('הפסקה')).click());
-                assert(await page.$('#cc-demo-resume'));
-                await page.click('#cc-demo-resume');
-                assert(await page.$eval('#demo-reader',n=>!n.hidden));
-                assert.equal(await page.evaluate(()=>localStorage.length),0,'Demo must not persist reading or private information');
-                assert.deepEqual(errors,[]);assert.deepEqual(external,[],'Demo must make no external/auth/database requests');
-                results.push({viewport,status:'passed',checks:['three choices','responsive layout','real preview','start','next page','pause','resume','no persistent data','no external requests','no JS exceptions']});
-                await page.close();
-              }
-              fs.writeFileSync('verification/browser-report.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results));
-            }finally{await browser.close();}
-          })().catch(e=>{console.error(e);process.exitCode=1;});
-          NODE
+          node scripts/test-child-choice-browser.cjs
       - name: Verify existing no-login review link
         run: |
           curl --fail --silent --show-error --max-time 30 https://yehuditamos.github.io/booki/child-choice-test.html > verification/published-demo.html
