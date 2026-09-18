@@ -36,6 +36,8 @@
    .private-library-dialog .pl-story{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #d9e5dd;padding:12px 0}
    .private-library-dialog .pl-story strong{flex:1;min-width:150px}
    .private-library-dialog .pl-story-state{font-size:.9rem;color:#5f7469}
+   .private-library-dialog .pl-page-tip{margin:8px 0 12px;padding:12px 14px;border:2px solid #b7cfbf;background:#f2f9f4;border-radius:14px;line-height:1.5;color:#214e39}
+   .private-library-dialog .pl-page-tip strong{display:block;margin-bottom:3px}
   `;document.head.append(style);
  }
  const clean=s=>String(s||'').replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'');
@@ -184,7 +186,8 @@
   function edit(doc){
    body.replaceChildren();const record=doc?.data()||{},storyRef=doc?.ref||ref(a.uid).doc();
    const heading=el('input');heading.value=record.title||'';heading.maxLength=120;heading.setAttribute('aria-label','שם הסיפור');heading.placeholder='שם הסיפור';
-   const text=el('textarea');text.value=record.text||'';text.rows=12;text.maxLength=20000;text.setAttribute('aria-label','טקסט הסיפור לעריכה ולניקוד');text.placeholder='מדביקים או כותבים כאן את הסיפור. שורה ריקה מפרידה בין עמודים.';
+   const text=el('textarea');text.value=record.text||'';text.rows=12;text.maxLength=20000;text.setAttribute('aria-label','טקסט הסיפור לעריכה ולניקוד');text.placeholder='מדביקים או כותבים כאן את הסיפור.';
+   const pageTip=el('div');pageTip.className='pl-page-tip';pageTip.append(el('strong','📄 איך יוצרים עמוד חדש?'),el('span',' משאירים שורה אחת ריקה בין קטע לקטע — וכל קטע יהפוך לעמוד חדש.'));
    heading.oninput=text.oninput=()=>{dirty=true;preview.textContent=text.value;};
    const file=el('input');file.type='file';file.accept='.txt,text/plain';file.multiple=true;file.hidden=true;
    const upload=btn('📄 העלאת קובץ טקסט (TXT)',()=>file.click());upload.className='private-library-upload';
@@ -229,7 +232,7 @@
     }catch(e){if(valid())status.textContent=e.message||'לא הצלחתי לקרוא את הקובץ. נסי שוב או הדביקי את הטקסט.';}
     finally{upload.disabled=draft.disabled=publish.disabled=back.disabled=false;file.value='';}
    };
-   actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),text,palette,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
+   actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),pageTip,text,palette,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
   }
   await list();
  }
