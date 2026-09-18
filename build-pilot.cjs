@@ -1,0 +1,12 @@
+const fs=require('fs'),vm=require('vm');
+const index=fs.readFileSync('index.html','utf8');
+const scripts=[...index.matchAll(/<script src="(content\/stories[^"?]+\.js)[^"]*"><\/script>/g)].map(m=>m[1]);
+const sandbox={window:{}};vm.createContext(sandbox);for(const file of [...scripts,'stories.js','child-choice.js'])vm.runInContext(fs.readFileSync(file,'utf8'),sandbox);
+const stories=vm.runInContext('getAllStories()',sandbox),api=sandbox.window.BookiChoice;
+const mapping=stories.map(s=>{const p=api.profile(s);return {id:s.id,title:s.title,format:p.format?.id,formatLabel:p.format?.label,pages:p.pages.length,words:p.total,maxWordsPerPage:p.max,uniqueWords:p.uniqueWords,longWords:p.longWords,vowelMarks:p.vowelMarks,review:'בדיקת אוצר מילים, מורכבות משפטים ודיוק ניקוד נדרשת לפני התאמה פדגוגית'};});
+fs.writeFileSync('child-choice-catalog.json',JSON.stringify(mapping,null,2));
+console.log(JSON.stringify({stories:stories.length,formats:api.formats.map(f=>({label:f.label,count:mapping.filter(s=>s.format===f.id).length}))},null,2));
+const tags=scripts.map(p=>`<script src="${p}"></script>`).join('\n');
+fs.writeFileSync('child-choice-test.html',`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>בוקי · בחירת סיפור — גרסת ניסיון</title><link rel="stylesheet" href="child-choice.css?v=1"><style>body{margin:0;background:#faf7ec;color:#244b3d;font-family:Arial,sans-serif}.pilot-bar{max-width:1000px;margin:auto;padding:16px 18px;border-bottom:1px solid #dce3d5;font-size:14px;display:flex;justify-content:space-between;gap:14px}.pilot-bar a{color:#285540}.demo-reader{max-width:650px;margin:25px auto;padding:20px}.demo-reader h1{font-size:28px}.demo-reader .cc-sample{margin:20px 0}.demo-reader nav{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}</style></head><body><div class="pilot-bar"><span>גרסת ניסיון · הקריאה כאן אינה נרשמת</span><a href="./">לבוקי</a></div><main id="choice"></main><main id="demo-reader" class="demo-reader" hidden></main>${tags}<script src="stories.js"></script><script src="child-choice.js?v=1"></script><script src="child-choice-demo.js?v=1"></script></body></html>`);
+// Isolated full-app pilot: production index and assets are not modified.
+fs.writeFileSync('child-choice-app-test.html',index.replace('</head>','<link rel="stylesheet" href="child-choice.css?v=1"></head>').replace('</body>','<script src="child-choice.js?v=1"></script><script src="child-choice-app.js?v=1"></script></body>'));

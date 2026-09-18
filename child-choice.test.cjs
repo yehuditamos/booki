@@ -1,0 +1,23 @@
+const {JSDOM}=require('/tmp/booki-roster-dom/node_modules/jsdom');const fs=require('fs'),assert=require('node:assert/strict');
+const dom=new JSDOM('<main id="root"></main>',{runScripts:'outside-only',url:'https://example.test'}),w=dom.window;
+w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.HTMLElement.prototype.scrollIntoView=function(){};
+w.eval(fs.readFileSync('child-choice.js','utf8'));const api=w.BookiChoice;
+const story=(id,texts)=>({id,title:id,pages:texts.map(text=>({text}))});
+assert.equal(api.profile(story('single',['אָב','בָּא'])).format.id,'word');
+assert.equal(api.profile(story('mixed',['אָב','דָּן בָּא'])).format.id,'sentence');
+assert.equal(api.profile(story('dense',['א',Array(70).fill('מילה').join(' ')])).format.id,'paragraph');
+let catalog=[story('פרטי',['אָב'])],context='class-a',opens=0;
+const ui=api.mount(w.document.getElementById('root'),{catalog:()=>catalog,context:()=>context,open:async()=>{opens++;return true;},recommendations:()=>['ציבורי']});
+assert.equal(w.document.querySelectorAll('.cc-card').length,1);assert(!w.document.body.textContent.includes('ציבורי'));
+w.document.querySelector('.cc-card').click();assert.equal(opens,0,'Preview must not start/record reading');
+assert.equal(w.document.querySelector('.cc-sample p').textContent,'אָב');
+context='class-b';catalog=[];
+(async()=>{
+ await w.document.querySelector('dialog .cc-primary').onclick();assert.equal(opens,0,'Switching class invalidates preview');
+ ui.reset();assert.equal(w.document.querySelectorAll('.cc-card').length,0);assert(!w.document.body.textContent.includes('פרטי'));
+ catalog=[story('<img src=x onerror=alert(1)>',['<script>bad</script>']),story('גֵּק',['א']),story('second',['שלום עולם'])];ui.render();assert.equal(w.document.querySelectorAll('img,script').length,0);
+ [...w.document.querySelectorAll('button')].find(b=>b.textContent==='לכל הסיפורים ←').click();const input=w.document.querySelector('input');input.value='גק';input.dispatchEvent(new w.Event('input'));assert.equal(w.document.querySelectorAll('.cc-browse .cc-card').length,1);
+ input.value='missing';input.dispatchEvent(new w.Event('input'));assert.equal(w.document.querySelectorAll('.cc-browse .cc-card').length,0);
+ ui.preview('second');await w.document.querySelector('dialog .cc-primary').onclick();assert.equal(opens,1);assert.equal(w.document.querySelectorAll('dialog').length,0);
+ console.log('PASS: preview, context change, private-only catalog, empty/error catalog, niqqud search, safe text, read transition');
+})();
