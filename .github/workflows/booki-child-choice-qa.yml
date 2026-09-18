@@ -1,0 +1,101 @@
+name: Booki Child Choice Safety
+on:
+  push:
+    branches: ['booki/child-choice-safety-20260918']
+  pull_request:
+    paths: ['child-choice*', 'scripts/test-child-choice*', '.github/workflows/booki-child-choice-qa.yml']
+permissions:
+  contents: read
+jobs:
+  child-choice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm production assets and data rules are untouched
+        run: |
+          git diff --exit-code 76360eb14c5fc9ee0f8197dde08c5f8f6f66e58a HEAD -- index.html script.js routing.js private-library.js stories.js story-recommendations.js teacher-workspace.js firebase-messages.js firestore.rules storage.rules content
+      - name: Install isolated QA dependencies
+        run: npm install --no-save --no-package-lock jsdom@26.1.0 puppeteer-core@24
+      - name: Syntax, catalog mapping and component tests
+        run: |
+          node --check child-choice.js
+          node --check child-choice-app.js
+          node --check child-choice-demo.js
+          node build-pilot.cjs
+          node child-choice.test.cjs
+          node --test scripts/test-child-choice-integration.cjs
+      - name: Existing reading and release regressions
+        run: |
+          node scripts/test-reading-safety.js
+          node scripts/test-omri-word-matcher.js
+          node scripts/test-booki-local-listening.js
+          node scripts/test-release-flows.js
+      - name: Real-browser public demo checks (no login or database access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python3 -m http.server 8089 --bind 127.0.0.1 >/tmp/booki-choice-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          node <<'NODE'
+          const puppeteer=require('puppeteer-core');
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await puppeteer.launch({executablePath:process.env.BOOKI_CHROME,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+            const results=[];
+            try{
+              for(const viewport of [{width:390,height:844},{width:1280,height:900}]){
+                const page=await browser.newPage();await page.setViewport(viewport);
+                const errors=[],external=[];
+                page.on('pageerror',e=>errors.push(e.message));
+                await page.setRequestInterception(true);
+                page.on('request',r=>{if(new URL(r.url()).hostname!=='127.0.0.1'){external.push(r.url());r.abort();}else r.continue();});
+                const response=await page.goto('http://127.0.0.1:8089/child-choice-test.html',{waitUntil:'networkidle0'});
+                assert.equal(response.status(),200);
+                assert.equal(await page.$$eval('#choice .cc-suggestions .cc-card',a=>a.length),3);
+                assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'No horizontal overflow');
+                await page.screenshot({path:`verification/child-choice-${viewport.width}.png`,fullPage:true});
+                await page.click('#choice .cc-card');
+                assert(await page.$eval('dialog',d=>d.open));
+                assert(await page.$eval('dialog .cc-sample p',p=>p.textContent.trim().length>0));
+                await page.screenshot({path:`verification/child-preview-${viewport.width}.png`,fullPage:true});
+                assert(await page.$eval('#demo-reader',n=>n.hidden),'Preview must not start reading');
+                await page.click('dialog .cc-primary');
+                assert(await page.$eval('#demo-reader',n=>!n.hidden));
+                await page.click('#demo-reader nav .cc-primary');
+                await page.evaluate(()=>[...document.querySelectorAll('#demo-reader button')].find(b=>b.textContent.includes('הפסקה')).click());
+                assert(await page.$('#cc-demo-resume'));
+                await page.click('#cc-demo-resume');
+                assert(await page.$eval('#demo-reader',n=>!n.hidden));
+                assert.equal(await page.evaluate(()=>localStorage.length),0,'Demo must not persist reading or private information');
+                assert.deepEqual(errors,[]);assert.deepEqual(external,[],'Demo must make no external/auth/database requests');
+                results.push({viewport,status:'passed',checks:['three choices','responsive layout','real preview','start','next page','pause','resume','no persistent data','no external requests','no JS exceptions']});
+                await page.close();
+              }
+              fs.writeFileSync('verification/browser-report.json',JSON.stringify(results,null,2));console.log(JSON.stringify(results));
+            }finally{await browser.close();}
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          NODE
+      - name: Archive exact tested public source
+        if: always()
+        run: |
+          mkdir -p verification
+          git archive --format=tar HEAD > verification/tested-source.tar
+          git rev-parse HEAD > verification/tested-commit.txt
+      - name: Save review screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: child-choice-review
+          path: verification/
+          retention-days: 3
