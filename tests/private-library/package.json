@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "test": "node catalog.cjs && node editor.cjs && firebase emulators:exec --only firestore --project demo-booki-private --config firebase.json \"node rules.cjs\""
+    "test": "node catalog.cjs && node editor.cjs && node photo.cjs && firebase emulators:exec --only firestore --project demo-booki-private --config firebase.json \"node rules.cjs\""
   },
   "devDependencies": {
     "firebase": "12.19.0",

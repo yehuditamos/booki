@@ -149,22 +149,25 @@
    file.onchange=async()=>{
     const token=++uploadVersion;const files=[...file.files];if(!files.length)return;
     if(files.some(f=>f.size>15*1024*1024)){status.textContent='בחרי קבצים שגודלם עד 15MB כל אחד.';return;}
-    upload.disabled=draft.disabled=publish.disabled=true;status.textContent='מזהה את הטקסט…';
-    try{let output='';for(const f of files){
+    upload.disabled=draft.disabled=publish.disabled=back.disabled=true;status.textContent='מזהה את הטקסט…';
+    try{let output='',confidence=100,hasPhoto=false;for(const f of files){
       if(f.type==='text/plain'||/\.txt$/i.test(f.name))output+=(output?'\n\n':'')+await f.text();
       else if(f.type.startsWith('image/')){
+       if(!window.BookiStoryPhoto)throw Error('רענני את העמוד כדי להפעיל בחירת אזור צילום.');
+       const image=await window.BookiStoryPhoto.crop(f,d);if(image===null){status.textContent='ההעלאה בוטלה. הסיפור לא השתנה.';return;}
        const T=await loadOCR();if(!valid()||token!==uploadVersion)return;
-       worker=await T.createWorker('heb+eng',1,{logger:()=>{}});
-       try{const result=await worker.recognize(f);output+=(output?'\n\n':'')+result.data.text;}finally{await worker.terminate();worker=null;}
+       worker=await T.createWorker('heb',1,{logger:()=>{}});
+       try{await worker.setParameters({preserve_interword_spaces:'1'});const result=await worker.recognize(image);hasPhoto=true;confidence=Math.min(confidence,Number(result.data.confidence)||0);output+=(output?'\n\n':'')+result.data.text;}finally{await worker.terminate();worker=null;}
       }else throw Error('בחרי תמונה או קובץ TXT.');
      }
      if(!valid()||token!==uploadVersion)return;
+     if(hasPhoto){output=await window.BookiStoryPhoto.review(clean(output).trim(),d,confidence);if(output===null){status.textContent='ההעלאה בוטלה. הסיפור לא השתנה.';return;}if(!valid()||token!==uploadVersion)return;}
      const combined=(text.value.trim()?text.value.trim()+'\n\n':'')+clean(output).trim();
      if(!output.trim())throw Error('לא זוהה טקסט. נסי צילום חד יותר או הדביקי טקסט.');
      if(combined.length>20000)throw Error('הטקסט ארוך מדי. העלי סיפור קצר יותר.');
      text.value=combined;text.dispatchEvent(new Event('input'));status.textContent='הטקסט מוכן לבדיקה ולניקוד. הוא עדיין לא פורסם.';
     }catch(e){if(valid())status.textContent=e.message||'לא הצלחתי לזהות טקסט. נסי שוב או הדביקי אותו.';}
-    finally{upload.disabled=draft.disabled=publish.disabled=false;file.value='';}
+    finally{upload.disabled=draft.disabled=publish.disabled=back.disabled=false;file.value='';}
    };
    actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),text,palette,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
   }
