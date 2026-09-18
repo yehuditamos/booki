@@ -35,7 +35,8 @@ try {
 // ─── פונקציות עזר ────────────────────────────────────────────────────
 
 function getAllStories() {
-  return Array.isArray(STORIES) ? [...STORIES] : [];
+  const all = Array.isArray(STORIES) ? [...STORIES] : [];
+  return window.BookiPrivateLibrary ? window.BookiPrivateLibrary.visible(all) : all;
 }
 
 window.getAllStories = getAllStories;
@@ -43,24 +44,24 @@ window.getAllStories = getAllStories;
 // מחפש לפי id (string slug) או legacyId (מספר) — תאימות אחורה עם Firebase
 function getStoryById(id) {
   if (!Array.isArray(STORIES)) return null;
-  return STORIES.find(s => s.id === id || s.legacyId === id) ?? null;
+  return getAllStories().find(s => s.id === id || s.legacyId === id) ?? null;
 }
 
 function getStoriesByCategory(category) {
-  return STORIES.filter(s => s.category === category);
+  return getAllStories().filter(s => s.category === category);
 }
 
 function getStoriesByLibrary(libraryId) {
-  return STORIES.filter(s => s.libraryId === libraryId);
+  return getAllStories().filter(s => s.libraryId === libraryId);
 }
 
 function getStoriesByLibraryAndCategory(libraryId, categoryId) {
-  return STORIES.filter(s => s.libraryId === libraryId && s.categoryId === categoryId);
+  return getAllStories().filter(s => s.libraryId === libraryId && s.categoryId === categoryId);
 }
 
 function getStoriesByTags(tags = []) {
-  if (!tags.length) return [...STORIES];
-  return STORIES.filter(s => tags.every(t => s.tags.includes(t)));
+  if (!tags.length) return getAllStories();
+  return getAllStories().filter(s => tags.every(t => s.tags.includes(t)));
 }
 
 // ─── ולידציה פנימית (רצה פעם אחת בטעינה) ────────────────────────────
@@ -108,3 +109,4 @@ function getStoriesByTags(tags = []) {
     console.log(`[stories.js] ✅ ${STORIES.length} סיפורים — כל הבדיקות עברו בהצלחה`);
   }
 })();
+

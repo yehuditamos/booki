@@ -1,0 +1,9 @@
+.private-library-dialog{width:min(720px,calc(100vw - 24px));max-height:90dvh;overflow:auto;border:1px solid #a9c4b0;border-radius:20px;background:#fff;color:#183e2a;padding:20px;box-sizing:border-box;font:16px/1.6 Arial,sans-serif}
+.private-library-dialog::backdrop{background:rgb(20 45 30 / .45)}
+.private-library-dialog button,.private-library-dialog select,.private-library-dialog input,.private-library-dialog textarea{font:inherit;color:inherit;border:1px solid #9abca5;border-radius:10px;padding:10px;margin:5px;min-height:44px;box-sizing:border-box;background:#f5faf6}
+.private-library-dialog button{cursor:pointer}.private-library-dialog button:disabled{opacity:.55;cursor:wait}
+.private-library-dialog label{display:block;font-weight:bold}.private-library-dialog input:not([type=file]),.private-library-dialog textarea{display:block;width:100%;margin:6px 0;background:white}
+.private-library-dialog article{border-bottom:1px solid #c5d8ca;padding:12px 0}.private-library-upload{width:100%;font-size:21px!important;padding:24px!important;background:#e4f3e7!important;font-weight:bold!important}
+.private-library-niqud{background:#edf7ef;padding:10px;border-radius:12px}.private-library-niqud button{font-size:22px;background:white;min-width:44px}.private-library-niqud button:last-child{font-size:15px}
+.private-library-preview{font:22px/1.9 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;background:#faf8f0;border-radius:12px;padding:16px;max-height:260px;overflow:auto}
+.private-library-dialog :focus-visible{outline:3px solid #26714f;outline-offset:2px}

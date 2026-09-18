@@ -19,15 +19,20 @@
     const title=node('h2',name);title.id='booki-recommend-title';d.setAttribute('aria-labelledby',title.id);
     const close=button('סגירה',()=>d.close()),body=node('div');d.append(close,title,body);document.body.append(d);
     d.addEventListener('close',()=>{d.remove();if(dialog===d)dialog=null;});
+    let catalog=null;const choices=()=>catalog||stories();
     const sameTeacher=()=>firebase.auth().currentUser?.uid===auth.uid&&getCurrentTeacher()?.uid===auth.uid;
-    const choose=()=>{
+    const choose=async()=>{
+      body.replaceChildren(node('p','טוענת את ספריית הכיתה…'));
+      try{catalog=window.BookiPrivateLibrary?await window.BookiPrivateLibrary.forTeacherClub(clubId):stories();}
+      catch(e){body.replaceChildren(node('p','לא ניתן לטעון את ספריית הכיתה.'),button('ניסיון נוסף',choose));return;}
+      if(!d.isConnected||!sameTeacher())return;
       body.replaceChildren();title.textContent='בחירת סיפור עבור '+name;
       const search=node('input');search.type='search';search.placeholder='חיפוש סיפור';search.setAttribute('aria-label','חיפוש במאגר הסיפורים');
       const list=node('div');list.className='booki-recommend-stories';body.append(search,list);
       const render=()=>{
-        list.replaceChildren();const found=stories().filter(s=>plain(s.title+' '+(s.category||'')).includes(plain(search.value.trim())));
+        list.replaceChildren();const found=choices().filter(s=>plain(s.title+' '+(s.category||'')).includes(plain(search.value.trim())));
         for(const s of found)list.append(button((s.emoji||'📖')+' '+s.title,()=>confirmStory(s)));
-        if(!found.length)list.append(node('p',stories().length?'לא נמצאו סיפורים. נסי חיפוש אחר.':'מאגר הסיפורים לא נטען. סגרי ורענני את בוקי.'));
+        if(!found.length)list.append(node('p',choices().length?'לא נמצאו סיפורים. נסי חיפוש אחר.':'מאגר הסיפורים לא נטען. סגרי ורענני את בוקי.'));
       };search.oninput=render;render();search.focus();
     };
     const confirmStory=story=>{
@@ -45,7 +50,7 @@
           ]);
           const m=member.exists?member.data():null;
           if(!sameTeacher()||!club.exists||club.data().teacherUid!==auth.uid||!m||m.status==='left'||
-            (String(m.name||'').startsWith('כרטיס פנוי ')&&!m.claimedByUid)||!stories().some(s=>String(s.id)===String(story.id)))throw Error('invalid-target');
+            (String(m.name||'').startsWith('כרטיס פנוי ')&&!m.claimedByUid)||!choices().some(s=>String(s.id)===String(story.id)))throw Error('invalid-target');
           await ref.set({type:'story-recommendation',toUserId:userId,storyId:story.id,storyTitle:story.title,
             text:'קיבלת המלצה לסיפור, זה הזמן לקרוא ✨',createdBy:auth.uid,createdAt:new Date().toISOString()});
           body.replaceChildren(node('p','ההמלצה נשלחה ל'+name+' 💚'),button('סיום',()=>d.close()));
@@ -67,7 +72,8 @@
         if(typeof startStory!=='function')return;
         b.disabled=true;
         try{
-          startStory(story.id);
+          const opened=await startStory(story.id);
+          if(opened===false){b.disabled=false;return;}
           // Never mark other recommendations or encouragements as seen.
           const saved=await fbMarkMessagesSeen(clubId,userId,[m.id]);
           if(saved)b.remove();else b.disabled=false;
@@ -76,3 +82,4 @@
     }
   };
 })();
+
