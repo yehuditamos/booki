@@ -1,0 +1,37 @@
+name: Student Cards Live Check
+on:
+  push:
+    branches: ['verify/student-cards-live-20260918']
+permissions:
+  contents: read
+jobs:
+  verify-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c82f362da73af8df7f2d5b748b083bf9c339ffd8
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify live HTML and theme match tested source
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          (async()=>{
+            for(const file of ['index.html','student-cards.css']){
+              let text,status;
+              for(let i=0;i<6;i++){
+                const response=await fetch('https://yehuditamos.github.io/booki/'+(file==='index.html'?'':file)+'?v=c82f362&check='+i,{signal:AbortSignal.timeout(15000)});
+                text=await response.text();status=response.status;
+                if(status===200&&text===fs.readFileSync(file,'utf8'))break;
+                await new Promise(r=>setTimeout(r,6000));
+              }
+              assert.equal(status,200,file);assert.equal(text,fs.readFileSync(file,'utf8'),file+' deployed source');
+              console.log('PASS: live '+file+' is an exact match to c82f362');
+            }
+            console.log('No auth, database or student-account requests.');
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          NODE
