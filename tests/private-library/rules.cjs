@@ -24,6 +24,9 @@ const {doc,setDoc,getDoc,getDocs,collection,query,where,updateDoc}=require('fire
   await assertSucceeds(getDocs(query(collection(child,'teacherLibraries/teacher/stories'),where('status','==','published'))));
   await assertFails(getDocs(collection(child,'teacherLibraries/teacher/stories')));
   await assertFails(setDoc(doc(teacher,path),{...story,title:'<img>'}));
+  await env.withSecurityRulesDisabled(async c=>updateDoc(doc(c.firestore(),'clubs/class'),{libraryMode:'both'}));
+  await assertSucceeds(getDoc(doc(child,path)));
+  await assertSucceeds(setDoc(doc(child,access),{clubId:'class',memberId:'card'}));
   await env.withSecurityRulesDisabled(async c=>updateDoc(doc(c.firestore(),'clubs/class/memberships/card'),{status:'left'}));
   await assertFails(getDoc(doc(child,path)));
   await env.withSecurityRulesDisabled(async c=>updateDoc(doc(c.firestore(),'clubs/class/memberships/card'),{status:'active',claimedByUid:'stranger'}));

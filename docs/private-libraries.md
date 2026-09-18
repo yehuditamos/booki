@@ -1,6 +1,6 @@
 # Private teacher libraries
 
-Teacher dashboard → הספרייה הפרטית שלי. Libraries belong to the teacher account and can be used by every club owned by that teacher. Each club independently selects public Booki or private teacher content. No owner moderation or approval queue.
+Teacher dashboard → הספרייה הפרטית שלי. Libraries belong to the teacher account and can be used by every club owned by that teacher. Each club independently selects public Booki, private teacher content, or both together. No owner moderation or approval queue.
 
 ## Included
 

@@ -351,6 +351,7 @@ function showLibraryCategories() {
     const empty = count === 0;
     return `<button class="library-category-card library-category-${shelf.id}${empty ? ' library-category-coming-soon' : ''}" ${empty ? 'disabled aria-disabled="true"' : `onclick="openLibraryShelf('${shelf.id}')"`}><span class="library-category-emoji">${shelf.emoji}</span>${empty ? '<span class="library-coming-soon-label">בקרוב</span>' : ''}<span class="library-category-copy"><strong>${shelf.title}</strong><small>${shelf.subtitle}</small><b>${empty ? 'סיפורים חדשים בדרך' : `${count} סיפורים ←`}</b></span></button>`;
   }).join('');
+  window.BookiPrivateLibrary?.appendPrivateCategory();
 }
 
 function openLibraryShelf(id) {
@@ -377,6 +378,7 @@ function filterLibrary(filter, resetCount = true) {
     let stories = allStories;
     const shelf = BOOKI_LIBRARY_SHELVES.find(x => x.id === filter);
     if (shelf) stories = stories.filter(s => _storyBelongsToShelf(s, shelf));
+    else if (filter === 'teacher-private') stories = stories.filter(s => s.libraryId === 'teacher-private');
     else if (filter === 'צעדים ראשונים') stories = stories.filter(s => s.category === filter || s.libraryId === 'beginner');
     else if (filter === 'short') stories = stories.filter(s => (s.pages || []).length <= 7);
     else if (filter === 'recommended') {

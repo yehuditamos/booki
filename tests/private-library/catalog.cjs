@@ -14,6 +14,8 @@ w.eval(fs.readFileSync(__dirname+'/../../private-library.js','utf8'));const lib=
  reader={clubId:'c2',userId:'card2'};assert.equal(lib.visible(publicStories).length,0);
  reject=true;assert.equal(await lib.prepare('c2','card2'),false);assert.equal(lib.visible(publicStories).length,0);
  reject=false;mode='public';assert(await lib.prepare('c2','card2'));assert.equal(lib.visible(publicStories)[0].id,'public');
+ mode='both';assert(await lib.prepare('c2','card2'));assert.deepEqual(Array.from(lib.visible(publicStories),s=>s.id),['public','private_t1_s1']);assert.equal(lib.privateCategories(),false);
+ reject=true;assert.equal(await lib.prepare('c2','card2'),false);assert.equal(lib.visible(publicStories).length,0);reject=false;
  user={uid:'teacher',isAnonymous:false};assert.equal(lib.visible(publicStories)[0].id,'public');
  user={uid:'child',isAnonymous:true};reader={clubId:null};assert.equal(lib.privateCategories(),false);
  console.log('PASS private catalog, account ownership, switch isolation, offline fail-closed, public/standalone compatibility, plain text validation, niqqud preservation, pagination');

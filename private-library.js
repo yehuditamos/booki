@@ -35,12 +35,13 @@
    const c=await window.db.collection('clubs').doc(clubId).get({source:'server'});
    if(request!==version||auth()?.uid!==a.uid)return false;
    if(!c.exists)throw Error('club');
-   if(c.data().libraryMode!=='private'){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
+   const mode=c.data().libraryMode;
+   if(!['private','both'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
    const uid=c.data().teacherUid;if(!uid)throw Error('teacher');
    await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
    const items=await published(uid);
    if(request!==version||auth()?.uid!==a.uid)return false;
-   state={clubId,userId,authUid:a?.uid,mode:'private',items};return true;
+   state={clubId,userId,authUid:a?.uid,mode,items};return true;
   }catch(e){if(request===version)state={clubId,userId,authUid:a?.uid,mode:'error',items:[]};return false;}
  }
  function visible(publicStories){
@@ -48,7 +49,7 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
   if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
-  return state.mode==='public'?publicStories:state.mode==='private'?state.items:[];
+  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:[];
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
@@ -56,7 +57,7 @@
  }
  function privateCategories(){
   const reader=typeof getActiveReader==='function'?getActiveReader():null;
-  if(teacher()||!reader?.clubId||state.mode==='public')return false;
+  if(teacher()||!reader?.clubId||state.mode==='public'||(state.mode==='both'&&state.authUid===auth()?.uid&&state.clubId===reader.clubId&&state.userId===reader.userId))return false;
   const grid=$('library-category-grid');if(!grid)return false;grid.replaceChildren();
   if(state.mode==='error'||state.mode==='loading'||state.authUid!==auth()?.uid||state.clubId!==reader.clubId||state.userId!==reader.userId){
    grid.append(el('p','לא ניתן לטעון את ספריית הכיתה כרגע.'),btn('ניסיון נוסף',async()=>{await refresh();showLibraryCategories();}));
@@ -69,7 +70,15 @@
  async function forTeacherClub(clubId){
   const a=teacher();if(!a)throw Error('teacher');const c=await window.db.collection('clubs').doc(clubId).get({source:'server'});
   if(!c.exists||c.data().teacherUid!==a.uid)throw Error('club');
-  return c.data().libraryMode==='private'?published(a.uid):getAllStories();
+  const mode=c.data().libraryMode;
+  if(mode==='private')return published(a.uid);
+  return mode==='both'?[...getAllStories(),...await published(a.uid)]:getAllStories();
+ }
+ function appendPrivateCategory(){
+  if(state.mode!=='both'||teacher()||!state.items.length)return;
+  const b=btn('📚 סיפורי המורה · '+state.items.length+' סיפורים',()=>{
+   $('library-screen-title').textContent='סיפורי המורה';$('library-category-view').style.display='none';$('library-story-view').style.display='';filterLibrary('teacher-private');
+  });b.className='library-category-card';$('library-category-grid')?.append(b);
  }
  function loadOCR(){
   if(window.Tesseract)return Promise.resolve(window.Tesseract);
@@ -96,13 +105,13 @@
     // This read is denied until the new privacy rules are deployed. No unsafe fallback.
     await window.db.collection('libraryConfig').doc('availability').get({source:'server'});
     const [ss,cs]=await Promise.all([ref(a.uid).get({source:'server'}),window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'})]);
-    if(!valid())return;body.replaceChildren(el('p','הסיפורים שייכים לחשבון שלך וזמינים רק לתלמידים במועדונים שלך שבחרת עבורם ספרייה פרטית.'),btn('📷 הוספת סיפור מצילום, קובץ או טקסט',()=>edit(null)));
+    if(!valid())return;body.replaceChildren(el('p','הסיפורים שייכים לחשבון שלך וזמינים רק לתלמידים במועדונים שלך שבחרת עבורם ספרייה פרטית או גם וגם.'),btn('📷 הוספת סיפור מצילום, קובץ או טקסט',()=>edit(null)));
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
     const clubs=el('section');clubs.append(el('h3','איזו ספרייה הילדים יראו?'));
     if(!cs.docs.length)clubs.append(el('p','אפשר להכין סיפורים עכשיו ולבחור ספרייה לאחר פתיחת מועדון.'));
     for(const c of cs.docs.filter(c=>!c.data().hidden)){
      const row=el('label',c.data().name||'מועדון');const select=el('select');select.setAttribute('aria-label','הספרייה של '+(c.data().name||'המועדון'));
-     for(const [value,text] of [['public','ספריית בוקי הציבורית'],['private','הספרייה הפרטית שלי']]){const o=el('option',text);o.value=value;select.append(o);}select.value=c.data().libraryMode||'public';
+     for(const [value,text] of [['public','ציבורית — סיפורי בוקי'],['private','פרטית — סיפורי המורה'],['both','גם וגם — כל הסיפורים']]){const o=el('option',text);o.value=value;select.append(o);}select.value=c.data().libraryMode||'public';
      select.onchange=async()=>{const old=select.dataset.savedMode||c.data().libraryMode||'public',mode=select.value;
       if(mode==='private'&&!publishedCount){select.value=old;status.textContent='פרסמי קודם לפחות סיפור אחד בספרייה הפרטית.';return;}
       select.disabled=true;try{if(!valid())return;await c.ref.update({libraryMode:mode});select.dataset.savedMode=mode;status.textContent='הבחירה נשמרה. תופיע בפתיחה הבאה של הספרייה אצל הילדים.';}catch(e){select.value=old;status.textContent='הבחירה לא נשמרה. נסי שוב.';}finally{select.disabled=false;}
@@ -161,5 +170,5 @@
   }
   await list();
  }
- window.BookiPrivateLibrary={open,prepare,visible,refresh,privateCategories,forTeacherClub,validate,toStory};
+ window.BookiPrivateLibrary={open,prepare,visible,refresh,privateCategories,appendPrivateCategory,forTeacherClub,validate,toStory};
 })();
