@@ -1,0 +1,62 @@
+name: Booki Student Cards QA
+on:
+  push:
+    branches: ['release/student-cards-20260918']
+permissions:
+  contents: read
+jobs:
+  theme-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/student-cards-20260918
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enable scoped theme only
+        run: node scripts/enable-student-cards.cjs
+      - name: Verify existing production files are unchanged except one stylesheet link
+        run: |
+          node <<'NODE'
+          const cp=require('node:child_process'),fs=require('node:fs'),assert=require('node:assert/strict');
+          const base='911552c63afe990646049a0e7eafbb6353cc7772';
+          const files=cp.execFileSync('git',['ls-tree','-r','--name-only',base],{encoding:'utf8'}).trim().split('\n');
+          for(const file of files){
+            const original=cp.execFileSync('git',['show',base+':'+file]);
+            let current=fs.readFileSync(file);
+            if(file==='index.html')current=Buffer.from(current.toString().replace('<link rel="stylesheet" href="student-cards.css?v=20260918-folder-style">\n',''));
+            assert(original.equals(current),'Unexpected modification: '+file);
+          }
+          console.log('All existing production source, story, permission and data logic files are byte-identical; index adds only the stylesheet.');
+          NODE
+          node scripts/test-reading-safety.js
+          node scripts/test-omri-word-matcher.js
+          node scripts/test-booki-local-listening.js
+          node scripts/test-release-flows.js
+      - name: Install isolated browser driver
+        run: python -m pip install playwright==1.57.0
+      - name: Native student-card UI and teacher roster checks with synthetic data
+        run: |
+          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium)"
+          python scripts/test-student-cards-browser.py
+      - name: Save the tested stylesheet link on release branch only
+        run: |
+          git config user.name 'Booki Release'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply approved folder-style student cards to live entry [cache-bust-done]'
+            git push origin HEAD:refs/heads/release/student-cards-20260918
+          fi
+          git rev-parse HEAD > verification/student-cards/tested-commit.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: student-cards-review
+          path: verification/student-cards/
+          retention-days: 3
