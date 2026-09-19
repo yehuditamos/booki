@@ -78,7 +78,7 @@
           const saved=await fbMarkMessagesSeen(clubId,userId,[m.id]);
           if(saved)b.remove();else b.disabled=false;
         }catch(e){b.disabled=false;}
-      });b.className='booki-recommend-home';host.append(b);
+      });b.className='booki-recommend-home booki-envelope-notice booki-envelope-book';b.textContent='💌';b.setAttribute('aria-label','יש לך סיפור חדש מהמורה: '+story.title+'. לחצו לפתיחה');b.title='סיפור מהמורה';host.append(b);
     }
   };
 })();
