@@ -3035,6 +3035,22 @@ body:not(.nav-visible) .btn-niqud-toggle { bottom: calc(14px + env(safe-area-ins
 }
 .booki-message-banner-close:hover { opacity: 1; }
 
+/* Booki mail — exact child-facing language: two small tactile envelopes beside Booki. */
+#screen-main #booki-story-recommendations{display:flex!important;position:absolute;z-index:18;top:190px;right:18px;gap:10px;width:auto}
+.booki-message-banner.booki-envelope-notice{position:absolute;z-index:18;top:190px;left:18px;width:112px;height:76px;margin:0;padding:0;border:0;background:linear-gradient(145deg,#fffdf5,#f6e4bf);border-radius:14px;box-shadow:0 8px 18px #7d5b2630;display:grid;place-items:center;cursor:pointer;transform-origin:center}
+.booki-recommend-home.booki-envelope-notice{width:112px;height:76px;padding:0;border:0;background:linear-gradient(145deg,#fffdf5,#f6e4bf);border-radius:14px;box-shadow:0 8px 18px #7d5b2630;display:grid;place-items:center;font-size:0;cursor:pointer;position:relative;transform-origin:center}
+.booki-envelope-notice::before{content:"";position:absolute;inset:8px;border:2px solid #d8bd86;border-radius:8px;clip-path:polygon(0 0,50% 52%,100% 0,100% 100%,0 100%);background:#fff8e9}
+.booki-envelope-notice::after{position:relative;z-index:2;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:0 2px 7px #755b3030;font-size:23px}
+.booki-envelope-heart::after{content:"❤️"}.booki-envelope-book::after{content:"📖"}
+.booki-envelope-notice:not(.is-open){animation:bookiEnvelopeShake 2.2s ease-in-out infinite}
+.booki-envelope-notice:not(.is-open):hover,.booki-envelope-notice:not(.is-open):focus-visible{animation-duration:.8s;outline:3px solid #f1c84a;outline-offset:4px}
+.booki-message-banner.booki-envelope-notice .booki-message-banner-text{font-size:0;position:relative;z-index:3}
+.booki-message-banner.booki-envelope-notice.is-open{width:min(320px,calc(100vw - 36px));height:auto;min-height:82px;padding:16px;background:#fffaf0;border:2px solid #e8d09c;animation:none}
+.booki-message-banner.booki-envelope-notice.is-open::before,.booki-message-banner.booki-envelope-notice.is-open::after{display:none}
+.booki-message-banner.booki-envelope-notice.is-open .booki-message-banner-text{font-size:16px;color:#285b46;line-height:1.45}
+@keyframes bookiEnvelopeShake{0%,72%,100%{transform:rotate(0) translateY(0)}76%{transform:rotate(-5deg) translateY(-2px)}80%{transform:rotate(5deg) translateY(-2px)}84%{transform:rotate(-4deg)}88%{transform:rotate(4deg)}92%{transform:rotate(0)}}
+@media(max-width:420px){#screen-main #booki-story-recommendations{top:185px;right:12px}.booki-message-banner.booki-envelope-notice{top:185px;left:12px}.booki-envelope-notice,.booki-recommend-home.booki-envelope-notice{width:96px!important;height:66px!important}}
+
 /* לב עידוד בטבלת הקוראים — שליחה בלבד, אין יותר "תגובה שלא נקראה" */
 .tcd-m-encourage { background: none; border: none; font-size: 1rem; cursor: pointer; opacity: .5; padding: 4px; border-radius: 6px; flex-shrink: 0; transition: opacity .15s; }
 .tcd-m-encourage:hover { opacity: 1; }
