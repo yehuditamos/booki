@@ -19,7 +19,7 @@
  const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[],anchors:new Set()});
  const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue],anchors:new Set(t.anchors||[])});
 
- let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCommitted=-1,pageCelebrated=false;
+ let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCommitted=-1,pageCelebrated=false,locked=false,rollingAnchors=new Set(),yellowFrom=-1;
  let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
 
  function reader(){
@@ -76,13 +76,14 @@
  }
  function paint(){
   nodes.forEach((n,i)=>{
-   n.className='reader-word'+(track.heard.has(i)?' is-heard':'')+(preview.has(i)?' is-preview':'');
+   const yellow=yellowFrom>=0&&i>=yellowFrom&&!track.heard.has(i);
+   n.className='reader-word'+(track.heard.has(i)?' is-heard':'')+(yellow?' is-landing':'')+(preview.has(i)?' is-preview':'');
    delete n.dataset.readingRetry;n.removeAttribute('tabindex');n.removeAttribute('role');n.removeAttribute('aria-label');
   });
   const target=$('reader-text');
   target?.querySelectorAll?.('.reader-space').forEach(n=>{
-   const after=Number(n.dataset.afterWord||0);
-   n.className='reader-space'+(track.heard.has(after)&&track.heard.has(after+1)?' is-heard':'');
+   const after=Number(n.dataset.afterWord||0),green=track.heard.has(after)&&track.heard.has(after+1),yellow=yellowFrom>=0&&after>=yellowFrom-1&&!green;
+   n.className='reader-space'+(green?' is-heard':yellow?' is-landing':'');
   });
  }
  function rebuildVisualLines(){
@@ -102,28 +103,30 @@
   for(let i=lastCommitted+1;i<=Math.min(index,words.length-1);i++)track.heard.add(i);
   lastCommitted=Math.min(index,words.length-1);
  }
- function anchorProgress(t=track){
-  const a=[...realAnchors(t)].sort((x,y)=>x-y);
-  return {a,count:a.length,last:a.length?a[a.length-1]:-1,first:a.length?a[0]:-1};
+ function mergeAnchors(candidate){
+  (candidate.anchors||[]).forEach(i=>{track.anchors.add(i);rollingAnchors.add(i);});
+  const ordered=[...rollingAnchors].sort((x,y)=>x-y);
+  // Two distinct forward text anchors establish location once. After lock,
+  // every new forward anchor can move the reading wave immediately.
+  if(!locked&&ordered.length>=2&&ordered[ordered.length-1]>ordered[0])locked=true;
+  return ordered;
  }
  function applyFastProgress(candidate){
   if(!words.length)return;
-  const p=anchorProgress(candidate);
-  // Two genuine text anchors unlock a calm chunk. Never advance from sound/time.
-  if(p.count>=2){
-   const safe=Math.max(lastCommitted,p.last);
-   commitThrough(safe);
-  }
-  if(!lineGroups.length)rebuildVisualLines();
-  const landingStart=Math.max(0,Math.floor(words.length*.75));
-  const inLanding=p.a.some(i=>i>=landingStart);
-  const enoughJourney=words.length<=4?p.count>=2:p.count>=Math.max(3,Math.ceil(words.length*.28));
-  if(!pageCelebrated&&inLanding&&enoughJourney){
-   pageCelebrated=true;commitThrough(words.length-1);paint();
-   nodes.forEach(n=>n.classList?.add?.('is-page-success'));
+  const ordered=mergeAnchors(candidate);if(!ordered.length)return;
+  const last=ordered[ordered.length-1];
+  if(locked)commitThrough(last);
+  // V3 landing: only the final or penultimate word is an ending anchor.
+  // Unverified remainder is encouragement-yellow, never claimed as read-green.
+  const endingStart=Math.max(0,words.length-2);
+  const endingAnchor=ordered.find(i=>i>=endingStart);
+  if(locked&&endingAnchor!==undefined&&!pageCelebrated){
+   pageCelebrated=true;
+   yellowFrom=Math.min(words.length-1,endingAnchor+1);
+   paint();
    const target=$('reader-text');target?.classList?.add?.('reader-page-success');
-   say('יפה! ממשיכים כשמתחשק ✨');
-   setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},900);
+   say('יפה! הגעת לסוף העמוד ✨');
+   setTimeout(()=>target?.classList?.remove?.('reader-page-success'),800);
   }
  }
  function render(value){
@@ -131,7 +134,7 @@
   syncButton();
   if(typeof document.createElement!=='function'||typeof document.createTextNode!=='function'){target.textContent=String(value||'');return;}
   const raw=String(value||''),parts=raw.match(/\S+|\s+/g)||[];
-  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];lastCommitted=-1;pageCelebrated=false;
+  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];lastCommitted=-1;pageCelebrated=false;locked=false;rollingAnchors.clear();yellowFrom=-1;
   target.textContent='';nodes=[];let i=0;
   parts.forEach(part=>{
    if(/^\s+$/.test(part)){
@@ -157,10 +160,7 @@
   const candidate=follow(clone(track),input);
   // V2: interim speech is allowed to move the UI. It does not become a report or
   // score; it only supplies real text anchors for the current reading session.
-  if(candidate.anchors?.size>=2){
-   candidate.anchors.forEach(i=>track.anchors.add(i));
-   applyFastProgress(candidate);
-  }
+  if(candidate.anchors?.size)applyFastProgress(candidate);
   preview=new Set([...candidate.heard].filter(i=>!track.heard.has(i)));paint();
   const id=epoch;previewTimer=setTimeout(()=>{if(id===epoch){preview.clear();paint();}},900);
  }
