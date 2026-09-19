@@ -19,7 +19,7 @@
  const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[],anchors:new Set()});
  const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue],anchors:new Set(t.anchors||[])});
 
- let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCommitted=-1,pageCelebrated=false,locked=false,rollingAnchors=new Set(),yellowFrom=-1;
+ let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCommitted=-1,pageCelebrated=false,locked=false,rollingAnchors=new Set(),yellowFrom=-1,sessionListeningMs=0,listeningSince=0,sessionVerified=false;
  let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
 
  function reader(){
@@ -108,7 +108,7 @@
   const ordered=[...rollingAnchors].sort((x,y)=>x-y);
   // Two distinct forward text anchors establish location once. After lock,
   // every new forward anchor can move the reading wave immediately.
-  if(!locked&&ordered.length>=2&&ordered[ordered.length-1]>ordered[0])locked=true;
+  if(!locked&&ordered.length>=2&&ordered[ordered.length-1]>ordered[0]){locked=true;sessionVerified=true;}
   return ordered;
  }
  function applyFastProgress(candidate){
@@ -153,7 +153,7 @@
   const old=session;session=null;if(old){clearTimeout(old.timer);old.rec.onresult=old.rec.onerror=old.rec.onend=null;old.rec.onstart=()=>{try{old.rec.abort();}catch(_){}};try{old.rec.abort();}catch(_){}}
   track.queue=[];
  }
- function stop(hide=true){running=false;armed=false;closeRecognition();if(hide)setPanel(false);else syncButton();paint();}
+ function stop(hide=true){if(listeningSince){sessionListeningMs+=Math.max(0,Date.now()-listeningSince);listeningSince=0;}running=false;armed=false;closeRecognition();if(hide)setPanel(false);else syncButton();paint();}
  function fallback(){quiet=true;closeRecognition();say('קוראים בנחת — גם בלי צבעים 💛');setPanel(true);paint();}
  function showPreview(input){
   clearPreview();
