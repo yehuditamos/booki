@@ -809,50 +809,31 @@ function renderReaderPage() {
   const shared = page.sharedReading && typeof page.sharedReading.childText === 'string';
   if (readerText) readerText.classList.toggle('reader-shared-turn', !!shared);
   if (shared && readerText) {
-    // Shared reading shows ONE complete sentence. Parent text stays quiet/grey;
-    // only the child's turn becomes large and dark inside that same sentence.
-    const childRaw = page.sharedReading.childText.trim();
-    const childDisplay = revealed || mode === 'full' ? childRaw : mode === 'mixed' ? _mixedNiqudText(childRaw,currentPageIndex) : stripNiqud(childRaw);
-    const childName = (typeof getActiveReader==='function' && getActiveReader()?.name) || 'הילד';
+    const childRaw=page.sharedReading.childText.trim();
+    const childDisplay=revealed||mode==='full'?childRaw:mode==='mixed'?_mixedNiqudText(childRaw,currentPageIndex):stripNiqud(childRaw);
+    const childName=(typeof getActiveReader==='function'&&getActiveReader()?.name)||'הילד';
     readerText.replaceChildren();
     const instruction=document.createElement('p');instruction.className='shared-reading-parent-note';
-    instruction.textContent='👩‍👧 אמא קוראת את האפור · '+childName+' קורא את השחור';
-    readerText.append(instruction);
+    instruction.textContent='👩‍👧 אמא קוראת את האפור · '+childName+' קורא את השחור';readerText.append(instruction);
     const sentence=document.createElement('div');sentence.className='shared-reading-sentence';
-    // Find the authored child turn in the full line; if the author used an
-    // ellipsis prompt, append the child's word so the child still sees a whole sentence.
-    // Locate the child word accent-insensitively so niqqud-mode transformations
-    // cannot make the parent half disappear.
-    const normalized=x=>String(x||'').normalize('NFD').replace(/[\u0591-\u05C7]/g,'').normalize('NFC');
-    // Tokenize the displayed sentence and match the LAST token whose bare Hebrew
-    // letters contain the child's target. This handles prefixes such as הַגַּן/בַּגַּן
-    // while preserving the complete sentence around the highlighted child word.
-    const tokenRe=/\S+/gu;let hit=null,m;
-    while((m=tokenRe.exec(displayText))){
-      const bare=normalized(m[0]).replace(/[^א-ת]/g,'');
-      if(bare.endsWith(normalized(childDisplay).replace(/[^א-ת]/g,'')))hit={start:m.index,end:m.index+m[0].length,token:m[0]};
-    }
-    let before=displayText,after='',shownChild=childDisplay;
-    if(hit){
-      const bareTarget=normalized(childDisplay).replace(/[^א-ת]/g,'');
-      const tokenBare=normalized(hit.token);
-      const prefixLetters=Math.max(0,tokenBare.replace(/[^א-ת]/g,'').length-bareTarget.length);
-      // For prefixed forms, keep the prefix with the parent's grey text and make
-      // the child's known core word the large dark turn.
-      let split=hit.start,letters=0;
-      for(let p=hit.start;p<hit.end&&letters<prefixLetters;){
-        const ch=displayText[p];p++;
-        if(/[א-ת]/.test(normalized(ch)))letters++;
-        while(p<hit.end&&/[\u0591-\u05C7]/.test(displayText[p]))p++;
-        split=p;
-      }
-      before=displayText.slice(0,split);after=displayText.slice(hit.end);
-    }
-    const lead=document.createElement('span');lead.className='shared-reading-parent';lead.textContent=before;
-    const word=document.createElement('span');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;
-    const tail=document.createElement('span');tail.className='shared-reading-parent';tail.textContent=after;
-    sentence.append(lead,word,tail);readerText.append(sentence);
-    if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(childDisplay);
+    // Render the COMPLETE authored sentence first. Then visually promote the
+    // last occurrence of the child's core word, even inside ה/ב/ל prefixed words.
+    const bare=x=>String(x||'').normalize('NFD').replace(/[\u0591-\u05C7]/g,'').normalize('NFC').replace(/[^א-ת]/g,'');
+    const target=bare(childDisplay),parts=displayText.match(/\S+|\s+/gu)||[displayText];
+    let hit=-1;for(let i=0;i<parts.length;i++)if(!/^\s+$/.test(parts[i])&&bare(parts[i]).endsWith(target))hit=i;
+    parts.forEach((part,i)=>{
+      if(i!==hit){const n=document.createElement('span');n.className='shared-reading-parent';n.textContent=part;sentence.append(n);return;}
+      const tokenBare=bare(part),prefixCount=Math.max(0,tokenBare.length-target.length);
+      // Keep Hebrew prefix (ב/ה/ל...) grey, but never delete any authored text.
+      let cut=0,letters=0;
+      while(cut<part.length&&letters<prefixCount){const ch=part[cut++];if(/[א-ת]/.test(ch))letters++;while(cut<part.length&&/[\u0591-\u05C7]/.test(part[cut]))cut++;}
+      if(cut){const pre=document.createElement('span');pre.className='shared-reading-parent';pre.textContent=part.slice(0,cut);sentence.append(pre);}
+      const word=document.createElement('span');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;sentence.append(word);
+      // Preserve punctuation after the target.
+      const punct=part.match(/[^א-ת\u0591-\u05C7]+$/u)?.[0]||'';if(punct){const tail=document.createElement('span');tail.className='shared-reading-parent';tail.textContent=punct;sentence.append(tail);}
+    });
+    readerText.append(sentence);
+    if(window.BookiLocalListening?.isEnabled())window.BookiLocalListening.render(childDisplay);
   } else {
     if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
     else if (readerText) readerText.textContent = displayText;
