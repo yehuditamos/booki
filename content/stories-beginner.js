@@ -116,4 +116,63 @@ const STORIES_BEGINNER = [
     ],
   },
 
+
+  // ─── אותיות והברות — קוראים באמת, עוד לפני קריאה שוטפת ───
+  {
+    id: "beginner-syllables-dad-comes",
+    libraryId: "beginner",
+    category: "אותיות והברות",
+    title: "אַבָּא בָּא",
+    emoji: "👨‍👦",
+    tags: ["אותיות והברות","הברות","משפחה","🌱 קורא ראשון"],
+    pages: [
+      { text: "אַ־בָּא", readingMinutes: 0.15 },
+      { text: "בָּא", readingMinutes: 0.15 },
+      { text: "אַבָּא בָּא.", readingMinutes: 0.15 },
+      { text: "אַבָּא בָּא! ❤️", readingMinutes: 0.15 }
+    ]
+  },
+  {
+    id: "beginner-syllables-mom-came",
+    libraryId: "beginner",
+    category: "אותיות והברות",
+    title: "אִמָּא בָּאָה",
+    emoji: "👩‍👧",
+    tags: ["אותיות והברות","הברות","משפחה","🌱 קורא ראשון"],
+    pages: [
+      { text: "אִ־מָּא", readingMinutes: 0.15 },
+      { text: "בָּ־אָה", readingMinutes: 0.15 },
+      { text: "אִמָּא בָּאָה.", readingMinutes: 0.15 },
+      { text: "הֵיי, אִמָּא! 👋", readingMinutes: 0.15 }
+    ]
+  },
+  {
+    id: "beginner-together-fish",
+    libraryId: "beginner",
+    category: "אותיות והברות",
+    title: "אֲנִי קוֹרֵא: דָּג",
+    emoji: "🐟",
+    tags: ["אותיות והברות","קוראים יחד","דג","🌱 קורא ראשון"],
+    pages: [
+      { text: "יֵשׁ בַּיָּם מַשֶּׁהוּ קָטָן…", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
+      { text: "הוּא שָׂח בַּמַּיִם. זֶה…", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
+      { text: "דָּג", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
+      { text: "דָּג שָׂח! 🐟", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } }
+    ]
+  },
+  {
+    id: "beginner-together-garden",
+    libraryId: "beginner",
+    category: "אותיות והברות",
+    title: "אֲנִי קוֹרֵא: גַּן",
+    emoji: "🌳",
+    tags: ["אותיות והברות","קוראים יחד","גן","🌱 קורא ראשון"],
+    pages: [
+      { text: "דָּן יוֹצֵא מֵהַבַּיִת וְהוֹלֵךְ אֶל הַ…", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
+      { text: "בַּגַּן דָּן רָץ וְשָׂמֵחַ. אֵיפֹה דָּן? בַּ…", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
+      { text: "גַּן", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
+      { text: "דָּן בַּגַּן! 🌳", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } }
+    ]
+  },
+
 ];
