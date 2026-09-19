@@ -141,11 +141,15 @@
  function retry(index){
   if(!isEnabled()||!track.gaps.has(index))return;retryTarget=index;say('אפשר לקרוא את המילה שוב, או פשוט להמשיך.');paint();
  }
- document.addEventListener('click',e=>{const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n)retry(Number(n.dataset.wordIndex));});
- document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n){e.preventDefault();retry(Number(n.dataset.wordIndex));}});
- document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stop(false);});
- window.addEventListener('pagehide',()=>stop(true));
- window.addEventListener('offline',()=>{if(running)fallback();});
+ if(typeof document.addEventListener==='function'){
+  document.addEventListener('click',e=>{const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n)retry(Number(n.dataset.wordIndex));});
+  document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n){e.preventDefault();retry(Number(n.dataset.wordIndex));}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stop(false);});
+ }
+ if(typeof window.addEventListener==='function'){
+  window.addEventListener('pagehide',()=>stop(true));
+  window.addEventListener('offline',()=>{if(running)fallback();});
+ }
 
  window.BookiLocalListening=Object.freeze({isEnabled,render,start,requestStart,stop,_followForTest:(input,story)=>{expected=story.map(key);const t=make();follow(t,input.map(key));return{cursor:t.cursor,heard:[...t.heard],gaps:[...t.gaps]};}});
  if(!isEnabled())setPanel(false);
