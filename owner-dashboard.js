@@ -22,6 +22,9 @@ function showOwnerDashboard(teacher) {
 // ─── Main Loader — 5 קריאות מקבילות ──────────────────────────────────────────
 
 let _odSnapshot=null, _odLoadVersion=0, _odPeriod='48h', _odShowAllTeachers=false, _odTeacherFilter='all', _odMemberFilter='all';
+const _odPilotMessage=name=>`היי ${name||''}, שבוע טוב 💛 מה שלומך?\n\nהשבוע אנחנו סוגרים את רשימת המשתתפות בפיילוט של בוקי, וממש נשמח לתת לך עוד הזדמנות להצטרף לפני שאנחנו סוגרים את ההרשמה.\n\nכדי שנוכל באמת ללמוד מהפיילוט ולבחון את נתוני הקריאה, ההשתתפות בו היא עם כיתה פעילה וילדים שמתחילים לקרוא בבוקי 📚\n\nחופשת סוכות היא הזדמנות מעולה לתת לילדים לקרוא בבית 🌿\n\nצריכה מאיתנו עזרה קצרה בהקמת המועדון והכנסת הילדים? בשמחה. ואם החלטת שבסוף זה פחות מתאים כרגע — גם ממש בסדר, רק כתבי לי כדי שאדע 💛`;
+function _odWaPhone(phone){let p=String(phone||'').replace(/\D/g,'');if(p.startsWith('0'))p='972'+p.slice(1);return /^972\d{8,9}$/.test(p)?p:'';}
+function _odWhatsAppButton(teacher){const p=_odWaPhone(teacher.phone);if(!p)return null;const a=_odNode('a','💬 WhatsApp','od-wa-btn');a.href='https://wa.me/'+p+'?text='+encodeURIComponent(_odPilotMessage(teacher.name||''));a.target='_blank';a.rel='noopener';return a;}
 const _odIsTest=o=>o?.isTest===true||o?.isDemo===true||o?.demo===true||o?.test===true;
 function _odTimestamp(value){
  const ms=value?.toMillis?value.toMillis():value?.toDate?value.toDate().getTime():new Date(value||'').getTime();
@@ -190,13 +193,18 @@ function _odRecentTeachers(teachers){
 function _odRenderRecentTeachers(teachers,clubs){
  const list=document.getElementById('od-recent-teachers');if(!list)return;
  list.replaceChildren();
- const sorted=_odRecentTeachers(teachers).filter(t=>_odTeacherFilter==='new'?_odInPeriod(t.createdAt,'30d'):_odTeacherFilter==='active'?_odInPeriod(t.lastLoginAt,_odPeriod):true);
- const heading=document.getElementById('od-recent-teachers-title');if(heading)heading.textContent=_odTeacherFilter==='new'?'מורות שהצטרפו ב־30 הימים האחרונים':_odTeacherFilter==='active'?'מורות שנכנסו בתקופה שנבחרה':'כל המורות · מהחדשה לוותיקה';
+ const inactive=t=>{const owned=clubs.filter(c=>c.teacherUid===t.id);if(!owned.length)return true;return owned.every(c=>(c.memberCount??(_odSnapshot?.memberships?.get(c.id)||[]).filter(m=>m.status!=='left').length)===0);};
+ const sorted=_odRecentTeachers(teachers).filter(t=>_odTeacherFilter==='new'?_odInPeriod(t.createdAt,'30d'):_odTeacherFilter==='active'?_odInPeriod(t.lastLoginAt,_odPeriod):_odTeacherFilter==='needs-class'?inactive(t):true);
+ const heading=document.getElementById('od-recent-teachers-title');if(heading)heading.textContent=_odTeacherFilter==='new'?'מורות שהצטרפו ב־30 הימים האחרונים':_odTeacherFilter==='active'?'מורות שנכנסו בתקופה שנבחרה':_odTeacherFilter==='needs-class'?'טרם הפעילו כיתה · לפנייה אישית':'כל המורות · מהחדשה לוותיקה';
+ if(_odTeacherFilter==='needs-class'){
+   const tools=_odNode('div',undefined,'od-pilot-tools');tools.append(_odNode('p','כאן מופיעות מורות בלי מועדון או בלי תלמידים פעילים. WhatsApp נפתח אחד־אחד עם הודעה מוכנה.'));
+   list.append(tools);
+ }
  if(!sorted.length){list.append(_odNode('p','אין מורות להצגה בבחירה הזו.'));return;}
  for(const t of (_odShowAllTeachers?sorted:sorted.slice(0,5))){
   const card=_odNode('div',undefined,'od-club-browser');
   const top=_odNode('div',undefined,'od-manager');
-  top.append(_odNode('strong',t.name||'מורה ללא שם'));_odContact(top,t);card.append(top);
+  top.append(_odNode('strong',t.name||'מורה ללא שם'));_odContact(top,t);const wa=_odWhatsAppButton(t);if(wa)top.append(wa);card.append(top);
   const joined=_odTimestamp(t.createdAt);
   const date=joined===null?'תאריך הצטרפות לא שמור':'הצטרפה ב־'+new Date(joined).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jerusalem'});
   card.append(_odNode('p',date));
