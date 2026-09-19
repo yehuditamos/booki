@@ -65,8 +65,16 @@
       const browse=el('section',null,'cc-browse');browse.append(el('h3','מה מעניין אותך?'));
       const topicRow=el('div',null,'cc-chips');topicRow.setAttribute('aria-label','בחירה לפי נושא');
       for(const t of topics.filter(t=>all.some(t.match))){const b=btn(t.emoji+' '+t.label,()=>{topic=t.id;limit=9;drawList();},'cc-chip');b.dataset.topic=t.id;topicRow.append(b);}
-      const formatRow=el('div',null,'cc-chips');formatRow.setAttribute('aria-label','כמות הטקסט');
-      for(const f of [{id:'all',label:'כל סוגי הטקסט'},...formats.filter(f=>all.some(s=>profile(s).format.id===f.id))]){const b=btn((f.symbol||'')+' '+f.label,()=>{format=f.id;limit=9;drawList();},'cc-chip');b.dataset.format=f.id;formatRow.append(b);}
+      const formatPanel=el('section',null,'cc-format-panel');
+      formatPanel.append(el('h3','✨ איך מתחשק לקרוא?'),el('p','בחרו את כמות הטקסט שמתאימה לכם:','cc-format-help'));
+      const formatRow=el('div',null,'cc-chips cc-format-chips');formatRow.setAttribute('aria-label','כמות הטקסט');
+      for(const f of [{id:'all',label:'כל סוגי הטקסט',symbol:''},...formats.filter(f=>all.some(s=>profile(s).format.id===f.id))]){
+       const b=btn('',()=>{format=f.id;limit=9;drawList();},'cc-chip');b.dataset.format=f.id;
+       if(f.id==='all')b.append(el('span','כל סוגי הטקסט','cc-format-label'));
+       else{const shape=el('span',f.symbol,'cc-format-shape');shape.setAttribute('aria-hidden','true');b.append(shape,el('span',f.label,'cc-format-label'));}
+       formatRow.append(b);
+      }
+      formatPanel.append(formatRow);
       const search=el('input');search.type='search';search.placeholder='חיפוש סיפור';search.value=query;search.setAttribute('aria-label','חיפוש לפי שם סיפור');
       const count=el('p',null,'cc-count');count.setAttribute('role','status');
       const list=el('div',null,'cc-grid');const more=btn('עוד סיפורים',()=>{limit+=9;drawList();},'cc-secondary');
@@ -77,7 +85,7 @@
         count.textContent=found.length?found.length+' סיפורים לבחירה':'לא מצאנו סיפור. אפשר לבחור נושא אחר או למחוק את החיפוש.';
         list.replaceChildren(...found.slice(0,limit).map(s=>card(s,recommended.some(id=>String(id)===String(s.id)))));more.hidden=found.length<=limit;
       }
-      search.oninput=()=>{query=search.value;limit=9;drawList();};browse.append(topicRow,el('h3','איך מתחשק לקרוא?'),formatRow,search,count,list,more);root.append(browse);drawList();
+      search.oninput=()=>{query=search.value;limit=9;drawList();};browse.append(topicRow,formatPanel,search,count,list,more);root.append(browse);drawList();
     }
     async function openDirect(id){
       const context=options.context?.();
