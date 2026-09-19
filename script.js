@@ -809,30 +809,25 @@ function renderReaderPage() {
   const shared = page.sharedReading && typeof page.sharedReading.childText === 'string';
   if (readerText) readerText.classList.toggle('reader-shared-turn', !!shared);
   if (shared && readerText) {
-    // Shared reading is deliberately turn-based: the child never faces a full
-    // paragraph as their task. Adult/Booki context is quiet; child's word is the hero.
+    // Shared reading shows ONE complete sentence. Parent text stays quiet/grey;
+    // only the child's turn becomes large and dark inside that same sentence.
     const childRaw = page.sharedReading.childText.trim();
     const childDisplay = revealed || mode === 'full' ? childRaw : mode === 'mixed' ? _mixedNiqudText(childRaw,currentPageIndex) : stripNiqud(childRaw);
-    const fullPlain = stripNiqud(displayText), childPlain = stripNiqud(childDisplay);
-    let lead = displayText;
-    const at = fullPlain.lastIndexOf(childPlain);
-    if (at >= 0) {
-      // Mapping exact diacritics is intentionally avoided: authored shared pages
-      // place the child turn at the end or repeat it as the focal page.
-      const rawAt = displayText.lastIndexOf(childRaw);
-      if (rawAt >= 0) lead = displayText.slice(0, rawAt).trim();
-    }
+    const childName = (typeof getActiveReader==='function' && getActiveReader()?.name) || 'הילד';
     readerText.replaceChildren();
-    if (lead && stripNiqud(lead).trim() !== childPlain.trim()) {
-      const guide=document.createElement('div');guide.className='shared-reading-guide';
-      guide.append(Object.assign(document.createElement('span'),{className:'shared-reading-label',textContent:'👂 בוקי קורא'}),Object.assign(document.createElement('p'),{textContent:lead}));
-      readerText.append(guide);
-    }
-    const turn=document.createElement('div');turn.className='shared-reading-child';
-    turn.append(Object.assign(document.createElement('span'),{className:'shared-reading-label',textContent:'🌟 עכשיו אתה'}));
-    const word=document.createElement('div');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;turn.append(word);readerText.append(turn);
-    // Feed only the child's tiny turn to the listening companion. This reuses
-    // the approved green/yellow feedback without asking the child to read Booki's text.
+    const instruction=document.createElement('p');instruction.className='shared-reading-parent-note';
+    instruction.textContent='👩‍👧 אמא קוראת את האפור · '+childName+' קורא את השחור';
+    readerText.append(instruction);
+    const sentence=document.createElement('div');sentence.className='shared-reading-sentence';
+    // Find the authored child turn in the full line; if the author used an
+    // ellipsis prompt, append the child's word so the child still sees a whole sentence.
+    let before=displayText,after='',rawAt=displayText.lastIndexOf(childRaw);
+    if(rawAt>=0){before=displayText.slice(0,rawAt);after=displayText.slice(rawAt+childRaw.length);}
+    else if(/[.…]\s*$/.test(before)){before=before.replace(/[.…]\s*$/,' ');}
+    const lead=document.createElement('span');lead.className='shared-reading-parent';lead.textContent=before;
+    const word=document.createElement('span');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;
+    const tail=document.createElement('span');tail.className='shared-reading-parent';tail.textContent=after;
+    sentence.append(lead,word,tail);readerText.append(sentence);
     if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(childDisplay);
   } else {
     if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
