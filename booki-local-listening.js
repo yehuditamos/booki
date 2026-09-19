@@ -19,7 +19,7 @@
  const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[],anchors:new Set()});
  const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue],anchors:new Set(t.anchors||[])});
 
- let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCelebratedPageKey='';
+ let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCommitted=-1,pageCelebrated=false;
  let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
 
  function reader(){
@@ -91,47 +91,42 @@
   });
   if(group.length)lineGroups.push(group);
  }
- function completePassedLines(){
-  if(!lineGroups.length)rebuildVisualLines();
-  if(!lineGroups.length||track.cursor<1)return;
-  const anchorSet=track.anchors||new Set();
-  // A line is closed only after there is a genuine anchor in a later visual
-  // line. This is what proves the child moved on; time/noise alone never does.
-  let furthestAnchorLine=-1;
-  anchorSet.forEach(i=>{furthestAnchorLine=Math.max(furthestAnchorLine,lineOf[i]??-1);});
-  if(furthestAnchorLine<1)return;
-  for(let line=0;line<furthestAnchorLine;line++){
-   const ids=lineGroups[line]||[];
-   const matched=ids.filter(i=>anchorSet.has(i)).length;
-   const needed=ids.length<=2?1:Math.min(3,Math.max(2,Math.ceil(ids.length*.35)));
-   if(matched>=needed)ids.forEach(i=>track.heard.add(i));
-  }
+ function realAnchors(t=track){return t.anchors||new Set();}
+ function commitThrough(index){
+  if(index<=lastCommitted)return;
+  for(let i=lastCommitted+1;i<=Math.min(index,words.length-1);i++)track.heard.add(i);
+  lastCommitted=Math.min(index,words.length-1);
  }
- function maybeCelebratePage(){
-  if(!words.length||!nodes.length)return;
-  const anchorSet=track.anchors||new Set(),needed=words.length<=3?Math.max(1,words.length-1):Math.max(3,Math.ceil(words.length*.4));
+ function anchorProgress(t=track){
+  const a=[...realAnchors(t)].sort((x,y)=>x-y);
+  return {a,count:a.length,last:a.length?a[a.length-1]:-1,first:a.length?a[0]:-1};
+ }
+ function applyFastProgress(candidate){
+  if(!words.length)return;
+  const p=anchorProgress(candidate);
+  // Two genuine text anchors unlock a calm chunk. Never advance from sound/time.
+  if(p.count>=2){
+   const safe=Math.max(lastCommitted,p.last);
+   commitThrough(safe);
+  }
   if(!lineGroups.length)rebuildVisualLines();
-  const lastLine=lineGroups.length-1,lastIds=lineGroups[lastLine]||[];
-  const lastAnchors=lastIds.filter(i=>anchorSet.has(i));
-  // Reading itself triggers success. We do NOT wait for the next-page tap.
-  // A real anchor in the final visual line + enough real anchors across the page
-  // is sufficient; noise cannot satisfy the text-anchor requirement.
-  const reachedEnding=lastAnchors.length>=1 || track.cursor>=Math.max(1,words.length-2);
-  if(!reachedEnding||anchorSet.size<needed)return;
-  nodes.forEach((n,i)=>track.heard.add(i));
-  paint();
-  // Add the success class only after paint(), otherwise paint overwrites it.
-  nodes.forEach(n=>n.classList?.add?.('is-page-success'));
-  const target=$('reader-text');target?.classList?.add?.('reader-page-success');
-  say('יפה! ממשיכים כשמתחשק ✨');
-  setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},900);
+  const landingStart=Math.max(0,Math.floor(words.length*.75));
+  const inLanding=p.a.some(i=>i>=landingStart);
+  const enoughJourney=words.length<=4?p.count>=2:p.count>=Math.max(3,Math.ceil(words.length*.28));
+  if(!pageCelebrated&&inLanding&&enoughJourney){
+   pageCelebrated=true;commitThrough(words.length-1);paint();
+   nodes.forEach(n=>n.classList?.add?.('is-page-success'));
+   const target=$('reader-text');target?.classList?.add?.('reader-page-success');
+   say('יפה! ממשיכים כשמתחשק ✨');
+   setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},900);
+  }
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
   syncButton();
   if(typeof document.createElement!=='function'||typeof document.createTextNode!=='function'){target.textContent=String(value||'');return;}
   const raw=String(value||''),parts=raw.match(/\S+|\s+/g)||[];
-  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];
+  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];lastCommitted=-1;pageCelebrated=false;
   target.textContent='';nodes=[];let i=0;
   parts.forEach(part=>{
    if(/^\s+$/.test(part)){target.append(document.createTextNode(part));return;}
@@ -149,14 +144,21 @@
  function stop(hide=true){running=false;armed=false;closeRecognition();if(hide)setPanel(false);else syncButton();paint();}
  function fallback(){quiet=true;closeRecognition();say('קוראים בנחת — גם בלי צבעים 💛');setPanel(true);paint();}
  function showPreview(input){
-  clearPreview();const candidate=follow(clone(track),input);preview=new Set([...candidate.heard].filter(i=>!track.heard.has(i)));paint();
-  const id=epoch;previewTimer=setTimeout(()=>{if(id===epoch){preview.clear();paint();}},1800);
+  clearPreview();
+  const candidate=follow(clone(track),input);
+  // V2: interim speech is allowed to move the UI. It does not become a report or
+  // score; it only supplies real text anchors for the current reading session.
+  if(candidate.anchors?.size>=2){
+   candidate.anchors.forEach(i=>track.anchors.add(i));
+   applyFastProgress(candidate);
+  }
+  preview=new Set([...candidate.heard].filter(i=>!track.heard.has(i)));paint();
+  const id=epoch;previewTimer=setTimeout(()=>{if(id===epoch){preview.clear();paint();}},900);
  }
  function applyFinal(input){
   follow(track,input);
-  completePassedLines();
+  applyFastProgress(track);
   paint();
-  maybeCelebratePage();
  }
  function launch(){
   if(!running||quiet||!isEnabled()||document.hidden)return;
