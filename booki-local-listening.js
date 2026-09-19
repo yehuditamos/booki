@@ -79,6 +79,11 @@
    n.className='reader-word'+(track.heard.has(i)?' is-heard':'')+(preview.has(i)?' is-preview':'');
    delete n.dataset.readingRetry;n.removeAttribute('tabindex');n.removeAttribute('role');n.removeAttribute('aria-label');
   });
+  const target=$('reader-text');
+  target?.querySelectorAll?.('.reader-space').forEach(n=>{
+   const after=Number(n.dataset.afterWord||0);
+   n.className='reader-space'+(track.heard.has(after)&&track.heard.has(after+1)?' is-heard':'');
+  });
  }
  function rebuildVisualLines(){
   lineGroups=[];lineOf=[];
@@ -129,7 +134,11 @@
   words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];lastCommitted=-1;pageCelebrated=false;
   target.textContent='';nodes=[];let i=0;
   parts.forEach(part=>{
-   if(/^\s+$/.test(part)){target.append(document.createTextNode(part));return;}
+   if(/^\s+$/.test(part)){
+    // Keep spaces inside the painted reading wave so completed chunks look like
+    // one calm continuous strip rather than separate green word boxes.
+    const n=document.createElement('span');n.className='reader-space';n.textContent=part;n.dataset.afterWord=String(Math.max(0,i-1));target.append(n);return;
+   }
    const n=document.createElement('span');n.className='reader-word';n.dataset.wordIndex=String(i++);n.textContent=part;nodes.push(n);target.append(n);
   });
   paint();
