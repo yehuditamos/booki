@@ -74,6 +74,7 @@
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
+  if(typeof document.createElement!=='function'||typeof document.createTextNode!=='function'){target.textContent=String(value||'');return;}
   const raw=String(value||''),parts=raw.match(/\S+|\s+/g)||[];
   words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();retryTarget=null;
   target.textContent='';nodes=[];let i=0;
