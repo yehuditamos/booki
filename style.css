@@ -803,6 +803,7 @@ body.back-to-school-promo-open { overflow:hidden; }
 .booki-listening-meter i { width:4px; height:5px; border-radius:8px; background:#18b8ae; transform:scaleY(var(--meter,1)); transition:transform 70ms linear; }
 .reader-word,.reader-space { display:inline; padding:.08em 0; transition:color .16s ease,background .16s ease; box-decoration-break:clone;-webkit-box-decoration-break:clone; }
 .reader-word.is-heard,.reader-space.is-heard { color:#16865f; background:#e1f7e9; }
+.reader-word.is-landing,.reader-space.is-landing{color:#6f5a12;background:#fff0a8}
 .reader-word.is-heard { border-radius:0; }
 .reader-word.is-listening-now { background:#fff0a8; }
 .reader-word.is-preview:not(.is-heard) { background:#f1eef7; }
