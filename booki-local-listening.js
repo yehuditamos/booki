@@ -19,7 +19,7 @@
  const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue]});
 
  let words=[],expected=[],nodes=[],track=make(),preview=new Set(),retryTarget=null;
- let running=false,quiet=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
+ let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
 
  function reader(){
   try { return typeof getActiveReader==='function'?getActiveReader():null; } catch (_) { return null; }
@@ -31,7 +31,13 @@
  function panel(){return $('booki-local-listening');}
  function status(){return $('booki-listening-status');}
  function say(v){if(status())status().textContent=v;}
+ function syncButton(){
+  const button=$('booki-reading-aloud-btn');if(!button)return;
+  button.hidden=!isEnabled();button.textContent=running?'⏸ הפסקת קריאה בקול':'🎙️ קריאה בקול';
+  button.setAttribute('aria-pressed',String(running));
+ }
  function setPanel(on){
+  syncButton();
   const p=panel();if(!p)return;p.hidden=!on;p.style.display=on?'':'none';
   p.classList.toggle('booki-listening-quiet',quiet);
   const meter=$('booki-listening-meter');if(meter)meter.hidden=true;
@@ -83,7 +89,7 @@
   const old=session;session=null;if(old){clearTimeout(old.timer);old.rec.onresult=old.rec.onerror=old.rec.onend=null;old.rec.onstart=()=>{try{old.rec.abort();}catch(_){}};try{old.rec.abort();}catch(_){}}
   track.queue=[];
  }
- function stop(hide=true){running=false;closeRecognition();retryTarget=null;if(hide)setPanel(false);paint();}
+ function stop(hide=true){running=false;armed=false;closeRecognition();retryTarget=null;if(hide)setPanel(false);else syncButton();paint();}
  function fallback(){quiet=true;closeRecognition();retryTarget=null;say('קוראים בנחת — גם בלי צבעים 💛');setPanel(true);paint();}
  function showPreview(input){
   clearPreview();const candidate=follow(clone(track),input);preview=new Set([...candidate.heard].filter(i=>!track.heard.has(i)));paint();
@@ -120,8 +126,17 @@
   try{rec.start();}catch(_){fallback();}
  }
  function start(){
+  // Rendering a story must never trigger a microphone permission prompt.
+  // The child explicitly chooses "קריאה בקול" first.
   if(!isEnabled()){stop(true);return;}
-  if(running)return;running=true;quiet=false;restartTimes=[];emptyEnds=0;setPanel(true);say('קוראים בקצב שלך. הצביעה היא רק ליווי.');launch();
+  syncButton();
+  if(!armed||running)return;
+  running=true;quiet=false;restartTimes=[];emptyEnds=0;setPanel(true);say('קוראים בקצב שלך. הצביעה היא רק ליווי.');launch();
+ }
+ function requestStart(){
+  if(!isEnabled()){stop(true);return;}
+  if(running){stop(true);syncButton();return;}
+  armed=true;running=true;quiet=false;restartTimes=[];emptyEnds=0;setPanel(true);say('מאשרים מיקרופון ומתחילים לקרוא 💛');launch();syncButton();
  }
  function retry(index){
   if(!isEnabled()||!track.gaps.has(index))return;retryTarget=index;say('אפשר לקרוא את המילה שוב, או פשוט להמשיך.');paint();
@@ -132,7 +147,7 @@
  window.addEventListener('pagehide',()=>stop(true));
  window.addEventListener('offline',()=>{if(running)fallback();});
 
- window.BookiLocalListening=Object.freeze({isEnabled,render,start,stop,_followForTest:(input,story)=>{expected=story.map(key);const t=make();follow(t,input.map(key));return{cursor:t.cursor,heard:[...t.heard],gaps:[...t.gaps]};}});
+ window.BookiLocalListening=Object.freeze({isEnabled,render,start,requestStart,stop,_followForTest:(input,story)=>{expected=story.map(key);const t=make();follow(t,input.map(key));return{cursor:t.cursor,heard:[...t.heard],gaps:[...t.gaps]};}});
  if(!isEnabled())setPanel(false);
 
  // Preserve the existing basic-consent bootstrap. The reading companion never bypasses it.
