@@ -806,8 +806,38 @@ function renderReaderPage() {
     : mode === 'mixed' ? _mixedNiqudText(page.text, currentPageIndex)
     : stripNiqud(page.text);
   const readerText = document.getElementById('reader-text');
-  if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
-  else if (readerText) readerText.textContent = displayText;
+  const shared = page.sharedReading && typeof page.sharedReading.childText === 'string';
+  if (readerText) readerText.classList.toggle('reader-shared-turn', !!shared);
+  if (shared && readerText) {
+    // Shared reading is deliberately turn-based: the child never faces a full
+    // paragraph as their task. Adult/Booki context is quiet; child's word is the hero.
+    const childRaw = page.sharedReading.childText.trim();
+    const childDisplay = revealed || mode === 'full' ? childRaw : mode === 'mixed' ? _mixedNiqudText(childRaw,currentPageIndex) : stripNiqud(childRaw);
+    const fullPlain = stripNiqud(displayText), childPlain = stripNiqud(childDisplay);
+    let lead = displayText;
+    const at = fullPlain.lastIndexOf(childPlain);
+    if (at >= 0) {
+      // Mapping exact diacritics is intentionally avoided: authored shared pages
+      // place the child turn at the end or repeat it as the focal page.
+      const rawAt = displayText.lastIndexOf(childRaw);
+      if (rawAt >= 0) lead = displayText.slice(0, rawAt).trim();
+    }
+    readerText.replaceChildren();
+    if (lead && stripNiqud(lead).trim() !== childPlain.trim()) {
+      const guide=document.createElement('div');guide.className='shared-reading-guide';
+      guide.append(Object.assign(document.createElement('span'),{className:'shared-reading-label',textContent:'👂 בוקי קורא'}),Object.assign(document.createElement('p'),{textContent:lead}));
+      readerText.append(guide);
+    }
+    const turn=document.createElement('div');turn.className='shared-reading-child';
+    turn.append(Object.assign(document.createElement('span'),{className:'shared-reading-label',textContent:'🌟 עכשיו אתה'}));
+    const word=document.createElement('div');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;turn.append(word);readerText.append(turn);
+    // Feed only the child's tiny turn to the listening companion. This reuses
+    // the approved green/yellow feedback without asking the child to read Booki's text.
+    if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(childDisplay);
+  } else {
+    if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
+    else if (readerText) readerText.textContent = displayText;
+  }
 
   // סיפורי "מילה אחת" מוסיפים איור גדול ורלוונטי לכל עמוד.
   // האיור מוזן כטקסט בלבד (לא HTML), כדי שתוכן סיפורים לא יוכל להזריק קוד.
