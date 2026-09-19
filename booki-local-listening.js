@@ -110,15 +110,21 @@
  function maybeCelebratePage(){
   if(!words.length||!nodes.length)return;
   const anchorSet=track.anchors||new Set(),needed=words.length<=3?Math.max(1,words.length-1):Math.max(3,Math.ceil(words.length*.4));
-  const lastLine=lineGroups.length-1;
-  const lastLineHasAnchor=[...(anchorSet||[])].some(i=>(lineOf[i]??-1)===lastLine);
-  const reachedEnd=track.cursor>=Math.max(1,words.length-2)||lastLineHasAnchor;
-  if(!reachedEnd||anchorSet.size<needed)return;
-  // Finish the visual page as encouragement only after verified text anchors.
-  nodes.forEach((n,i)=>{track.heard.add(i);n.classList?.add?.('is-page-success');});
+  if(!lineGroups.length)rebuildVisualLines();
+  const lastLine=lineGroups.length-1,lastIds=lineGroups[lastLine]||[];
+  const lastAnchors=lastIds.filter(i=>anchorSet.has(i));
+  // Reading itself triggers success. We do NOT wait for the next-page tap.
+  // A real anchor in the final visual line + enough real anchors across the page
+  // is sufficient; noise cannot satisfy the text-anchor requirement.
+  const reachedEnding=lastAnchors.length>=1 || track.cursor>=Math.max(1,words.length-2);
+  if(!reachedEnding||anchorSet.size<needed)return;
+  nodes.forEach((n,i)=>track.heard.add(i));
   paint();
+  // Add the success class only after paint(), otherwise paint overwrites it.
+  nodes.forEach(n=>n.classList?.add?.('is-page-success'));
   const target=$('reader-text');target?.classList?.add?.('reader-page-success');
-  setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},1050);
+  say('יפה! ממשיכים כשמתחשק ✨');
+  setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},900);
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
