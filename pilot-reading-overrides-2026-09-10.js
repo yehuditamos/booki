@@ -32,14 +32,19 @@ async function finishAppReading() {
     const current = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
     const niqud = _storyNiqudSummary(current.history || []);
     const basePoints = minutes;
-    const points = basePoints + niqud.lengthBonus + niqud.courageBonus + niqud.milestoneBonus;
+    const aloud = window.BookiLocalListening?.sessionSummary?.() || {verified:false,seconds:0};
+    const readAloudMinutes = aloud.verified ? Math.min(minutes, Math.max(0, Number(aloud.seconds)||0) / 60) : 0;
+    const readAloudBonus = aloud.verified ? 1 : 0;
+    const points = basePoints + niqud.lengthBonus + niqud.courageBonus + niqud.milestoneBonus + readAloudBonus;
     const entry = {
       type: 'app', storyId: currentStory.id, storyTitle: currentStory.title,
       minutes, points, basePoints,
       niqudMode: niqud.mode, qualifiedPages: niqud.qualifiedPages,
       noNiqudWords: niqud.noNiqudWords, niqudHelpPages: niqud.helpPages,
       lengthBonus: niqud.lengthBonus, courageBonus: niqud.courageBonus,
-      milestoneBonus: niqud.milestoneBonus, date: todayStr(),
+      milestoneBonus: niqud.milestoneBonus,
+      readAloudVerified: !!aloud.verified, readAloudMinutes, readAloudBonus,
+      date: todayStr(),
     };
     const result = await BookiReadingSave.commit({
       id: completionId,
@@ -62,7 +67,7 @@ async function finishAppReading() {
     _stopAppStoryTimer();
     _clearPausedAppStory();
     _storyNiqudSession = null;
-    showComplete(minutes, points, { levelUp, streakDays, niqudBonus: { ...niqud, basePoints } });
+    showComplete(minutes, points, { levelUp, streakDays, niqudBonus: { ...niqud, basePoints, readAloudBonus } });
   } catch (e) {
     console.error('[booki] finishAppReading failed:', e);
     alert('לא הצלחנו לשמור את הקריאה. הדקות לא אבדו — נסו שוב בעוד רגע.');
