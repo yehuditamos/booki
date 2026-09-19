@@ -129,6 +129,21 @@
    setTimeout(()=>target?.classList?.remove?.('reader-page-success'),800);
   }
  }
+ function setTarget(value){
+  // Shared-reading mode: configure recognition without taking ownership of
+  // #reader-text, whose full parent+child sentence must remain visible.
+  const raw=String(value||''),parts=raw.match(/\S+/g)||[];
+  words=parts;expected=words.map(key);nodes=[];
+  const target=$('shared-reading-word');
+  if(target){
+    target.replaceChildren();let i=0;
+    (raw.match(/\S+|\s+/g)||[]).forEach(part=>{
+      if(/^\s+$/.test(part)){const sp=document.createElement('span');sp.className='reader-space';sp.textContent=part;sp.dataset.afterWord=String(Math.max(0,i-1));target.append(sp);return;}
+      const n=document.createElement('span');n.className='reader-word';n.dataset.wordIndex=String(i++);n.textContent=part;nodes.push(n);target.append(n);
+    });
+  }
+  track=make();preview.clear();lineGroups=[];lineOf=[];lastCommitted=-1;pageCelebrated=false;locked=false;rollingAnchors.clear();yellowFrom=-1;paint();
+ }
  function render(value){
   const target=$('reader-text');if(!target)return;
   syncButton();
