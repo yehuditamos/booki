@@ -814,7 +814,7 @@ function renderReaderPage() {
     const childName=(typeof getActiveReader==='function'&&getActiveReader()?.name)||'הילד';
     readerText.replaceChildren();
     const instruction=document.createElement('p');instruction.className='shared-reading-parent-note';
-    instruction.textContent='👩‍👧 אמא קוראת את האפור · '+childName+' קורא את השחור';readerText.append(instruction);
+    instruction.textContent='👥 קוראים יחד · מי שאיתך קורא את האפור · '+childName+' קורא את השחור';readerText.append(instruction);
     const sentence=document.createElement('div');sentence.className='shared-reading-sentence';
     // Render the COMPLETE authored sentence first. Then visually promote the
     // last occurrence of the child's core word, even inside ה/ב/ל prefixed words.
