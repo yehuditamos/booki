@@ -341,33 +341,34 @@
       target.appendChild(button('קישור הכיתה', () => { showScreen('screen-teacher-club'); openTeacherClubShare(); }));
       return;
     }
-    const summary = element('div', undefined, 'booki-reading-summary');
-    const minutesTotal = members.reduce((sum,m) => sum + Math.max(0,Number(m.cachedStats?.totalMinutes)||0),0);
-    summary.append(element('span', members.length + ' כרטיסים'), element('span', Math.round(minutesTotal).toLocaleString('he-IL') + ' דקות קריאה'));
-    target.appendChild(summary);
-    const table = element('table', undefined, 'booki-encouragement-table');
-    table.setAttribute('aria-label', 'תלמידים, נתוני קריאה ושליחת עידוד');
-    const head = document.createElement('thead'), header = document.createElement('tr');
-    ['תלמיד/ה', 'דקות קריאה', 'קריאה אחרונה', 'עידוד'].forEach(label => { const th = element('th', label); th.scope = 'col'; header.appendChild(th); });
-    head.appendChild(header); table.appendChild(head);
-    const body = document.createElement('tbody');
-    [...members].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'he', { numeric: true })).forEach(m => {
-      const row = document.createElement('tr');
-      const name = String(m.name || 'תלמיד/ה');
-      const nameCell = element('th', name); nameCell.scope = 'row';
-      if (!(name.startsWith('כרטיס פנוי ') && !m.claimedByUid)) {
-        nameCell.replaceChildren(button(name + ' 📖', () => openStoryRecommendation(id, m.userId, name), 'booki-recommend-name'));
-      }
-      const minutes = Number(m.cachedStats?.totalMinutes);
-      const heart = button('💙', () => openEncouragementModal(id, m.userId, name), 'booki-encouragement-heart');
-      heart.title = 'שליחת עידוד ל' + name; heart.setAttribute('aria-label', heart.title);
-      const action = document.createElement('td');
-      if (String(m.name || '').startsWith('כרטיס פנוי ') && !m.claimedByUid) action.textContent = '—';
-      else action.appendChild(heart);
-      row.append(nameCell, element('td', String(Number.isFinite(minutes) ? Math.max(0, Math.round(minutes)) : 0)), element('td', lastRead(m.cachedStats?.lastReadAt)), action);
-      body.appendChild(row);
+    const sum = key => members.reduce((n,m)=>n+Math.max(0,Number(m.cachedStats?.[key])||0),0);
+    const total=sum('totalMinutes'), aloud=sum('readAloudMinutes'), noNiq=sum('noNiqudMinutes'), full=sum('fullNiqudMinutes');
+    const hero=element('section',undefined,'booki-reading-hero');
+    hero.append(element('h3','תמונת מצב כיתתית'));
+    const metrics=element('div',undefined,'booki-reading-metrics');
+    [['📚',total,'דקות קריאה'],['🎙️',aloud,'דקות בקול'],['✨',noNiq,'דקות בלי ניקוד']].forEach(([icon,value,label])=>{
+      const card=element('div',undefined,'booki-reading-metric');card.append(element('b',icon+' '+Math.round(value).toLocaleString('he-IL')),element('span',label));metrics.append(card);
     });
-    table.appendChild(body); target.appendChild(table);
+    hero.append(metrics,element('p','הפירוט של ניקוד וקריאה בקול נאסף מקריאות שנשמרו בגרסה החדשה.','booki-reading-note'));
+    target.append(hero,element('h3','הילדים','booki-reading-list-title'));
+    const list=element('div',undefined,'booki-reading-students');
+    [...members].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'he',{numeric:true})).forEach(m=>{
+      const name=String(m.name||'תלמיד/ה'),empty=name.startsWith('כרטיס פנוי ')&&!m.claimedByUid,st=m.cachedStats||{};
+      const card=element('article',undefined,'booki-reading-student');
+      const top=element('div',undefined,'booki-reading-student-top');
+      top.append(element('strong',name),element('span',Math.round(Number(st.totalMinutes)||0)+' דקות'));
+      const detail=element('div',undefined,'booki-reading-breakdown');
+      detail.append(element('span','🎙️ '+Math.round(Number(st.readAloudMinutes)||0)+' בקול'),element('span','אָ '+Math.round(Number(st.fullNiqudMinutes)||0)+' עם ניקוד'),element('span','✨ '+Math.round(Number(st.noNiqudMinutes)||0)+' בלי ניקוד'));
+      const last=element('small','קריאה אחרונה: '+lastRead(st.lastReadAt));
+      card.append(top,detail,last);
+      if(!empty){
+        const actions=element('div',undefined,'booki-reading-actions');
+        actions.append(button('💙 עידוד',()=>openEncouragementModal(id,m.userId,name),'booki-reading-action'),button('📖 שליחת סיפור',()=>openStoryRecommendation(id,m.userId,name),'booki-reading-action'));
+        card.append(actions);
+      }
+      list.append(card);
+    });
+    target.append(list);
   }
   window.showTeacherEncouragement = async function () {
     if (!teacher()) { showTeacherAuth('login'); return; }
@@ -420,12 +421,13 @@
     .booki-flow-empty{background:#fffdf5;border:1px solid #dae8d8;border-radius:22px}.booki-flow-empty h3{margin:4px 0 10px;color:#286747}.booki-flow-empty p{margin:10px 0}.booki-flow-empty-icon{font-size:34px}
     .booki-flow-notice p{margin:0 0 14px}.booki-flow-notice button{max-width:280px;margin:auto}
     #booki-add-students-button{font-weight:700}.booki-encouragement-content{max-width:760px;margin:auto;padding:14px 12px 90px}
-    .booki-encouragement-table{width:100%;border-collapse:collapse;background:#fff;table-layout:fixed;text-align:right;font-family:inherit;font-size:15px}
+    .booki-reading-hero{background:#fffdf7;border:1px solid #dce7dc;border-radius:24px;padding:18px;margin:4px 0 22px}.booki-reading-hero h3,.booki-reading-list-title{margin:0 0 14px;color:#285b46}.booki-reading-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.booki-reading-metric{background:#f1f7f1;border-radius:16px;padding:13px 8px;text-align:center;display:flex;flex-direction:column;gap:4px}.booki-reading-metric b{font-size:20px}.booki-reading-metric span{font-size:12px;color:#536b5d}.booki-reading-note{font-size:12px;color:#6a786f;margin:12px 0 0}.booki-reading-students{display:grid;gap:12px}.booki-reading-student{background:#fff;border:1px solid #dce7dc;border-radius:20px;padding:15px}.booki-reading-student-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.booki-reading-student-top strong{font-size:17px;color:#244f3e}.booki-reading-student-top span{font-weight:700;color:#315f4b}.booki-reading-breakdown{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.booki-reading-breakdown span{background:#f4f7f2;border-radius:999px;padding:6px 9px;font-size:12px}.booki-reading-student small{color:#68766d}.booki-reading-actions{display:flex;gap:8px;margin-top:12px}.booki-reading-action{flex:1;min-height:42px;border:1px solid #c8d9ca;border-radius:13px;background:#f8fbf7;color:#285b46;font-weight:700}
+        .booki-encouragement-table{width:100%;border-collapse:collapse;background:#fff;table-layout:fixed;text-align:right;font-family:inherit;font-size:15px}
     .booki-encouragement-table th,.booki-encouragement-table td{padding:12px 8px;border-bottom:1px solid #e5ece6;overflow-wrap:anywhere;vertical-align:middle}
     .booki-encouragement-table thead th{background:#edf6f8;color:#244d65;font-weight:700}.booki-encouragement-table th:first-child{width:32%}.booki-encouragement-table th:last-child{width:52px}
     .booki-encouragement-table tbody th{font-weight:600}.booki-encouragement-heart{min-width:44px;min-height:44px;border:0;border-radius:12px;background:#edf6ff;cursor:pointer;font-size:24px}
     .booki-encouragement-heart:focus-visible{outline:3px solid #2877b8;outline-offset:2px}.booki-encouragement-heart:hover{background:#dceeff}
-    @media(max-width:400px){.booki-encouragement-content{padding:10px 8px 90px}.booki-encouragement-table{font-size:13px}.booki-encouragement-table th,.booki-encouragement-table td{padding:10px 4px}.booki-encouragement-table th:last-child{width:46px}.booki-flow-empty{padding:18px 14px}}
+    @media(max-width:400px){.booki-reading-metrics{grid-template-columns:1fr 1fr}.booki-reading-metric:first-child{grid-column:1/-1}.booki-reading-actions{flex-direction:column}.booki-encouragement-content{padding:10px 8px 90px}.booki-encouragement-table{font-size:13px}.booki-encouragement-table th,.booki-encouragement-table td{padding:10px 4px}.booki-encouragement-table th:last-child{width:46px}.booki-flow-empty{padding:18px 14px}}
   `;
   document.head.appendChild(css);
   window.BookiTeacherFlow = { version: '2026-09-09.1', parentInvite, installUi };
