@@ -154,8 +154,8 @@ const STORIES_BEGINNER = [
     emoji: "🐟",
     tags: ["אותיות והברות","קוראים יחד","דג","🌱 קורא ראשון"],
     pages: [
-      { text: "יֵשׁ בַּיָּם מַשֶּׁהוּ קָטָן…", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
-      { text: "הוּא שָׂח בַּמַּיִם. זֶה…", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
+      { text: "יֵשׁ בַּיָּם מַשֶּׁהוּ קָטָן: דָּג.", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
+      { text: "הוּא שָׂח בַּמַּיִם. זֶה דָּג.", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
       { text: "דָּג", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } },
       { text: "דָּג שָׂח! 🐟", readingMinutes: 0.15, sharedReading: { childText: "דָּג" } }
     ]
@@ -168,8 +168,8 @@ const STORIES_BEGINNER = [
     emoji: "🌳",
     tags: ["אותיות והברות","קוראים יחד","גן","🌱 קורא ראשון"],
     pages: [
-      { text: "דָּן יוֹצֵא מֵהַבַּיִת וְהוֹלֵךְ אֶל הַ…", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
-      { text: "בַּגַּן דָּן רָץ וְשָׂמֵחַ. אֵיפֹה דָּן? בַּ…", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
+      { text: "דָּן יוֹצֵא מֵהַבַּיִת וְהוֹלֵךְ אֶל הַגַּן.", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
+      { text: "בַּגַּן דָּן רָץ וְשָׂמֵחַ. אֵיפֹה דָּן? בַּגַּן.", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
       { text: "גַּן", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } },
       { text: "דָּן בַּגַּן! 🌳", readingMinutes: 0.15, sharedReading: { childText: "גַּן" } }
     ]
