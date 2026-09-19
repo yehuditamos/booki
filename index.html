@@ -524,6 +524,7 @@ window.addEventListener('pageshow', function (e) {
     <button id="reader-niqud-help-btn" class="reader-niqud-help-btn" onclick="revealNiqudForCurrentPage()">✨ צריך ניקוד לרגע?</button>
   </div>
   <button id="reader-pause-btn" class="reader-pause-btn" onclick="pauseAppStory()">⏸️ אני צריך הפסקה</button>
+  <button id="booki-reading-aloud-btn" class="booki-reading-aloud-btn" type="button" hidden onclick="window.BookiLocalListening?.requestStart?.()">🎙️ קריאה בקול</button>
   <div id="booki-local-listening" class="booki-local-listening" hidden role="status" aria-live="polite">
     <img class="booki-listening-character" src="assets/booki/core/states/booki-reading.png" alt="בוקי מקשיב" width="72" height="72">
     <span id="booki-listening-status">בוקי מכוון אוזניים...</span>
