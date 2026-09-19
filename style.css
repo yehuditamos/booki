@@ -805,9 +805,8 @@ body.back-to-school-promo-open { overflow:hidden; }
 .reader-word.is-heard { color:#16865f; background:#e1f7e9; }
 .reader-word.is-listening-now { background:#fff0a8; }
 .reader-word.is-preview:not(.is-heard) { background:#f1eef7; }
-.reader-word.is-gap { position:relative;cursor:pointer; }
-.reader-word.is-gap::after { content:"";position:absolute;left:.05em;right:.05em;bottom:-.06em;border-bottom:2px dotted #aca397; }
-.reader-word.is-retry { outline:2px solid #b4a4cb;outline-offset:2px; }
+.reader-word.is-page-success{animation:bookiPageSuccess .82s ease-out}
+@keyframes bookiPageSuccess{0%{background:#e8f4eb;transform:scale(1)}45%{background:#d5f3df;transform:scale(1.035)}100%{background:#e8f4eb;transform:scale(1)}}
 .booki-local-listening.booki-listening-quiet { background:#f7f4ea;color:#6b655a; }
 .booki-local-listening.booki-listening-quiet .booki-listening-character { opacity:.8; }
 .reader-niqud-toolbar { display:flex;gap:9px;justify-content:center;align-items:center;flex-wrap:wrap;margin:0 16px 14px; }
