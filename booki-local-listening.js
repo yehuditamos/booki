@@ -30,7 +30,14 @@
   const header=$('current-student-name')?.textContent?.trim();
   return String(window.currentStudentData?.name||r?.name||header||'').trim();
  }
- function isEnabled(){ return activeName()===TARGET_NAME; }
+ function isEnabled(){
+  // Family Amos is the live test club: every reader entering through it gets the
+  // reading-aloud companion. Keep Yonatan fallback for sessions whose club
+  // context is not yet hydrated when the reader opens.
+  const r=reader();
+  const clubId=String(r?.clubId||window.currentClubId||'');
+  return clubId==='משפחת-עמוס-1783658629348' || activeName()===TARGET_NAME;
+ }
  function panel(){return $('booki-local-listening');}
  function status(){return $('booki-listening-status');}
  function say(v){if(status())status().textContent=v;}
