@@ -31,11 +31,12 @@
   return String(window.currentStudentData?.name||r?.name||header||'').trim();
  }
  function isEnabled(){
-  // Live pilot: the test club named "עמוס" (including its trophy emoji), NOT
-  // "משפחת עמוס". Resolve by the active club's visible name when available.
+  // Temporary live pilot: show the opt-in control to every child reader.
+  // The microphone still starts only after the child taps "קריאה בקול", and
+  // failure never blocks the story. This removes fragile club/name gating while
+  // we validate the real-device experience.
   const r=reader();
-  const clubName=String(r?.clubName||r?.club?.name||window.currentClubData?.name||window.currentClubName||'').replace(/🏆/g,'').trim();
-  return clubName==='עמוס' || activeName()===TARGET_NAME;
+  return !!(r?.userId || window.currentStudentData?.name || $('current-student-name')?.textContent?.trim());
  }
  function panel(){return $('booki-local-listening');}
  function status(){return $('booki-listening-status');}
