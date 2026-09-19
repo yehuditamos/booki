@@ -833,7 +833,10 @@ function renderReaderPage() {
       const punct=part.match(/[^א-ת\u0591-\u05C7]+$/u)?.[0]||'';if(punct){const tail=document.createElement('span');tail.className='shared-reading-parent';tail.textContent=punct;sentence.append(tail);}
     });
     readerText.append(sentence);
-    if(window.BookiLocalListening?.isEnabled())window.BookiLocalListening.render(childDisplay);
+    // Do not let the generic listening renderer replace the shared-reading DOM.
+    // It normally owns #reader-text; shared reading owns that container and only
+    // needs the recognizer to listen for the child's target word.
+    if(window.BookiLocalListening?.isEnabled()&&window.BookiLocalListening.setTarget)window.BookiLocalListening.setTarget(childDisplay);
   } else {
     if (window.BookiLocalListening?.isEnabled()) window.BookiLocalListening.render(displayText);
     else if (readerText) readerText.textContent = displayText;
