@@ -823,22 +823,30 @@ function renderReaderPage() {
     // ellipsis prompt, append the child's word so the child still sees a whole sentence.
     // Locate the child word accent-insensitively so niqqud-mode transformations
     // cannot make the parent half disappear.
-    const normalized=s=>String(s||'').normalize('NFD').replace(/[\u0591-\u05C7]/g,'').normalize('NFC');
-    const fullNorm=normalized(displayText),childNorm=normalized(childDisplay);
-    const normAt=fullNorm.lastIndexOf(childNorm);
-    let before=displayText,after='';
-    if(normAt>=0){
-      // Build character boundaries by normalized length; Hebrew combining marks
-      // stay attached to their source character.
-      let startRaw=0,endRaw=displayText.length,n=0,started=false;
-      for(let p=0;p<displayText.length;){
-        const cp=displayText.codePointAt(p),ch=String.fromCodePoint(cp),step=ch.length;
-        const add=normalized(ch).length;
-        if(!started&&n>=normAt){startRaw=p;started=true;}
-        n+=add;p+=step;
-        if(started&&n>=normAt+childNorm.length){while(p<displayText.length&&/[\u0591-\u05C7]/.test(displayText[p]))p++;endRaw=p;break;}
+    const normalized=x=>String(x||'').normalize('NFD').replace(/[\u0591-\u05C7]/g,'').normalize('NFC');
+    // Tokenize the displayed sentence and match the LAST token whose bare Hebrew
+    // letters contain the child's target. This handles prefixes such as הַגַּן/בַּגַּן
+    // while preserving the complete sentence around the highlighted child word.
+    const tokenRe=/\S+/gu;let hit=null,m;
+    while((m=tokenRe.exec(displayText))){
+      const bare=normalized(m[0]).replace(/[^א-ת]/g,'');
+      if(bare.endsWith(normalized(childDisplay).replace(/[^א-ת]/g,'')))hit={start:m.index,end:m.index+m[0].length,token:m[0]};
+    }
+    let before=displayText,after='',shownChild=childDisplay;
+    if(hit){
+      const bareTarget=normalized(childDisplay).replace(/[^א-ת]/g,'');
+      const tokenBare=normalized(hit.token);
+      const prefixLetters=Math.max(0,tokenBare.replace(/[^א-ת]/g,'').length-bareTarget.length);
+      // For prefixed forms, keep the prefix with the parent's grey text and make
+      // the child's known core word the large dark turn.
+      let split=hit.start,letters=0;
+      for(let p=hit.start;p<hit.end&&letters<prefixLetters;){
+        const ch=displayText[p];p++;
+        if(/[א-ת]/.test(normalized(ch)))letters++;
+        while(p<hit.end&&/[\u0591-\u05C7]/.test(displayText[p]))p++;
+        split=p;
       }
-      before=displayText.slice(0,startRaw);after=displayText.slice(endRaw);
+      before=displayText.slice(0,split);after=displayText.slice(hit.end);
     }
     const lead=document.createElement('span');lead.className='shared-reading-parent';lead.textContent=before;
     const word=document.createElement('span');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;
