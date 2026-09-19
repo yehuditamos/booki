@@ -16,8 +16,8 @@
  const norm=v=>String(v||'').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'').replace(/[^א-ת]/g,'');
  const key=v=>{const n=norm(v);return aliases.get(n)||n;};
  const spoken=v=>String(v||'').replace(/[־–—]/g,' ').split(/\s+/).map(key).filter(Boolean);
- const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[]});
- const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue]});
+ const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[],anchors:new Set()});
+ const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue],anchors:new Set(t.anchors||[])});
 
  let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCelebratedPageKey='';
  let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
@@ -54,7 +54,7 @@
  }
  function follow(t,incoming){
   t.queue.push(...incoming);if(t.queue.length>64)t.queue.splice(0,t.queue.length-64);
-  const accept=i=>{t.heard.add(i);t.gaps.delete(i);};
+  const accept=i=>{t.heard.add(i);t.anchors.add(i);t.gaps.delete(i);};
   while(t.queue.length&&t.cursor<expected.length){
    const at=t.cursor;let speechAt=-1,storyAt=-1;
    for(let s=0;s<t.queue.length;s++){
@@ -94,23 +94,31 @@
  function completePassedLines(){
   if(!lineGroups.length)rebuildVisualLines();
   if(!lineGroups.length||track.cursor<1)return;
-  const currentLine=lineOf[Math.min(track.cursor,words.length-1)]??0;
-  for(let line=0;line<currentLine;line++){
+  const anchorSet=track.anchors||new Set();
+  // A line is closed only after there is a genuine anchor in a later visual
+  // line. This is what proves the child moved on; time/noise alone never does.
+  let furthestAnchorLine=-1;
+  anchorSet.forEach(i=>{furthestAnchorLine=Math.max(furthestAnchorLine,lineOf[i]??-1);});
+  if(furthestAnchorLine<1)return;
+  for(let line=0;line<furthestAnchorLine;line++){
    const ids=lineGroups[line]||[];
-   const matched=ids.filter(i=>track.heard.has(i)).length;
-   // Forgiving, not gullible: close a passed line only with multiple real text
-   // anchors. A random/"בלה בלה" transcript cannot satisfy this.
-   const needed=Math.min(3,Math.max(2,Math.ceil(ids.length*.35)));
+   const matched=ids.filter(i=>anchorSet.has(i)).length;
+   const needed=ids.length<=2?1:Math.min(3,Math.max(2,Math.ceil(ids.length*.35)));
    if(matched>=needed)ids.forEach(i=>track.heard.add(i));
   }
  }
  function maybeCelebratePage(){
-  if(!words.length)return;
-  const anchors=track.heard.size,needed=Math.max(3,Math.ceil(words.length*.45));
-  const reachedEnd=track.cursor>=Math.max(1,words.length-2);
-  if(!reachedEnd||anchors<needed)return;
-  nodes.forEach(n=>n.classList?.add?.('is-page-success'));
-  setTimeout(()=>nodes.forEach(n=>n.classList?.remove?.('is-page-success')),850);
+  if(!words.length||!nodes.length)return;
+  const anchorSet=track.anchors||new Set(),needed=words.length<=3?Math.max(1,words.length-1):Math.max(3,Math.ceil(words.length*.4));
+  const lastLine=lineGroups.length-1;
+  const lastLineHasAnchor=[...(anchorSet||[])].some(i=>(lineOf[i]??-1)===lastLine);
+  const reachedEnd=track.cursor>=Math.max(1,words.length-2)||lastLineHasAnchor;
+  if(!reachedEnd||anchorSet.size<needed)return;
+  // Finish the visual page as encouragement only after verified text anchors.
+  nodes.forEach((n,i)=>{track.heard.add(i);n.classList?.add?.('is-page-success');});
+  paint();
+  const target=$('reader-text');target?.classList?.add?.('reader-page-success');
+  setTimeout(()=>{nodes.forEach(n=>n.classList?.remove?.('is-page-success'));target?.classList?.remove?.('reader-page-success');},1050);
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
@@ -124,7 +132,7 @@
    const n=document.createElement('span');n.className='reader-word';n.dataset.wordIndex=String(i++);n.textContent=part;nodes.push(n);target.append(n);
   });
   paint();
-  requestAnimationFrame?.(()=>rebuildVisualLines());
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>rebuildVisualLines());else rebuildVisualLines();
  }
  function clearPreview(){clearTimeout(previewTimer);previewTimer=null;preview.clear();}
  function closeRecognition(){
