@@ -90,23 +90,31 @@ async function checkNewMessages(clubId, userId) {
   const seen = new Set(membership?.seenMessageIds || []);
   if (typeof renderStoryRecommendations === 'function') renderStoryRecommendations(clubId, userId, messages, seen);
   const unseen = messages.filter(m => m.type !== 'story-recommendation' && !seen.has(m.id));
-
   if (!unseen.length) { wants(); return; }
-
-  // מוצגת רק ההודעה האחרונה שלא נראתה — אין רשימה, אין היסטוריה. "ראייתה" (הצגתה
-  // כאן) מספיקה כדי לסמן אותה (ואת כל השאר הממתינות) כ-seen מיד, בהתאם לדרישה
-  // "לאחר שהתלמיד ראה או סגר את ההודעה — היא נעלמת ולא חוזרת".
+  // New encouragements are rendered as a tactile envelope near Booki, not as
+  // the old full-width banner. They are consumed only when the child opens it.
   const latest = unseen[0];
-  const textEl = document.getElementById('booki-message-banner-text');
-  if (textEl) textEl.textContent = latest.text || '';
-  const stageEl = document.getElementById('booki-message-banner-stage');
-  if (stageEl && !stageEl.innerHTML && typeof bookiStageHtml === 'function') {
-    stageEl.innerHTML = bookiStageHtml('class-goal/booki-message.png', { className: 'booki-message-banner-char' });
+  if (banner) {
+    banner.dataset.messageId = latest.id || '';
+    banner.classList.add('booki-envelope-notice','booki-envelope-heart');
+    banner.setAttribute('role','button'); banner.tabIndex=0;
+    banner.setAttribute('aria-label','יש לך עידוד חדש מהמורה. לחצו לפתיחה');
+    const textEl=document.getElementById('booki-message-banner-text');
+    if(textEl) textEl.textContent='💌';
+    const stageEl=document.getElementById('booki-message-banner-stage');
+    if(stageEl) stageEl.replaceChildren();
+    const close=banner.querySelector('.booki-message-banner-close');if(close)close.style.display='none';
+    const open=async()=>{
+      if(banner.dataset.opened==='1')return;banner.dataset.opened='1';
+      const text=latest.text||'המורה שלחה לך עידוד 💙';
+      banner.classList.add('is-open');if(textEl)textEl.textContent=text;
+      await fbMarkMessagesSeen(clubId,userId,[latest.id]).catch(()=>false);
+      setTimeout(()=>{wants();banner.dataset.opened='';banner.classList.remove('is-open');},2600);
+    };
+    banner.onclick=open;banner.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};
   }
   window._homeBannerWants.message = true;
   if (typeof _reconcileHomeBanners === 'function') _reconcileHomeBanners(); else if (banner) banner.style.display = '';
-
-  fbMarkMessagesSeen(clubId, userId, unseen.map(m => m.id)).catch(() => {});
 }
 
 function dismissMessageBanner() {
