@@ -9,7 +9,8 @@
 
  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
  const TARGET_NAME='יונתן';
- const TARGET_CLUB='משפחת-עמוס-1783658629348';
+ // Live pilot is deliberately limited by child name. Club IDs changed during the
+ // family/club migration, so gating on an old hard-coded club ID hid the control.
  const aliases=new Map([['בבקר','בבוקר'],['נעם','נועם'],['לגנה','לגינה'],['כחל','כחול'],['הכחל','הכחול'],['לאמא','לאימא']]);
  const $=id=>document.getElementById(id);
  const norm=v=>String(v||'').normalize('NFKD').replace(/[\u0591-\u05C7]/g,'').replace(/[^א-ת]/g,'');
@@ -26,7 +27,7 @@
  }
  function isEnabled(){
   const r=reader(),name=String(window.currentStudentData?.name||r?.name||'').trim();
-  return name===TARGET_NAME && String(r?.clubId||window.currentClubId||'')===TARGET_CLUB;
+  return name===TARGET_NAME;
  }
  function panel(){return $('booki-local-listening');}
  function status(){return $('booki-listening-status');}
