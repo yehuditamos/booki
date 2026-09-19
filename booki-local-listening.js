@@ -39,7 +39,7 @@
  function setPanel(on){
   syncButton();
   const p=panel();if(!p)return;p.hidden=!on;p.style.display=on?'':'none';
-  p.classList.toggle('booki-listening-quiet',quiet);
+  p.classList?.toggle?.('booki-listening-quiet',quiet);
   const meter=$('booki-listening-meter');if(meter)meter.hidden=true;
  }
  function follow(t,incoming){
