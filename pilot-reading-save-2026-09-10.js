@@ -51,6 +51,11 @@
       appMinutes: num(old.appMinutes),
       bookMinutes: num(old.bookMinutes),
       storiesRead: num(old.storiesRead),
+      fullNiqudMinutes: num(old.fullNiqudMinutes),
+      mixedNiqudMinutes: num(old.mixedNiqudMinutes),
+      noNiqudMinutes: num(old.noNiqudMinutes),
+      readAloudMinutes: num(old.readAloudMinutes),
+      readAloudSessions: num(old.readAloudSessions),
       lastReadAt: old.lastReadAt || null,
       recentCompletionIds: Array.isArray(old.recentCompletionIds) ? old.recentCompletionIds.slice(-49) : [],
     };
@@ -66,6 +71,13 @@
     stats.appMinutes += delta.isApp ? entry.minutes : 0;
     stats.bookMinutes += delta.isBook ? entry.minutes : 0;
     stats.storiesRead += entry.type === 'app' ? 1 : 0;
+    if (entry.type === 'app') {
+      if (entry.niqudMode === 'none') stats.noNiqudMinutes += entry.minutes;
+      else if (entry.niqudMode === 'mixed') stats.mixedNiqudMinutes += entry.minutes;
+      else stats.fullNiqudMinutes += entry.minutes;
+      stats.readAloudMinutes += Math.min(entry.minutes, num(entry.readAloudMinutes));
+      stats.readAloudSessions += entry.readAloudVerified ? 1 : 0;
+    }
     stats.lastReadAt = completedAt;
     stats.recentCompletionIds = [...stats.recentCompletionIds, id].slice(-50);
     return { stats, duplicate: false };
