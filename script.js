@@ -821,9 +821,25 @@ function renderReaderPage() {
     const sentence=document.createElement('div');sentence.className='shared-reading-sentence';
     // Find the authored child turn in the full line; if the author used an
     // ellipsis prompt, append the child's word so the child still sees a whole sentence.
-    let before=displayText,after='',rawAt=displayText.lastIndexOf(childRaw);
-    if(rawAt>=0){before=displayText.slice(0,rawAt);after=displayText.slice(rawAt+childRaw.length);}
-    else if(/[.…]\s*$/.test(before)){before=before.replace(/[.…]\s*$/,' ');}
+    // Locate the child word accent-insensitively so niqqud-mode transformations
+    // cannot make the parent half disappear.
+    const normalized=s=>String(s||'').normalize('NFD').replace(/[\u0591-\u05C7]/g,'').normalize('NFC');
+    const fullNorm=normalized(displayText),childNorm=normalized(childDisplay);
+    const normAt=fullNorm.lastIndexOf(childNorm);
+    let before=displayText,after='';
+    if(normAt>=0){
+      // Build character boundaries by normalized length; Hebrew combining marks
+      // stay attached to their source character.
+      let startRaw=0,endRaw=displayText.length,n=0,started=false;
+      for(let p=0;p<displayText.length;){
+        const cp=displayText.codePointAt(p),ch=String.fromCodePoint(cp),step=ch.length;
+        const add=normalized(ch).length;
+        if(!started&&n>=normAt){startRaw=p;started=true;}
+        n+=add;p+=step;
+        if(started&&n>=normAt+childNorm.length){while(p<displayText.length&&/[\u0591-\u05C7]/.test(displayText[p]))p++;endRaw=p;break;}
+      }
+      before=displayText.slice(0,startRaw);after=displayText.slice(endRaw);
+    }
     const lead=document.createElement('span');lead.className='shared-reading-parent';lead.textContent=before;
     const word=document.createElement('span');word.id='shared-reading-word';word.className='shared-reading-word';word.textContent=childDisplay;
     const tail=document.createElement('span');tail.className='shared-reading-parent';tail.textContent=after;
