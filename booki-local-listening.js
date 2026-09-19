@@ -25,10 +25,12 @@
  function reader(){
   try { return typeof getActiveReader==='function'?getActiveReader():null; } catch (_) { return null; }
  }
- function isEnabled(){
-  const r=reader(),name=String(window.currentStudentData?.name||r?.name||'').trim();
-  return name===TARGET_NAME;
+ function activeName(){
+  const r=reader();
+  const header=$('current-student-name')?.textContent?.trim();
+  return String(window.currentStudentData?.name||r?.name||header||'').trim();
  }
+ function isEnabled(){ return activeName()===TARGET_NAME; }
  function panel(){return $('booki-local-listening');}
  function status(){return $('booki-listening-status');}
  function say(v){if(status())status().textContent=v;}
@@ -75,6 +77,7 @@
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
+  syncButton();
   if(typeof document.createElement!=='function'||typeof document.createTextNode!=='function'){target.textContent=String(value||'');return;}
   const raw=String(value||''),parts=raw.match(/\S+|\s+/g)||[];
   words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();retryTarget=null;
