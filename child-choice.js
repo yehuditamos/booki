@@ -36,7 +36,7 @@
     const catalog=()=>options.catalog().filter(s=>s.id!=null&&profile(s).format);
     const badge=s=>{const f=profile(s).format,b=el('span',f.symbol+' '+f.label,'cc-badge');b.style.setProperty('--cc-color',f.color);return b;};
     const card=(s,recommended=false)=>{
-      const p=profile(s),b=btn('',()=>preview(s.id),'cc-card');b.style.setProperty('--cc-color',p.format.color);
+      const p=profile(s),b=btn('',()=>openDirect(s.id),'cc-card');b.style.setProperty('--cc-color',p.format.color);
       const art=el('div',null,'cc-cover');art.append(el('span',s.emoji||'📖','cc-cover-icon'));art.setAttribute('aria-hidden','true');
       const paper=el('span',p.format.symbol,'cc-cover-seal');art.append(paper);
       const copy=el('div',null,'cc-card-copy');
@@ -78,6 +78,15 @@
         list.replaceChildren(...found.slice(0,limit).map(s=>card(s,recommended.some(id=>String(id)===String(s.id)))));more.hidden=found.length<=limit;
       }
       search.oninput=()=>{query=search.value;limit=9;drawList();};browse.append(topicRow,el('h3','איך מתחשק לקרוא?'),formatRow,search,count,list,more);root.append(browse);drawList();
+    }
+    async function openDirect(id){
+      const context=options.context?.();
+      if(!catalog().some(s=>String(s.id)===String(id)))return;
+      try{
+        // options.open opens the real reader and its existing niqqud chooser.
+        // No intermediate story-preview dialog.
+        await options.open(id,{isCurrent:()=>options.context?.()===context});
+      }catch(_){}
     }
     function preview(id){
       const story=catalog().find(s=>String(s.id)===String(id));if(!story)return;
