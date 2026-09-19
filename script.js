@@ -1100,6 +1100,7 @@ function showComplete(minutes, points, opts = {}) {
       const rows = [`<span>⏱️ זמן קריאה <b>+${bonus.basePoints}</b></span>`];
       if (bonus.lengthBonus) rows.push(`<span>📚 סיום הסיפור <b>+${bonus.lengthBonus}</b></span>`);
       if (bonus.courageBonus) rows.push(`<span>✨ בונוס אומץ בלי ניקוד <b>+${bonus.courageBonus}</b></span>`);
+      if (bonus.readAloudBonus) rows.push(`<span>🎙️ בונוס קריאה בקול <b>+${bonus.readAloudBonus}</b></span>`);
       if (bonus.milestoneBonus) rows.push(`<span>🏅 הישג ראשון במסלול <b>+${bonus.milestoneBonus}</b></span>`);
       if (bonus.alreadyToday) rows.push(`<small>את בונוס הסיפור הזה כבר אספת היום — דקות הקריאה עדיין נוספו.</small>`);
       if (bonus.noNiqudWords > 0) rows.push(`<strong>קראת ${bonus.noNiqudWords} מילים בלי ניקוד!</strong>`);
