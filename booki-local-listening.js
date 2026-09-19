@@ -19,7 +19,7 @@
  const make=()=>({cursor:0,heard:new Set(),gaps:new Set(),queue:[]});
  const clone=t=>({cursor:t.cursor,heard:new Set(t.heard),gaps:new Set(t.gaps),queue:[...t.queue]});
 
- let words=[],expected=[],nodes=[],track=make(),preview=new Set(),retryTarget=null;
+ let words=[],expected=[],nodes=[],track=make(),preview=new Set(),lineGroups=[],lineOf=[],lastCelebratedPageKey='';
  let running=false,quiet=false,armed=false,session=null,epoch=0,restartTimer=null,previewTimer=null,restartTimes=[],emptyEnds=0;
 
  function reader(){
@@ -76,24 +76,55 @@
  }
  function paint(){
   nodes.forEach((n,i)=>{
-   const gap=track.gaps.has(i),retry=retryTarget===i;
-   n.className='reader-word'+(track.heard.has(i)?' is-heard':'')+(preview.has(i)?' is-preview':'')+(gap?' is-gap':'')+(retry?' is-retry':'');
-   if(gap){n.dataset.readingRetry='1';n.tabIndex=0;n.setAttribute('role','button');n.setAttribute('aria-label',words[i]+' — אפשר לקרוא שוב, לא חובה');}
-   else{delete n.dataset.readingRetry;n.removeAttribute('tabindex');n.removeAttribute('role');n.removeAttribute('aria-label');}
+   n.className='reader-word'+(track.heard.has(i)?' is-heard':'')+(preview.has(i)?' is-preview':'');
+   delete n.dataset.readingRetry;n.removeAttribute('tabindex');n.removeAttribute('role');n.removeAttribute('aria-label');
   });
+ }
+ function rebuildVisualLines(){
+  lineGroups=[];lineOf=[];
+  if(!nodes.length)return;
+  let group=[],lastTop=null;
+  nodes.forEach((node,i)=>{
+   const top=Math.round(node.offsetTop||0);
+   if(lastTop!==null&&Math.abs(top-lastTop)>3){lineGroups.push(group);group=[];}
+   group.push(i);lineOf[i]=lineGroups.length;lastTop=top;
+  });
+  if(group.length)lineGroups.push(group);
+ }
+ function completePassedLines(){
+  if(!lineGroups.length)rebuildVisualLines();
+  if(!lineGroups.length||track.cursor<1)return;
+  const currentLine=lineOf[Math.min(track.cursor,words.length-1)]??0;
+  for(let line=0;line<currentLine;line++){
+   const ids=lineGroups[line]||[];
+   const matched=ids.filter(i=>track.heard.has(i)).length;
+   // Forgiving, not gullible: close a passed line only with multiple real text
+   // anchors. A random/"בלה בלה" transcript cannot satisfy this.
+   const needed=Math.min(3,Math.max(2,Math.ceil(ids.length*.35)));
+   if(matched>=needed)ids.forEach(i=>track.heard.add(i));
+  }
+ }
+ function maybeCelebratePage(){
+  if(!words.length)return;
+  const anchors=track.heard.size,needed=Math.max(3,Math.ceil(words.length*.45));
+  const reachedEnd=track.cursor>=Math.max(1,words.length-2);
+  if(!reachedEnd||anchors<needed)return;
+  nodes.forEach(n=>n.classList?.add?.('is-page-success'));
+  setTimeout(()=>nodes.forEach(n=>n.classList?.remove?.('is-page-success')),850);
  }
  function render(value){
   const target=$('reader-text');if(!target)return;
   syncButton();
   if(typeof document.createElement!=='function'||typeof document.createTextNode!=='function'){target.textContent=String(value||'');return;}
   const raw=String(value||''),parts=raw.match(/\S+|\s+/g)||[];
-  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();retryTarget=null;
+  words=parts.filter(x=>!/^\s+$/.test(x));expected=words.map(key);track=make();preview.clear();lineGroups=[];lineOf=[];
   target.textContent='';nodes=[];let i=0;
   parts.forEach(part=>{
    if(/^\s+$/.test(part)){target.append(document.createTextNode(part));return;}
    const n=document.createElement('span');n.className='reader-word';n.dataset.wordIndex=String(i++);n.textContent=part;nodes.push(n);target.append(n);
   });
   paint();
+  requestAnimationFrame?.(()=>rebuildVisualLines());
  }
  function clearPreview(){clearTimeout(previewTimer);previewTimer=null;preview.clear();}
  function closeRecognition(){
@@ -101,16 +132,17 @@
   const old=session;session=null;if(old){clearTimeout(old.timer);old.rec.onresult=old.rec.onerror=old.rec.onend=null;old.rec.onstart=()=>{try{old.rec.abort();}catch(_){}};try{old.rec.abort();}catch(_){}}
   track.queue=[];
  }
- function stop(hide=true){running=false;armed=false;closeRecognition();retryTarget=null;if(hide)setPanel(false);else syncButton();paint();}
- function fallback(){quiet=true;closeRecognition();retryTarget=null;say('קוראים בנחת — גם בלי צבעים 💛');setPanel(true);paint();}
+ function stop(hide=true){running=false;armed=false;closeRecognition();if(hide)setPanel(false);else syncButton();paint();}
+ function fallback(){quiet=true;closeRecognition();say('קוראים בנחת — גם בלי צבעים 💛');setPanel(true);paint();}
  function showPreview(input){
   clearPreview();const candidate=follow(clone(track),input);preview=new Set([...candidate.heard].filter(i=>!track.heard.has(i)));paint();
   const id=epoch;previewTimer=setTimeout(()=>{if(id===epoch){preview.clear();paint();}},1800);
  }
  function applyFinal(input){
-  const before=track.cursor;
-  if(retryTarget!==null){const at=input.indexOf(expected[retryTarget]);if(at>=0){track.heard.add(retryTarget);track.gaps.delete(retryTarget);input=[...input];input.splice(at,1);retryTarget=null;}}
-  follow(track,input);if(track.cursor>before)retryTarget=null;paint();
+  follow(track,input);
+  completePassedLines();
+  paint();
+  maybeCelebratePage();
  }
  function launch(){
   if(!running||quiet||!isEnabled()||document.hidden)return;
@@ -154,8 +186,6 @@
   if(!isEnabled()||!track.gaps.has(index))return;retryTarget=index;say('אפשר לקרוא את המילה שוב, או פשוט להמשיך.');paint();
  }
  if(typeof document.addEventListener==='function'){
-  document.addEventListener('click',e=>{const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n)retry(Number(n.dataset.wordIndex));});
-  document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const n=e.target.closest?.('.reader-word[data-reading-retry="1"]');if(n){e.preventDefault();retry(Number(n.dataset.wordIndex));}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stop(false);});
  }
  if(typeof window.addEventListener==='function'){
