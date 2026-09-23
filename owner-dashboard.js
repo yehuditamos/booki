@@ -190,6 +190,16 @@ function _odRecentTeachers(teachers){
   return (bt??-Infinity)-(at??-Infinity)||String(a.name||a.id).localeCompare(String(b.name||b.id),'he');
  });
 }
+function _odOpenTeacherClubs(teacher,clubs){
+ const owned=clubs.filter(c=>c.teacherUid===teacher.id).slice().sort((a,b)=>(_odTimestamp(b.createdAt)??-Infinity)-(_odTimestamp(a.createdAt)??-Infinity));
+ if(!owned.length)return;
+ const panel=document.getElementById('od-members-panel');if(panel){panel.open=true;const title=document.getElementById('od-members-title');if(title)title.textContent=(teacher.name||'המורה')+' · מועדונים וילדים';}
+ const list=document.getElementById('od-clubs-list');if(!list)return;
+ // Keep the global club data intact; visually focus the owner's view on this teacher.
+ [...list.children].forEach(node=>{const controls=[...node.querySelectorAll('button')];const club=owned.find(c=>node.textContent.includes(c.name||c.id));node.hidden=!club;});
+ list.scrollIntoView({behavior:'smooth',block:'start'});
+ setTimeout(()=>{const first=[...list.children].find(n=>!n.hidden);const b=first?.querySelector('button[aria-controls]');if(b&&b.getAttribute('aria-expanded')!=='true')b.click();},180);
+}
 function _odRenderRecentTeachers(teachers,clubs){
  const list=document.getElementById('od-recent-teachers');if(!list)return;
  list.replaceChildren();
@@ -208,7 +218,10 @@ function _odRenderRecentTeachers(teachers,clubs){
  }
  if(!sorted.length){list.append(_odNode('p','אין מורות להצגה בבחירה הזו.'));return;}
  for(const t of (_odShowAllTeachers?sorted:sorted.slice(0,5))){
-  const card=_odNode('div',undefined,'od-club-browser');
+  const card=_odNode('div',undefined,'od-club-browser od-teacher-jump');
+  card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','פתיחת המועדונים והנתונים של '+(t.name||'המורה'));
+  card.onclick=e=>{if(e.target.closest('a,button'))return;_odOpenTeacherClubs(t,clubs);};
+  card.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('a,button')){e.preventDefault();_odOpenTeacherClubs(t,clubs);}};
   const top=_odNode('div',undefined,'od-manager');
   top.append(_odNode('strong',t.name||'מורה ללא שם'));_odContact(top,t);const wa=_odWhatsAppButton(t);if(wa)top.append(wa);card.append(top);
   const joined=_odTimestamp(t.createdAt);
