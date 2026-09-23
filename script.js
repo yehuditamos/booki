@@ -998,7 +998,7 @@ async function finishAppReading() {
 function startBookReading() {
   document.getElementById('book-title').value  = '';
   document.getElementById('book-author').value = '';
-  bookData = {};
+  bookData = { niqudMode:'full', readAloud:false };
   document.querySelectorAll('.btn-pages').forEach(b => b.classList.remove('selected'));
   showScreen('screen-book-step1');
 }
@@ -1012,8 +1012,30 @@ function bookStep2() {
   showScreen('screen-book-step2');
 }
 
+function _bookMinutesPerPage(){
+  const s=_normalizeStudentReadingStats(currentStudentData||loadStudentLocal(currentStudentId||0));
+  const history=(s.history||[]).filter(h=>h.type==='book'&&Number(h.minutes)>0);
+  let mins=0,pages=0;
+  for(const h of history){const p=Number(h.pagesExact)||(typeof h.pages==='number'?h.pages:0);if(p>0){mins+=Number(h.minutes)||0;pages+=p;}}
+  // Personal history when available; otherwise a deliberately conservative
+  // child-reading estimate of ~1.2 minutes/page.
+  return pages>=5?Math.min(3,Math.max(.45,mins/pages)):1.2;
+}
+function _estimateBookMinutes(pages){return Math.max(1,Math.min(240,Math.round(Number(pages)*_bookMinutesPerPage())));}
+function selectManualPages(){
+  const input=document.getElementById('book-pages-manual'),pages=Math.floor(Number(input?.value));
+  if(!Number.isFinite(pages)||pages<1||pages>500){alert('כתבו מספר עמודים בין 1 ל־500');return;}
+  bookData.pages=pages;bookData.pagesExact=pages;bookData.minutes=_estimateBookMinutes(pages);
+  document.getElementById('q-character').value='';document.getElementById('q-story').value='';document.getElementById('q-liked').value='';
+  showScreen('screen-book-step3');
+}
+function selectBookNiqud(mode){
+  bookData.niqudMode=mode==='none'?'none':'full';
+  document.querySelectorAll('[data-book-niqud]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.bookNiqud===bookData.niqudMode)));
+}
 function selectPages(evt, range, minutes) {
   bookData.pages   = range;
+  bookData.pagesExact = null;
   bookData.minutes = minutes;
   document.querySelectorAll('.btn-pages').forEach(b => b.classList.remove('selected'));
   evt.currentTarget.classList.add('selected');
@@ -1041,9 +1063,11 @@ async function submitBookReading() {
   const liked = document.getElementById('q-liked').value.trim();
   if (!char || !story || !liked) { alert('יש למלא את כל השדות'); return; }
 
+  bookData.readAloud=!!document.getElementById('book-read-aloud')?.checked;
   const minutes = _safeReadingNumber(bookData.minutes, 5);
   if (minutes < 1 || minutes > 240) throw new Error('מספר דקות לא תקין: ' + minutes);
-  const points  = minutes * 1;
+  const readAloudBonus=bookData.readAloud?1:0, noNiqudBonus=bookData.niqudMode==='none'?1:0;
+  const points  = minutes + readAloudBonus + noNiqudBonus;
 
   const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
   const prevMinutes = s.totalMinutes;
@@ -1055,8 +1079,12 @@ async function submitBookReading() {
     title:  bookData.title,
     author: bookData.author || '',
     pages:  bookData.pages,
+    pagesExact: bookData.pagesExact || null,
     minutes,
     points,
+    niqudMode: bookData.niqudMode || 'full',
+    readAloud: !!bookData.readAloud,
+    readAloudBonus, noNiqudBonus,
     date: todayStr()
   });
   currentStudentData = s;
@@ -1069,7 +1097,8 @@ async function submitBookReading() {
   if (typeof fbSaveReadingSession === 'function') {
     fbSaveReadingSession(currentStudentId, {
       type: 'book', bookTitle: bookData.title, bookAuthor: bookData.author || null,
-      pagesRead: bookData.pages || null, minutes, points,
+      pagesRead: bookData.pages || null, pagesExact: bookData.pagesExact || null, minutes, points,
+      niqudMode: bookData.niqudMode || 'full', readAloud: !!bookData.readAloud, readAloudBonus, noNiqudBonus,
     }).catch(() => {});
   }
   if (window.currentClubId && !Number.isInteger(currentStudentId)
@@ -1087,7 +1116,7 @@ async function submitBookReading() {
   }
   const levelUp    = typeof detectLevelUp === 'function' ? detectLevelUp(prevMinutes, s.totalMinutes) : null;
   const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(s.history) : 0;
-  showComplete(minutes, points, { levelUp, streakDays });
+  showComplete(minutes, points, { levelUp, streakDays, niqudBonus:{basePoints:minutes,courageBonus:noNiqudBonus,readAloudBonus} });
   } catch (e) {
     console.error('[booki] submitBookReading failed:', e);
     alert('לא הצלחנו לשמור את הקריאה. נסו שוב בעוד רגע.');
