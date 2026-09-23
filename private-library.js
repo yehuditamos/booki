@@ -19,6 +19,13 @@
   'kosher-private':{title:'ספרייה כשרה + פרטית',note:'הילדים רואים את סיפורי הצדיקים וגם את הסיפורים שפרסמת.'}
  };
  const kosherStories=stories=>stories.filter(story=>story?.libraryId==='kosher'||story?.tags?.includes?.('כשר'));
+ const publicCatalog=()=>typeof STORIES!=='undefined'&&Array.isArray(STORIES)?[...STORIES]:[];
+ function visiblePublicByMode(publicStories,mode){
+   if(mode==='kosher')return kosherStories(publicStories);
+   // kosher-public deliberately means the normal Booki catalog (which already
+   // contains the kosher shelf) with no private reads.
+   return publicStories;
+ }
  function ensureTeacherLibraryStyles(){
   if(document.getElementById('booki-private-library-status-styles'))return;
   const style=el('style');style.id='booki-private-library-status-styles';style.textContent=`
@@ -71,8 +78,12 @@
    const c=await window.db.collection('clubs').doc(clubId).get({source:'server'});
    if(request!==version||auth()?.uid!==a.uid)return false;
    if(!c.exists)throw Error('club');
-   const mode=c.data().libraryMode;
-   if(!['private','both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:['kosher','kosher-public'].includes(mode)?mode:'public',items:[]};return true;}
+   const mode=c.data().libraryMode||'public';
+   // Public/kosher-only modes need no access grant and no private Firestore read.
+   // Keep this path deliberately tiny so a kosher catalog cannot fail because of
+   // private-library permissions or availability.
+   if(['public','kosher','kosher-public'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode,items:[]};return true;}
+   if(!['private','both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
    const uid=c.data().teacherUid;if(!uid)throw Error('teacher');
    await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
    const items=await published(uid);
@@ -85,7 +96,7 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
   if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
-  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher'?kosherStories(publicStories):state.mode==='kosher-public'?publicStories:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
+  return ['public','kosher','kosher-public'].includes(state.mode)?visiblePublicByMode(publicStories,state.mode):state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
