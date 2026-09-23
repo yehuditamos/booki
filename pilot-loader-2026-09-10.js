@@ -3,8 +3,8 @@
   'use strict';
   if(window.BookiPilotLoader20260910) return;
   const files=[
-    'pilot-reading-save-2026-09-10.js?v=1',
-    'pilot-reading-overrides-2026-09-10.js?v=1',
+    'pilot-reading-save-2026-09-10.js?v=20260923-bookreportfix',
+    'pilot-reading-overrides-2026-09-10.js?v=20260923-bookreportfix',
     'pilot-niqud-exact-2026-09-10.js?v=1',
     'pilot-niqud-defective-2026-09-10.js?v=20260919-fullspelling2',
     'pilot-niqud-logic-2026-09-10.js?v=20260919-fullspelling2',
