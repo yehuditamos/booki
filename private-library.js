@@ -85,10 +85,23 @@
    if(['public','kosher','kosher-public'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode,items:[]};return true;}
    if(!['private','both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
    const uid=c.data().teacherUid;if(!uid)throw Error('teacher');
-   await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
-   const items=await published(uid);
-   if(request!==version||auth()?.uid!==a.uid)return false;
-   state={clubId,userId,authUid:a?.uid,mode,items};return true;
+   // Private content is optional inside combined modes. Never block the child's
+   // whole library because a teacher has no published stories yet or an access
+   // grant/rules deployment is temporarily unavailable.
+   try{
+     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
+     const items=await published(uid);
+     if(request!==version||auth()?.uid!==a.uid)return false;
+     state={clubId,userId,authUid:a?.uid,mode,items};return true;
+   }catch(privateError){
+     console.warn('[booki] private catalog unavailable; keeping selected public catalog',privateError?.code||privateError?.message);
+     if(request!==version||auth()?.uid!==a.uid)return false;
+     if(mode==='both'){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
+     if(mode==='kosher-private'){state={clubId,userId,authUid:a?.uid,mode:'kosher',items:[]};return true;}
+     if(mode==='all'){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
+     // Only "private alone" has no safe public fallback.
+     throw privateError;
+   }
   }catch(e){if(request===version)state={clubId,userId,authUid:a?.uid,mode:'error',items:[]};return false;}
  }
  function visible(publicStories){
