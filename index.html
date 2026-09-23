@@ -103,6 +103,9 @@
 <link rel="stylesheet" href="child-choice.css?v=20260918-live-topics">
 <link rel="stylesheet" href="child-library.css?v=20260918-live-topics">
 <link rel="stylesheet" href="student-cards.css?v=20260918-name-search-top">
+<style>
+.book-pages-manual{grid-column:1/-1;margin-top:8px;padding:14px;border:2px dashed #cbded3;border-radius:16px;text-align:center}.book-pages-manual label{font-weight:800}.book-pages-manual>div{display:flex;gap:8px;margin-top:8px}.book-pages-manual input{min-width:0;flex:1;padding:12px;border:1px solid #bfd1c4;border-radius:12px;font-size:18px}.book-pages-manual button{border:0;border-radius:12px;padding:0 18px;background:#2d7957;color:#fff;font-weight:800}.book-pages-manual small{display:block;margin-top:7px;color:#65766c}.book-reading-modes{background:#f7fbf8;border:1px solid #cbded3;border-radius:18px;padding:14px;margin-bottom:18px}.book-reading-modes>strong{display:block;margin-bottom:10px}.book-reading-modes label{display:flex!important;align-items:center;gap:8px;margin:8px 0!important}.book-reading-modes input{width:21px;height:21px}.book-niqud-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.book-niqud-choice button{padding:11px;border:2px solid #d5e1d8;border-radius:12px;background:#fff;font-weight:800}.book-niqud-choice button[aria-pressed="true"]{border-color:#2d7957;background:#eaf6ee;color:#245f45}
+</style>
 </head>
 <body>
 
@@ -602,8 +605,13 @@ window.addEventListener('pageshow', function (e) {
     </button>
     <button class="btn-pages" onclick="selectPages(event,'21+',25)">
       <span class="pages-count">21+</span>
-      <span class="pages-mins" data-nk="כְּ-25 דַּקּוֹת">כ-25 דקות</span>
+      <span class="pages-mins">כ-25 דקות</span>
     </button>
+    <div class="book-pages-manual">
+      <label for="book-pages-manual">או כמה בדיוק?</label>
+      <div><input id="book-pages-manual" type="number" min="1" max="500" inputmode="numeric" placeholder="למשל 37"><button type="button" onclick="selectManualPages()">המשך</button></div>
+      <small id="book-pages-estimate">נחשב לך בערך כמה זמן קראת ✨</small>
+    </div>
   </div>
 </section>
 
@@ -618,6 +626,14 @@ window.addEventListener('pageshow', function (e) {
     <p class="step-indicator" data-nk="שָׁלָב 3 מִתּוֹךְ 3 — הֲבָנַת הַנִּקְרָא">שלב 3 מתוך 3 — הבנת הנקרא</p>
   </div>
   <div class="form-card">
+    <div class="book-reading-modes">
+      <strong>איך קראת?</strong>
+      <label><input id="book-read-aloud" type="checkbox"> 🎙️ קראתי בקול</label>
+      <div class="book-niqud-choice" role="group" aria-label="מצב ניקוד">
+        <button type="button" data-book-niqud="full" onclick="selectBookNiqud('full')">אָ עם ניקוד</button>
+        <button type="button" data-book-niqud="none" onclick="selectBookNiqud('none')">✨ בלי ניקוד</button>
+      </div>
+    </div>
     <label for="q-character"><span data-nk="מִי הַדְּמוּת הָרָאשִׁית בַּסִּפּוּר?">מי הדמות הראשית בסיפור?</span> <span class="required">*</span></label>
     <input id="q-character" type="text" class="input-field" placeholder="כתוב/י את שם הדמות…" />
     <label for="q-story"><span data-nk="מָה קָרָה בַּסִּפּוּר?">מה קרה בסיפור?</span> <span class="required">*</span></label>
