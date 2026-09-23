@@ -972,7 +972,11 @@ async function finishAppReading() {
   }
   if (window.currentClubId && !Number.isInteger(currentStudentId)
       && typeof fbAwardClubEconomy === 'function') {
-    await fbAwardClubEconomy(window.currentClubId, points);
+    // Economy is secondary to preserving a child's reading report. A temporary
+    // permission/network failure must never turn a successful local/stat save
+    // into the scary "לא הצלחנו לשמור" message.
+    try { await fbAwardClubEconomy(window.currentClubId, points); }
+    catch(e){ console.warn('[booki] book economy update failed:',e?.message||e); }
   }
   if (typeof analyticsReadingSession === 'function') {
     analyticsReadingSession(currentStudentId, window.currentClubId || null, {
@@ -1064,16 +1068,20 @@ async function submitBookReading() {
   if (!char || !story || !liked) { alert('יש למלא את כל השדות'); return; }
 
   bookData.readAloud=!!document.getElementById('book-read-aloud')?.checked;
+  // A real-book report can arrive here from the old quick page buttons, which
+  // predate the niqqud controls. Always normalize the new fields before math/save.
+  if(!['full','none'].includes(bookData.niqudMode))bookData.niqudMode='full';
   const minutes = _safeReadingNumber(bookData.minutes, 5);
   if (minutes < 1 || minutes > 240) throw new Error('מספר דקות לא תקין: ' + minutes);
   const readAloudBonus=bookData.readAloud?1:0, noNiqudBonus=bookData.niqudMode==='none'?1:0;
   const points  = minutes + readAloudBonus + noNiqudBonus;
 
   const s = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
-  const prevMinutes = s.totalMinutes;
-  s.totalMinutes += minutes;
-  s.bookMinutes  += minutes;
-  s.points       += points;
+  const prevMinutes = _safeReadingNumber(s.totalMinutes,0);
+  s.totalMinutes = prevMinutes + minutes;
+  s.bookMinutes  = _safeReadingNumber(s.bookMinutes,0) + minutes;
+  s.points       = _safeReadingNumber(s.points,0) + points;
+  if(!Array.isArray(s.history))s.history=[];
   s.history.push({
     type:   'book',
     title:  bookData.title,
