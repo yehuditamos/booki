@@ -71,12 +71,17 @@
     stats.appMinutes += delta.isApp ? entry.minutes : 0;
     stats.bookMinutes += delta.isBook ? entry.minutes : 0;
     stats.storiesRead += entry.type === 'app' ? 1 : 0;
-    if (entry.type === 'app') {
+    if (entry.type === 'app' || entry.type === 'book') {
       if (entry.niqudMode === 'none') stats.noNiqudMinutes += entry.minutes;
       else if (entry.niqudMode === 'mixed') stats.mixedNiqudMinutes += entry.minutes;
       else stats.fullNiqudMinutes += entry.minutes;
-      stats.readAloudMinutes += Math.min(entry.minutes, num(entry.readAloudMinutes));
-      stats.readAloudSessions += entry.readAloudVerified ? 1 : 0;
+      if(entry.type==='book'){
+        stats.readAloudMinutes += entry.readAloud ? entry.minutes : 0;
+        stats.readAloudSessions += entry.readAloud ? 1 : 0;
+      }else{
+        stats.readAloudMinutes += Math.min(entry.minutes, num(entry.readAloudMinutes));
+        stats.readAloudSessions += entry.readAloudVerified ? 1 : 0;
+      }
     }
     stats.lastReadAt = completedAt;
     stats.recentCompletionIds = [...stats.recentCompletionIds, id].slice(-50);
