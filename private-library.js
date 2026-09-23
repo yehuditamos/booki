@@ -14,6 +14,8 @@
   private:{title:'הספרייה הפרטית שלי',note:'הילדים רואים רק את הסיפורים שפרסמת.'},
   both:{title:'בוקי + הספרייה הפרטית',note:'הילדים רואים את ספריית בוקי וגם את הסיפורים שלך.'},
   kosher:{title:'ספרייה כשרה',note:'הילדים רואים רק סיפורי צדיקים שנבחרו לספרייה הכשרה.'},
+  'kosher-public':{title:'ספריית בוקי + כשרה',note:'הילדים רואים את ספריית בוקי ואת הספרייה הכשרה.'},
+  all:{title:'בוקי + כשרה + פרטית',note:'הילדים רואים את שלוש הספריות.'},
   'kosher-private':{title:'ספרייה כשרה + פרטית',note:'הילדים רואים את סיפורי הצדיקים וגם את הסיפורים שפרסמת.'}
  };
  const kosherStories=stories=>stories.filter(story=>story?.libraryId==='kosher'||story?.tags?.includes?.('כשר'));
@@ -70,7 +72,7 @@
    if(request!==version||auth()?.uid!==a.uid)return false;
    if(!c.exists)throw Error('club');
    const mode=c.data().libraryMode;
-   if(!['private','both','kosher-private'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:['kosher'].includes(mode)?mode:'public',items:[]};return true;}
+   if(!['private','both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:['kosher','kosher-public'].includes(mode)?mode:'public',items:[]};return true;}
    const uid=c.data().teacherUid;if(!uid)throw Error('teacher');
    await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
    const items=await published(uid);
@@ -83,7 +85,7 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
   if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
-  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher'?kosherStories(publicStories):state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:[];
+  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher'?kosherStories(publicStories):state.mode==='kosher-public'?publicStories:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
@@ -110,10 +112,12 @@
   if(mode==='both')return [...all,...await published(a.uid)];
   if(mode==='kosher')return kosherStories(all);
   if(mode==='kosher-private')return [...kosherStories(all),...await published(a.uid)];
+  if(mode==='kosher-public')return all;
+  if(mode==='all')return [...all,...await published(a.uid)];
   return all;
  }
  function appendPrivateCategory(){
-  if(!['both','kosher-private'].includes(state.mode)||teacher()||!state.items.length)return;
+  if(!['both','kosher-private','all'].includes(state.mode)||teacher()||!state.items.length)return;
   const b=btn('📚 סיפורי המורה · '+state.items.length+' סיפורים',()=>{
    $('library-screen-title').textContent='סיפורי המורה';$('library-category-view').style.display='none';$('library-story-view').style.display='';filterLibrary('teacher-private');
   });b.className='library-category-card';$('library-category-grid')?.append(b);
@@ -142,7 +146,7 @@
     body.replaceChildren(intro,add);
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
     const visibleClubs=cs.docs.filter(c=>!c.data().hidden);
-    const exposing=visibleClubs.filter(c=>['private','both','kosher-private'].includes(c.data().libraryMode||'public'));
+    const exposing=visibleClubs.filter(c=>['private','both','kosher-private','all'].includes(c.data().libraryMode||'public'));
     if(savedNotice){const notice=el('div',savedNotice);notice.className='pl-alert';body.append(notice);savedNotice='';}
     if(publishedCount&&visibleClubs.length&&!exposing.length){
      const warning=el('div');warning.className='pl-alert';
@@ -243,5 +247,6 @@
   }
   await list();
  }
- window.BookiPrivateLibrary={open,prepare,visible,refresh,privateCategories,appendPrivateCategory,forTeacherClub,validate,toStory};
+ async function openKosherPreview(){const all=Array.isArray(STORIES)?STORIES:[];const items=kosherStories(all);if(!items.length){alert('הספרייה הכשרה עדיין נטענת. נסי שוב.');return;}if(typeof showScreen==='function'){showScreen('screen-library');setTimeout(()=>{const root=document.getElementById('booki-child-library');if(root&&window.BookiChildLibrary)window.BookiChildLibrary.openKosher?.();else if(typeof filterLibrary==='function')filterLibrary('all');},0);}}
+ window.BookiPrivateLibrary={open,openKosherPreview,prepare,visible,refresh,privateCategories,appendPrivateCategory,forTeacherClub,validate,toStory};
 })();
