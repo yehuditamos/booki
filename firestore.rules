@@ -323,7 +323,7 @@ service cloud.firestore {
       let club = get(/databases/$(database)/documents/clubs/$(access.clubId)).data;
       let member = get(/databases/$(database)/documents/clubs/$(access.clubId)/memberships/$(access.memberId)).data;
       return isSignedIn() && club.teacherUid == teacherUid
-        && club.get('libraryMode', 'public') in ['private', 'both', 'kosher-private']
+        && club.get('libraryMode', 'public') in ['private', 'both', 'kosher-private', 'all']
         && member.get('status', 'active') != 'left'
         && (member.get('claimedByUid', null) == request.auth.uid || access.memberId == request.auth.uid);
     }
