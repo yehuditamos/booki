@@ -216,6 +216,27 @@
     const intro = el('div', undefined, 'tw-library-heading');
     intro.append(el('span', 'מילים שפותחות עולמות', 'tw-eyebrow'), el('h3', 'הסיפורים מתחילים כאן'));
     actions.append(intro);
+    const displayBox=el('section',undefined,'tw-display-folders');
+    displayBox.append(el('strong','מה יוצג לילדים?'),el('p','סמני את הספריות שתרצי להציג. אפשר לבחור יותר מאחת.'));
+    const displayChoices=el('div',undefined,'tw-display-choice-grid');
+    const defs=[['public','📚','ספריית בוקי'],['private','✍️','הספרייה הפרטית שלי'],['kosher','✡️','ספרייה כשרה']];
+    const selected=new Set(['public']);
+    const checks=[];
+    defs.forEach(([value,icon,label])=>{
+      const lab=el('label',undefined,'tw-display-choice');const input=document.createElement('input');input.type='checkbox';input.value=value;input.checked=value==='public';
+      input.onchange=()=>{input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
+      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));displayChoices.append(lab);checks.push(input);
+    });
+    const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
+    const apply=btn('החל על כל המועדונים',async()=>{
+      const a=teacher();if(!a||!selected.size){status.textContent='בחרי לפחות ספרייה אחת.';return;}
+      apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
+      const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
+      const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
+      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});await Promise.all(snap.docs.filter(d=>!d.data().hidden).map(d=>d.ref.update({libraryMode:mode})));status.textContent='נשמר ✓ מעכשיו רק הספריות המסומנות יוצגו לילדים בכל המועדונים.';}
+      catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}finally{apply.disabled=false;}
+    },'tw-apply-display');
+    displayBox.append(displayChoices,apply,status);actions.append(displayBox);
     const pair = el('div', undefined, 'tw-library-pair');
     const shelf = (title, copy, run, personal) => {
       const card = btn('', run, 'tw-library-link' + (personal ? ' tw-library-personal' : ''));
@@ -225,7 +246,7 @@
       text.append(el('strong',title),el('small',copy));
       card.append(art,text,el('span','←','tw-library-arrow'));return card;
     };
-    pair.append(shelf('סיפורי בוקי', 'לעיון בסיפורים של בוקי', openLibrary, false), shelf('הספרייה הפרטית שלי', 'להוסיף, לערוך ולבחור ספרייה', () => window.BookiPrivateLibrary?.open(), true));
+    pair.append(shelf('סיפורי בוקי','לעיון בסיפורים של בוקי',openLibrary,false),shelf('הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true),shelf('ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>window.BookiPrivateLibrary?.openKosherPreview?.(),false));
     actions.append(pair); body.append(actions);
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
@@ -250,6 +271,7 @@
     .tw-screen,.tw-dashboard-actions{font-family:Arial,sans-serif;color:#253f35}
     .tw-dashboard-actions{display:grid;grid-template-columns:minmax(220px,.9fr) minmax(0,1.8fr);gap:18px;margin:0 0 28px}
     .tw-eyebrow{margin:0 0 9px;font-size:13px;font-weight:700;color:#546d60}
+    .tw-display-folders{grid-column:1/-1;background:#f7fbf8;border:1px solid #cbded3;border-radius:20px;padding:16px 18px}.tw-display-folders>strong{font-size:17px}.tw-display-folders>p{margin:5px 0 12px;color:#61746a;font-size:13px}.tw-display-choice-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.tw-display-choice{display:flex;align-items:center;gap:8px;border:2px solid #d7e4da;border-radius:14px;padding:11px;background:#fff;cursor:pointer;font-weight:700}.tw-display-choice.is-selected{border-color:#2d7957;background:#eef8f1}.tw-display-choice input{width:20px;height:20px;accent-color:#2d7957}.tw-display-icon{font-size:20px}.tw-apply-display{margin-top:12px;width:100%;min-height:44px;border:0;border-radius:13px;background:#2d7957;color:#fff;font-weight:800}.tw-display-status{margin:8px 0 0!important;font-size:12px!important;color:#526e5e!important}@media(max-width:620px){.tw-display-choice-grid{grid-template-columns:1fr}.tw-library-pair{grid-template-columns:1fr!important}}
     .tw-secondary-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .tw-dashboard-action{display:flex;align-items:center;gap:10px;text-align:right;width:100%;min-height:128px;padding:18px 14px;background:#fff;border:1px solid #cbded3;border-radius:18px;color:#294938;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px #244f3810}
     .tw-dashboard-action strong,.tw-dashboard-action small{display:block}.tw-dashboard-action strong{font-size:18px;line-height:1.4}.tw-dashboard-action small{font-size:13px;line-height:1.6;margin-top:7px;color:#526e5e}
