@@ -1431,7 +1431,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20260917-clean-dashboard"></script>
+<script src="owner-dashboard.js?v=20260923-original-master"></script>
 <script src="initial-setup.js?v=30260918-library-copy"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1439,7 +1439,7 @@ window.addEventListener('pageshow', function (e) {
 <section id="screen-owner-dashboard" class="screen od-screen">
   <div class="od-header">
     <div>
-      <h2>הניהול של יהודית</h2>
+      <h2>📊 Owner Dashboard</h2>
       <p id="od-owner-name" style="font-size:.9rem;color:#888;margin:0"></p>
     </div>
     <span id="od-status" class="od-status"></span>
@@ -1447,42 +1447,36 @@ window.addEventListener('pageshow', function (e) {
   </div>
   <div class="od-body">
 
-    <div class="od-reading-hero">
-      <div class="od-periods" aria-label="תקופת הקריאה">
-        <button type="button" data-od-period="48h" aria-pressed="true" onclick="_odSetPeriod('48h')">48 שעות</button>
-        <button type="button" data-od-period="7d" aria-pressed="false" onclick="_odSetPeriod('7d')">7 ימים</button>
-        <button type="button" data-od-period="all" aria-pressed="false" onclick="_odSetPeriod('all')">מאז ההתחלה</button>
+    <div class="od-section">
+      <div class="od-section-title">📊 KPI</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-total-teachers">—</span><span class="od-lbl">מורות</span></div>
+        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></button>
+        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
+        <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
       </div>
-      <p id="od-reader-label">משתמשים פעילים ב־48 השעות האחרונות</p>
-      <strong id="od-user-count" aria-live="polite">—</strong>
-      <p id="od-count-note">כל כרטיס ילד נספר פעם אחת בתקופה שנבחרה</p>
     </div>
-    <div class="od-grid od-funnel">
-      <button type="button" class="od-metric" onclick="_odOpenTeachers('active')"><strong class="od-val" id="od-active-teachers">—</strong><span class="od-lbl">מורות שנכנסו</span></button>
-      <button type="button" class="od-metric od-pilot-followup" onclick="_odOpenTeachers('needs-class')"><strong class="od-val">💬</strong><span class="od-lbl">טרם הפעילו כיתה</span></button>
-      <button type="button" class="od-metric" onclick="_odOpenMembers('entered')"><strong class="od-val" id="od-entered-count">—</strong><span class="od-lbl">תלמידים שנכנסו</span></button>
-      <button type="button" class="od-metric" onclick="_odOpenMembers('readers')"><strong class="od-val" id="od-reader-count">—</strong><span class="od-lbl">מתוכם קראו</span></button>
+
+    <div class="od-section">
+      <div class="od-section-title">📅 היום</div>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-opens-today">—</span><span class="od-lbl">פתיחות</span></div>
+        <div class="od-metric"><span class="od-val" id="od-sessions-today">—</span><span class="od-lbl">סשני קריאה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-dau-today">—</span><span class="od-lbl">פעילים היום</span></div>
+        <div class="od-metric"><span class="od-val" id="od-wau">—</span><span class="od-lbl">פעילים 7 ימים</span></div>
+      </div>
     </div>
-    <p class="od-coverage">תיעוד כניסות תלמידים החל ב־17.9.2026; לפני כן נכללות רק כניסות ראשונות וקריאות שנשמרו.</p>
-    <div class="od-grid">
-      <button type="button" class="od-metric" onclick="_odOpenTeachers('all')"><strong class="od-val" id="od-teacher-count">—</strong><span class="od-lbl">מורות סה״כ</span><small id="od-teacher-started"></small></button>
-      <button type="button" class="od-metric" onclick="_odOpenTeachers('new')"><strong class="od-val" id="od-new-teachers">—</strong><span class="od-lbl">מורות שהצטרפו ב־30 הימים האחרונים</span></button>
+
+    <div class="od-section">
+      <div class="od-section-title">👩‍🏫 רשימת מורות</div>
+      <div id="od-teachers-list"><div class="od-empty">טוען...</div></div>
     </div>
-    <details class="od-section" id="od-teachers-panel">
-      <summary id="od-recent-teachers-title">כל המורות · מהחדשה לוותיקה</summary>
-      <div id="od-recent-teachers"></div>
-    </details>
-    <details class="od-section" id="od-members-panel">
-      <summary id="od-members-title">מועדונים ותלמידים</summary>
-      <button type="button" class="od-btn-sm" onclick="_odOpenMembers('all')">כל המועדונים והתלמידים</button>
-      <div id="od-clubs-list"></div>
-    </details>
-    <details class="od-section">
-      <summary>דקות קריאה ונתונים נוספים</summary>
-      <div class="od-lifetime"><span>דקות קריאה מצטברות מאז ההתחלה</span><strong id="od-lifetime-minutes">—</strong><p id="od-lifetime-note"></p></div>
-      <p><strong id="od-active-clubs">—</strong> <span id="od-active-label">מועדונים שבהם קראו</span></p>
-    </details>
-    <details class="od-section" ontoggle="if(this.open){_odRenderSystemClubs();_odLoadErrors();}"><summary>ניהול נוסף</summary>
+
+    <div class="od-section">
+      <div class="od-section-title">🌳 כל המועדונים</div>
+      <div id="od-clubs-list"><div class="od-empty">טוען...</div></div>
+    </div>
+
     <div class="od-section" id="od-repair-section" style="display:none">
       <div class="od-section-title">🔧 תיקון כרטיסים — <span id="od-repair-club-name"></span></div>
       <div id="od-repair-content"><div class="od-empty">סורק...</div></div>
@@ -1493,6 +1487,11 @@ window.addEventListener('pageshow', function (e) {
       <div class="od-section-title">🗂️ מועדוני מערכת / ישנים</div>
       <p style="font-size:.8rem;color:#888;margin:.3rem 0 .8rem">מועדונים Bootstrap — נתונים נשמרים, אפשר להסתיר או לשייך.</p>
       <div id="od-system-clubs"><div class="od-empty">טוען...</div></div>
+    </div>
+
+    <div class="od-section">
+      <div class="od-section-title">⭐ סיפורים פופולריים</div>
+      <div id="od-top-stories"><div class="od-empty">טוען...</div></div>
     </div>
 
     <div class="od-section">
@@ -1507,7 +1506,7 @@ window.addEventListener('pageshow', function (e) {
       <span id="od-joins-today"></span>
     </div>
 
-
+    <button class="od-refresh" onclick="_odLoad()">🔄 רענן נתונים</button>
 
     <div class="od-section od-danger-zone">
       <div class="od-section-title" style="color:#c0392b">⚠️ Danger Zone</div>
@@ -1517,8 +1516,6 @@ window.addEventListener('pageshow', function (e) {
       </p>
       <button id="btn-dev-reset" class="btn-dev-reset" onclick="devReset()">🗑️ Developer Reset</button>
     </div>
-    </details>
-    <button class="od-refresh" onclick="_odLoad()">🔄 רענון נתונים</button>
   </div>
 </section>
 
