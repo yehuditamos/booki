@@ -145,47 +145,9 @@
     const add=btn('📝 הוספת סיפור',()=>edit(null));add.className='pl-add';
     body.replaceChildren(intro,add);
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
-    const visibleClubs=cs.docs.filter(c=>!c.data().hidden);
-    const exposing=visibleClubs.filter(c=>['private','both','kosher-private','all'].includes(c.data().libraryMode||'public'));
     if(savedNotice){const notice=el('div',savedNotice);notice.className='pl-alert';body.append(notice);savedNotice='';}
-    if(publishedCount&&visibleClubs.length&&!exposing.length){
-     const warning=el('div');warning.className='pl-alert';
-     warning.append(el('strong','⚠️ יש לך סיפורים שפורסמו, אבל הילדים עדיין לא רואים אותם.'),el('p','כרגע כל הכיתות שלך מציגות סיפורי בוקי בלבד. אפשר לשנות זאת כאן למטה.'));
-     body.append(warning);
-    }
-    const clubs=el('section');clubs.className='pl-section';clubs.append(el('h3','👀 מה הילדים רואים עכשיו?'));
-    if(!visibleClubs.length)clubs.append(el('p','עדיין אין כיתה פעילה. אפשר לכתוב סיפורים עכשיו ולבחור מה הילדים יראו לאחר פתיחת כיתה.'));
-    function renderModeCard(c){
-     const card=el('article');card.className='pl-mode-card';
-     let mode=c.data().libraryMode||'public';card.dataset.mode=mode;
-     const clubName=el('p',c.data().name||'הכיתה');clubName.className='pl-mode-club';
-     const label=el('p','הילדים בכיתה הזאת רואים עכשיו:');label.className='pl-mode-label';
-     const modeTitle=el('strong');modeTitle.className='pl-mode-title';
-     const note=el('p');note.className='pl-mode-note';
-     const change=btn('שינוי מה הילדים רואים',()=>{picker.hidden=!picker.hidden;});change.className='pl-change';
-     const picker=el('div');picker.className='pl-mode-picker';picker.hidden=true;
-     const choices=[['public','📚 ספריית בוקי'],['private','✍️ הספרייה הפרטית שלי'],['both','📚 בוקי + פרטית'],['kosher','✡️ ספרייה כשרה'],['kosher-private','✡️ כשרה + פרטית']];
-     const choiceButtons=[];
-     function sync(){
-      const copy=MODE_COPY[mode]||MODE_COPY.public;card.dataset.mode=mode;modeTitle.textContent=copy.title;note.textContent=copy.note;
-      choiceButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));
-     }
-     for(const [value,text] of choices){
-      const b=btn(text,async()=>{
-       if(value===mode){picker.hidden=true;return;}
-       if(['private','kosher-private'].includes(value)&&!publishedCount){status.textContent='כדי לבחור רק את הסיפורים שלך, פרסמי קודם לפחות סיפור אחד.';return;}
-       choiceButtons.forEach(x=>x.disabled=true);status.textContent='שומרת…';
-       try{if(!valid())return;await c.ref.update({libraryMode:value});mode=value;sync();picker.hidden=true;status.textContent='נשמר ✓ הילדים יראו את הבחירה בפתיחה הבאה של הספרייה.';}
-       catch(e){status.textContent='הבחירה לא נשמרה. נסי שוב.';}
-       finally{choiceButtons.forEach(x=>x.disabled=false);}
-      });b.dataset.mode=value;choiceButtons.push(b);picker.append(b);
-     }
-     sync();card.append(clubName,label,modeTitle,note,change,picker);return card;
-    }
-    visibleClubs.forEach(c=>clubs.append(renderModeCard(c)));
-    body.append(clubs);
     const stories=el('section');stories.className='pl-section';stories.append(el('h3','📖 הסיפורים שלי'+(ss.docs.length?' ('+ss.docs.length+')':'')));
-    if(!ss.docs.length)stories.append(el('p','כאן תופיע הספרייה שלך. מתחילים מסיפור אחד.'));
+    if(!ss.docs.length)stories.append(el('p','כאן יופיעו הסיפורים שתעלי בעצמך.'));
     for(const s of ss.docs.sort((x,y)=>String(y.data().updatedAt).localeCompare(String(x.data().updatedAt)))){
      const row=el('article');row.className='pl-story';
      const storyState=el('span',s.data().status==='published'?'פורסם בספרייה שלי':'טיוטה — הילדים לא רואים');storyState.className='pl-story-state';
