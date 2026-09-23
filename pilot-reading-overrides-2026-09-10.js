@@ -98,6 +98,8 @@ async function submitBookReading() {
   const story = document.getElementById('q-story').value.trim();
   const liked = document.getElementById('q-liked').value.trim();
   if (!char || !story || !liked) { alert('יש למלא את כל השדות'); return; }
+  bookData.readAloud=!!document.getElementById('book-read-aloud')?.checked;
+  if(!['full','none'].includes(bookData.niqudMode))bookData.niqudMode='full';
 
   const completionId = bookData.completionId || (bookData.completionId = BookiReadingSave.newId('book'));
   const completionKey = 'book:' + completionId;
@@ -106,11 +108,14 @@ async function submitBookReading() {
   try {
     const minutes = _safeReadingNumber(bookData.minutes, 5);
     if (minutes < 1 || minutes > 240) throw new Error('מספר דקות לא תקין: ' + minutes);
-    const points = minutes;
+    const readAloudBonus=bookData.readAloud?1:0, noNiqudBonus=bookData.niqudMode==='none'?1:0;
+    const points = minutes + readAloudBonus + noNiqudBonus;
     const current = _normalizeStudentReadingStats(currentStudentData || loadStudentLocal(currentStudentId));
     const entry = {
       type: 'book', title: bookData.title, author: bookData.author || '',
-      pages: bookData.pages, minutes, points,
+      pages: bookData.pages, pagesExact: bookData.pagesExact || null, minutes, points,
+      niqudMode: bookData.niqudMode, readAloud: !!bookData.readAloud,
+      readAloudBonus, noNiqudBonus,
       comprehension: { character: char, plot: story, liked },
       date: todayStr(),
     };
@@ -132,7 +137,7 @@ async function submitBookReading() {
     const levelUp = typeof detectLevelUp === 'function'
       ? detectLevelUp(result.previousMinutes, result.student.totalMinutes) : null;
     const streakDays = typeof computeStreakDays === 'function' ? computeStreakDays(result.student.history) : 0;
-    showComplete(minutes, points, { levelUp, streakDays });
+    showComplete(minutes, points, { levelUp, streakDays, niqudBonus:{basePoints:minutes,courageBonus:noNiqudBonus,readAloudBonus} });
   } catch (e) {
     console.error('[booki] submitBookReading failed:', e);
     alert('לא הצלחנו לשמור את הקריאה. הדקות לא אבדו — נסו שוב בעוד רגע.');
