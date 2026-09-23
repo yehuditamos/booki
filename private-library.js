@@ -10,10 +10,13 @@
  const ref=uid=>window.db.collection('teacherLibraries').doc(uid).collection('stories');
  let state={clubId:null,userId:null,mode:'loading',items:[]},version=0,dialog=null;
  const MODE_COPY={
-  public:{title:'סיפורי בוקי בלבד',note:'הסיפורים שכתבת שמורים אצלך, אבל כרגע אינם מוצגים לילדים.'},
-  private:{title:'הסיפורים שלי בלבד',note:'הילדים רואים את הסיפורים שפרסמת בספרייה שלך.'},
-  both:{title:'סיפורי בוקי + הסיפורים שלי',note:'הילדים רואים גם את סיפורי בוקי וגם את הסיפורים שפרסמת.'}
+  public:{title:'ספריית בוקי',note:'הילדים רואים את ספריית בוקי הרגילה.'},
+  private:{title:'הספרייה הפרטית שלי',note:'הילדים רואים רק את הסיפורים שפרסמת.'},
+  both:{title:'בוקי + הספרייה הפרטית',note:'הילדים רואים את ספריית בוקי וגם את הסיפורים שלך.'},
+  kosher:{title:'ספרייה כשרה',note:'הילדים רואים רק סיפורי צדיקים שנבחרו לספרייה הכשרה.'},
+  'kosher-private':{title:'ספרייה כשרה + פרטית',note:'הילדים רואים את סיפורי הצדיקים וגם את הסיפורים שפרסמת.'}
  };
+ const kosherStories=stories=>stories.filter(story=>story?.libraryId==='kosher'||story?.tags?.includes?.('כשר'));
  function ensureTeacherLibraryStyles(){
   if(document.getElementById('booki-private-library-status-styles'))return;
   const style=el('style');style.id='booki-private-library-status-styles';style.textContent=`
@@ -67,7 +70,7 @@
    if(request!==version||auth()?.uid!==a.uid)return false;
    if(!c.exists)throw Error('club');
    const mode=c.data().libraryMode;
-   if(!['private','both'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
+   if(!['private','both','kosher-private'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode:['kosher'].includes(mode)?mode:'public',items:[]};return true;}
    const uid=c.data().teacherUid;if(!uid)throw Error('teacher');
    await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
    const items=await published(uid);
@@ -80,7 +83,7 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
   if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
-  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:[];
+  return state.mode==='public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher'?kosherStories(publicStories):state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:[];
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
@@ -102,11 +105,15 @@
   const a=teacher();if(!a)throw Error('teacher');const c=await window.db.collection('clubs').doc(clubId).get({source:'server'});
   if(!c.exists||c.data().teacherUid!==a.uid)throw Error('club');
   const mode=c.data().libraryMode;
+  const all=Array.isArray(STORIES)?[...STORIES]:getAllStories();
   if(mode==='private')return published(a.uid);
-  return mode==='both'?[...getAllStories(),...await published(a.uid)]:getAllStories();
+  if(mode==='both')return [...all,...await published(a.uid)];
+  if(mode==='kosher')return kosherStories(all);
+  if(mode==='kosher-private')return [...kosherStories(all),...await published(a.uid)];
+  return all;
  }
  function appendPrivateCategory(){
-  if(state.mode!=='both'||teacher()||!state.items.length)return;
+  if(!['both','kosher-private'].includes(state.mode)||teacher()||!state.items.length)return;
   const b=btn('📚 סיפורי המורה · '+state.items.length+' סיפורים',()=>{
    $('library-screen-title').textContent='סיפורי המורה';$('library-category-view').style.display='none';$('library-story-view').style.display='';filterLibrary('teacher-private');
   });b.className='library-category-card';$('library-category-grid')?.append(b);
@@ -135,7 +142,7 @@
     body.replaceChildren(intro,add);
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
     const visibleClubs=cs.docs.filter(c=>!c.data().hidden);
-    const exposing=visibleClubs.filter(c=>['private','both'].includes(c.data().libraryMode||'public'));
+    const exposing=visibleClubs.filter(c=>['private','both','kosher-private'].includes(c.data().libraryMode||'public'));
     if(savedNotice){const notice=el('div',savedNotice);notice.className='pl-alert';body.append(notice);savedNotice='';}
     if(publishedCount&&visibleClubs.length&&!exposing.length){
      const warning=el('div');warning.className='pl-alert';
@@ -153,7 +160,7 @@
      const note=el('p');note.className='pl-mode-note';
      const change=btn('שינוי מה הילדים רואים',()=>{picker.hidden=!picker.hidden;});change.className='pl-change';
      const picker=el('div');picker.className='pl-mode-picker';picker.hidden=true;
-     const choices=[['public','סיפורי בוקי'],['private','הסיפורים שלי'],['both','גם וגם']];
+     const choices=[['public','📚 ספריית בוקי'],['private','✍️ הספרייה הפרטית שלי'],['both','📚 בוקי + פרטית'],['kosher','✡️ ספרייה כשרה'],['kosher-private','✡️ כשרה + פרטית']];
      const choiceButtons=[];
      function sync(){
       const copy=MODE_COPY[mode]||MODE_COPY.public;card.dataset.mode=mode;modeTitle.textContent=copy.title;note.textContent=copy.note;
@@ -162,7 +169,7 @@
      for(const [value,text] of choices){
       const b=btn(text,async()=>{
        if(value===mode){picker.hidden=true;return;}
-       if(value==='private'&&!publishedCount){status.textContent='כדי לבחור רק את הסיפורים שלך, פרסמי קודם לפחות סיפור אחד.';return;}
+       if(['private','kosher-private'].includes(value)&&!publishedCount){status.textContent='כדי לבחור רק את הסיפורים שלך, פרסמי קודם לפחות סיפור אחד.';return;}
        choiceButtons.forEach(x=>x.disabled=true);status.textContent='שומרת…';
        try{if(!valid())return;await c.ref.update({libraryMode:value});mode=value;sync();picker.hidden=true;status.textContent='נשמר ✓ הילדים יראו את הבחירה בפתיחה הבאה של הספרייה.';}
        catch(e){status.textContent='הבחירה לא נשמרה. נסי שוב.';}
