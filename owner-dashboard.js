@@ -194,8 +194,14 @@ function _odRenderRecentTeachers(teachers,clubs){
  const list=document.getElementById('od-recent-teachers');if(!list)return;
  list.replaceChildren();
  const inactive=t=>{const owned=clubs.filter(c=>c.teacherUid===t.id);if(!owned.length)return true;return owned.every(c=>(c.memberCount??(_odSnapshot?.memberships?.get(c.id)||[]).filter(m=>m.status!=='left').length)===0);};
- const sorted=_odRecentTeachers(teachers).filter(t=>_odTeacherFilter==='new'?_odInPeriod(t.createdAt,'30d'):_odTeacherFilter==='active'?_odInPeriod(t.lastLoginAt,_odPeriod):_odTeacherFilter==='needs-class'?inactive(t):true);
- const heading=document.getElementById('od-recent-teachers-title');if(heading)heading.textContent=_odTeacherFilter==='new'?'מורות שהצטרפו ב־30 הימים האחרונים':_odTeacherFilter==='active'?'מורות שנכנסו בתקופה שנבחרה':_odTeacherFilter==='needs-class'?'טרם הפעילו כיתה · לפנייה אישית':'כל המורות · מהחדשה לוותיקה';
+ const clubOpenedAt=t=>{const owned=clubs.filter(c=>c.teacherUid===t.id);const times=owned.map(c=>_odTimestamp(c.createdAt)).filter(x=>x!==null);return times.length?Math.max(...times):null;};
+ const openedTeachers=teachers.filter(t=>t.role==='teacher'&&!_odIsTest(t)&&clubs.some(c=>c.teacherUid===t.id));
+ const base=_odTeacherFilter==='all'?openedTeachers:teachers;
+ const sorted=_odRecentTeachers(base).filter(t=>_odTeacherFilter==='new'?_odInPeriod(t.createdAt,'30d'):_odTeacherFilter==='active'?_odInPeriod(t.lastLoginAt,_odPeriod):_odTeacherFilter==='needs-class'?inactive(t):true).sort((a,b)=>{
+   if(_odTeacherFilter!=='all')return 0;
+   return (clubOpenedAt(b)??_odTimestamp(b.createdAt)??-Infinity)-(clubOpenedAt(a)??_odTimestamp(a.createdAt)??-Infinity);
+ });
+ const heading=document.getElementById('od-recent-teachers-title');if(heading)heading.textContent=_odTeacherFilter==='new'?'מורות שהצטרפו ב־30 הימים האחרונים':_odTeacherFilter==='active'?'מורות שנכנסו בתקופה שנבחרה':_odTeacherFilter==='needs-class'?'טרם הפעילו כיתה · לפנייה אישית':'כל המורות שפתחו מועדון · מהפתיחה האחרונה לראשונה';
  if(_odTeacherFilter==='needs-class'){
    const tools=_odNode('div',undefined,'od-pilot-tools');tools.append(_odNode('p','כאן מופיעות מורות בלי מועדון או בלי תלמידים פעילים. WhatsApp נפתח אחד־אחד עם הודעה מוכנה.'));
    list.append(tools);
@@ -209,7 +215,8 @@ function _odRenderRecentTeachers(teachers,clubs){
   const date=joined===null?'תאריך הצטרפות לא שמור':'הצטרפה ב־'+new Date(joined).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short',timeZone:'Asia/Jerusalem'});
   card.append(_odNode('p',date));
   const owned=clubs.filter(c=>c.teacherUid===t.id);
-  card.append(_odNode('p',owned.length?'מועדון פעיל: '+owned.map(c=>c.name||'ללא שם').join(' · '):'עדיין לא פתחה מועדון פעיל','od-club-reading'));
+  const activeOwned=owned.filter(c=>!c.hidden&&c.status!=='inactive'&&c.active!==false);
+  card.append(_odNode('p',owned.length?'מועדונים שנפתחו: '+owned.map(c=>(c.name||'ללא שם')+(activeOwned.includes(c)?'':' · לא פעיל')).join(' · '):'עדיין לא פתחה מועדון','od-club-reading'));
   list.append(card);
  }
  if(sorted.length>5){
