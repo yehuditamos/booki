@@ -225,12 +225,13 @@
     const checks=[];
     defs.forEach(([value,icon,label])=>{
       const lab=el('label',undefined,'tw-display-choice');const input=document.createElement('input');input.type='checkbox';input.value=value;input.checked=value==='public';
-      input.onchange=()=>{input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
-      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));displayChoices.append(lab);checks.push(input);
+      if(value==='public'){input.checked=true;input.disabled=true;input.setAttribute('aria-label','ספריית בוקי תמיד מוצגת');selected.add('public');}
+      input.onchange=()=>{if(value==='public'){input.checked=true;selected.add('public');return;}input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
+      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));if(value==='public')lab.append(el('small','ברירת מחדל · תמיד מוצגת','tw-default-library'));displayChoices.append(lab);checks.push(input);
     });
     const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
     const apply=btn('החל על כל המועדונים',async()=>{
-      const a=teacher();if(!a||!selected.size){status.textContent='בחרי לפחות ספרייה אחת.';return;}
+      const a=teacher();selected.add('public');if(!a)return;
       apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
       const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
       const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
