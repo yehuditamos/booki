@@ -8,7 +8,7 @@
   const $ = id => document.getElementById(id);
   const ids = { library: 'screen-teacher-booki-library', reader: 'screen-teacher-booki-preview', feedback: 'screen-teacher-feedback' };
   const SUPPORT = 'https://wa.me/972525383871'; // Existing recipient in routing.js/openBugReport.
-  const state = { uid: null, back: 'screen-teacher-dashboard', feedbackBack: null, query: '', shelf: '', limit: 24, story: null, page: 0, mode: 'full', revealed: false, draft: '', type: 'הצעת שיפור', context: '' };
+  const state = { uid: null, back: 'screen-teacher-dashboard', feedbackBack: null, query: '', shelf: '', libraryScope: 'public', limit: 24, story: null, page: 0, mode: 'full', revealed: false, draft: '', type: 'הצעת שיפור', context: '' };
   function el(tag, text, cls) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -50,9 +50,10 @@
   }
   function backToManagement() {
     if (!requireTeacher()) return;
-    activate($(state.back) ? state.back : 'screen-teacher-dashboard', false);
+    // Teacher preview must never fall through to a child-reading route.
+    state.back='screen-teacher-dashboard';activate('screen-teacher-dashboard', false);
   }
-  function allStories() { return typeof getAllStories === 'function' ? getAllStories().filter(s => Array.isArray(s.pages) && s.pages.length) : []; }
+  function allStories() { const source=typeof STORIES!=='undefined'&&Array.isArray(STORIES)?STORIES:(typeof getAllStories==='function'?getAllStories():[]);return source.filter(s=>Array.isArray(s.pages)&&s.pages.length).filter(s=>state.libraryScope==='kosher'?(s.libraryId==='kosher'||s.tags?.includes?.('כשר')):s.libraryId!=='teacher-private'); }
   function shelves() { return typeof BOOKI_LIBRARY_SHELVES !== 'undefined' ? BOOKI_LIBRARY_SHELVES : []; }
   function belongs(story, shelf) {
     return typeof _storyBelongsToShelf === 'function' ? _storyBelongsToShelf(story, shelf) : (shelf.libraries || []).includes(story.libraryId);
@@ -61,13 +62,13 @@
     const details = el('details', undefined, 'tw-tip'); details.append(el('summary', title));
     paragraphs.forEach(text => details.append(el('p', text))); return details;
   }
-  function openLibrary() {
+  function openLibrary(scope='public') {
     if (!requireTeacher()) return;
-    rememberBack(); renderLibrary(); activate(ids.library);
+    state.back='screen-teacher-dashboard';state.libraryScope=scope;state.query='';state.shelf='';state.limit=24;renderLibrary();activate(ids.library);
   }
   function renderLibrary() {
     const body = $(ids.library).querySelector('.tw-body'); body.replaceChildren();
-    body.append(el('p', 'כל הסיפורים שבספרייה של הילדים, לעיון שלך — בלי לבחור תלמיד ובלי לצבור עבורו דקות או נקודות.', 'tw-intro'));
+    body.append(el('p', state.libraryScope==='kosher'?'סיפורי הספרייה הכשרה לעיון שלך — בלי לבחור תלמיד ובלי לצבור דקות או נקודות.':'כל הסיפורים שבספריית בוקי, לעיון שלך — בלי לבחור תלמיד ובלי לצבור עבורו דקות או נקודות.', 'tw-intro'));
     body.append(tip('מנקודת המבט של הילד: איך זה עובד?', [
       '״אני בוחר סיפור שמעניין אותי וקורא בקצב שלי.״ כאן תוכלי לעבור על התוכן לפני שתמליצי עליו לכיתה.',
       '״אני בוחר עם ניקוד, חצי־חצי או בלי ניקוד; כשקשה לי, אפשר להיעזר בניקוד.״ הבחירה זמינה גם בתצוגה המקדימה שלך.',
@@ -246,7 +247,7 @@
       text.append(el('strong',title),el('small',copy));
       card.append(art,text,el('span','←','tw-library-arrow'));return card;
     };
-    pair.append(shelf('סיפורי בוקי','לעיון בסיפורים של בוקי',openLibrary,false),shelf('הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true),shelf('ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>window.BookiPrivateLibrary?.openKosherPreview?.(),false));
+    pair.append(shelf('סיפורי בוקי','לעיון בסיפורים של בוקי',openLibrary,false),shelf('הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true),shelf('ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>openLibrary('kosher'),false));
     actions.append(pair); body.append(actions);
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
