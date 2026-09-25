@@ -353,10 +353,16 @@
     if(!story)return;
     document.getElementById('booki-teacher-story-text')?.remove();
     const overlay=element('div',undefined,'booki-teacher-story-overlay');overlay.id='booki-teacher-story-text';
+    // Inline critical layout: this preview must be viewport-fixed even when an
+    // older cached stylesheet is present on iOS Safari.
+    overlay.style.cssText='position:fixed;inset:0;width:100vw;height:100dvh;background:rgba(30,45,38,.52);z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow:hidden';
     const box=element('article',undefined,'booki-teacher-story-box');
-    box.append(button('✕',()=>overlay.remove(),'booki-teacher-story-close'),element('h3',story.title||'הסיפור'));
-    (story.pages||[]).forEach((p,i)=>box.append(element('p',(p.text||'').trim())));
-    overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);
+    box.style.cssText='background:#fffdf8;border-radius:22px;width:min(650px,calc(100vw - 28px));max-height:82dvh;overflow:auto;padding:24px 20px;position:relative;box-sizing:border-box;box-shadow:0 18px 55px rgba(20,42,31,.28)';
+    const close=button('✕',()=>overlay.remove(),'booki-teacher-story-close');close.setAttribute('aria-label','סגירת הסיפור');close.style.cssText='position:absolute;top:12px;left:12px;border:0;background:#eef5ef;border-radius:50%;width:40px;height:40px;font-size:18px;z-index:2';
+    const title=element('h3',story.title||'הסיפור');title.style.cssText='text-align:center;color:#285b46;margin:6px 44px 18px';
+    box.append(close,title);
+    (story.pages||[]).forEach(p=>{const para=element('p',(p.text||'').trim());para.style.cssText='font-size:18px;line-height:1.8;text-align:right;margin:0 0 14px';box.append(para);});
+    overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);close.focus({preventScroll:true});
   }
   async function _toggleTeacherReadingDetail(card,clubId,member){
     let box=card.querySelector('.booki-student-sessions');
