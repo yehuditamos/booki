@@ -334,6 +334,49 @@
     if (!value || !Number.isFinite(date.getTime())) return 'טרם קרא/ה';
     return date.toLocaleDateString('he-IL', { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric', year: 'numeric' });
   }
+  function _teacherStoryTitle(session){
+    if(session.storyTitle)return session.storyTitle;
+    if(session.bookTitle)return session.bookTitle;
+    const all=typeof getAllStories==='function'?getAllStories():[];
+    return all.find(x=>String(x.id)===String(session.storyId))?.title||'סיפור';
+  }
+  async function _teacherMemberSessions(clubId,member){
+    try{
+      const cardId=member.id||member.userId;
+      if(!cardId)return [];
+      const snap=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(cardId).collection('sessions').orderBy('createdAt','desc').limit(30).get({source:'server'});
+      return snap.docs.map(d=>({id:d.id,...d.data()}));
+    }catch(e){console.warn('[teacher-flow] sessions:',e.code||e.message);return [];}
+  }
+  function _openTeacherStoryText(storyId){
+    const story=(typeof getAllStories==='function'?getAllStories():[]).find(x=>String(x.id)===String(storyId));
+    if(!story)return;
+    document.getElementById('booki-teacher-story-text')?.remove();
+    const overlay=element('div',undefined,'booki-teacher-story-overlay');overlay.id='booki-teacher-story-text';
+    const box=element('article',undefined,'booki-teacher-story-box');
+    box.append(button('✕',()=>overlay.remove(),'booki-teacher-story-close'),element('h3',story.title||'הסיפור'));
+    (story.pages||[]).forEach((p,i)=>box.append(element('p',(p.text||'').trim())));
+    overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);
+  }
+  async function _toggleTeacherReadingDetail(card,clubId,member){
+    let box=card.querySelector('.booki-student-sessions');
+    if(box){box.remove();return;}
+    box=element('div',undefined,'booki-student-sessions');box.append(element('p','טוען סיפורים…','td-loading'));card.append(box);
+    const sessions=await _teacherMemberSessions(clubId,member);if(!box.isConnected)return;box.replaceChildren();
+    const reads=sessions.filter(x=>['app','book','booki'].includes(x.type));
+    if(!reads.length){box.append(element('p','עדיין אין פירוט סיפורים שנשמר לקריאות של הילד/ה.'));return;}
+    reads.forEach(x=>{const row=element('div',undefined,'booki-session-row');const title=_teacherStoryTitle(x);const b=button(title,()=>x.storyId?_openTeacherStoryText(x.storyId):null,'booki-session-story');if(!x.storyId)b.disabled=true;row.append(b,element('span',Math.round(Number(x.minutes)||0)+' דק׳'));box.append(row);});
+  }
+  async function _teacherEncouragementStatus(clubId,member){
+    try{
+      const cardId=member.id||member.userId;if(!cardId)return null;
+      const snap=await window.db.collection('clubs').doc(clubId).collection('messages').where('toUserId','==',cardId).get({source:'server'});
+      const msgs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.type==='encouragement').sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+      if(!msgs.length)return null;
+      const latest=msgs[0],seen=new Set(member.seenMessageIds||[]);
+      return {seen:seen.has(latest.id),text:latest.text};
+    }catch(e){return null;}
+  }
   function renderEncouragement(target, members, id) {
     target.replaceChildren();
     if (!members.length) {
@@ -360,10 +403,13 @@
       const detail=element('div',undefined,'booki-reading-breakdown');
       detail.append(element('span','🎙️ '+Math.round(Number(st.readAloudMinutes)||0)+' בקול'),element('span','אָ '+Math.round(Number(st.fullNiqudMinutes)||0)+' עם ניקוד'),element('span','✨ '+Math.round(Number(st.noNiqudMinutes)||0)+' בלי ניקוד'));
       const last=element('small','קריאה אחרונה: '+lastRead(st.lastReadAt));
-      card.append(top,detail,last);
+      const storyToggle=button('📚 אילו סיפורים?',()=>_toggleTeacherReadingDetail(card,id,m),'booki-reading-stories-toggle');
+      card.append(top,detail,last,storyToggle);
       if(!empty){
+        const encouragementState=element('small','בודק אם העידוד נקרא…','booki-encouragement-state');card.append(encouragementState);
+        _teacherEncouragementStatus(id,m).then(st=>{if(!encouragementState.isConnected)return;encouragementState.textContent=!st?'עדיין לא נשלח עידוד':st.seen?'✓ העידוד האחרון נקרא':'💌 העידוד האחרון עדיין לא נקרא';encouragementState.dataset.seen=st?.seen?'1':'0';});
         const actions=element('div',undefined,'booki-reading-actions');
-        actions.append(button('💙 עידוד',()=>openEncouragementModal(id,m.userId,name),'booki-reading-action'),button('📖 שליחת סיפור',()=>openStoryRecommendation(id,m.userId,name),'booki-reading-action'));
+        actions.append(button('💙 עידוד',()=>openEncouragementModal(id,m.id||m.userId,name),'booki-reading-action'),button('📖 שליחת סיפור',()=>openStoryRecommendation(id,m.id||m.userId,name),'booki-reading-action'));
         card.append(actions);
       }
       list.append(card);
