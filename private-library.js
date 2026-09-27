@@ -89,15 +89,23 @@
    // whole library because a teacher has no published stories yet or an access
    // grant/rules deployment is temporarily unavailable.
    try{
-     let memberSnap=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
-     if(!memberSnap.exists){
-       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).limit(1).get({source:'server'});
-       if(claimed.empty)throw Error('membership');memberSnap=claimed.docs[0];
+     // Resolve the membership without assuming activeReader.userId equals the
+     // stable membership document id. Teacher-created cards often use a stable
+     // card id plus claimedByUid.
+     let stableMemberId=null;
+     const direct=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
+     if(direct.exists)stableMemberId=direct.id;
+     if(!stableMemberId){
+       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).get({source:'server'});
+       const activeClaim=claimed.docs.find(d=>(d.data()?.status||'active')!=='left');
+       if(activeClaim)stableMemberId=activeClaim.id;
      }
-     // On teacher-created cards the reader's auth UID can change/reclaim while
-     // the stable membership document id remains the card id. Keep the grant
-     // keyed by the current auth UID but point it at the stable card id.
-     const stableMemberId=memberSnap.id;
+     // Self-joined cards are keyed by auth uid.
+     if(!stableMemberId){
+       const self=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(a.uid).get({source:'server'});
+       if(self.exists)stableMemberId=self.id;
+     }
+     if(!stableMemberId)throw Error('membership');
      await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
