@@ -239,6 +239,7 @@
     };
     const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
     const modeSelections={public:['public'],private:['public','private'],both:['public','private'],kosher:['public','kosher'],'kosher-private':['public','private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
+    const modeRank={public:0,kosher:1,'kosher-public':1,private:2,both:2,'kosher-private':3,all:3};
     const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});selected.add('public');};
     const loadSavedDisplay=async()=>{
       const a=teacher();if(!a)return;
@@ -248,11 +249,11 @@
         const active=snap.docs.filter(d=>!d.data().hidden);
         if(!active.length){syncDisplayChecks(['public']);status.textContent='ספריית בוקי מוצגת כברירת מחדל.';return;}
         const modes=[...new Set(active.map(d=>d.data().libraryMode||'public'))];
-        // This control applies one configuration to all clubs. If legacy clubs differ,
-        // show the newest club's current choice and make the difference explicit.
-        const newest=active.slice().sort((x,y)=>String(y.data().createdAt||'').localeCompare(String(x.data().createdAt||'')))[0];
-        const mode=newest?.data().libraryMode||'public';syncDisplayChecks(modeSelections[mode]||['public']);
-        status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. לחצי „החל על כל המועדונים” כדי לאחד אותן.':'זו הבחירה השמורה כרגע בכל המועדונים.';
+        // Never let a legacy/default club visually erase a saved optional library.
+        // This is a global control, so show the union of what is currently enabled
+        // anywhere; Apply then normalizes that exact selection to every club.
+        const union=new Set(['public']);modes.forEach(mode=>(modeSelections[mode]||['public']).forEach(v=>union.add(v)));syncDisplayChecks([...union]);
+        status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. הסימון מציג את כולן; לחצי „החל על כל המועדונים” כדי לאחד.':'זו הבחירה השמורה כרגע בכל המועדונים.';
       }catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה. הבחירה בשרת לא השתנתה.';}
     };
     loadSavedDisplay();
@@ -262,7 +263,7 @@
       apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
       const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
       const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
-      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));status.textContent='נשמר ✓ מעכשיו רק הספריות המסומנות יוצגו לילדים בכל המועדונים.';const labels=[];if(selected.has('public'))labels.push('📚 ספריית בוקי');if(selected.has('private'))labels.push('💌 הסיפורים מהמורה');if(selected.has('kosher'))labels.push('✡️ ספרייה כשרה');showDisplayConfirmation(labels,active.length);}
+      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));const verify=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const bad=verify.docs.filter(d=>!d.data().hidden&&(d.data().libraryMode||'public')!==mode);if(bad.length)throw Error('library-mode-not-persisted');status.textContent='נשמר ✓ מעכשיו רק הספריות המסומנות יוצגו לילדים בכל המועדונים.';const labels=[];if(selected.has('public'))labels.push('📚 ספריית בוקי');if(selected.has('private'))labels.push('💌 הסיפורים מהמורה');if(selected.has('kosher'))labels.push('✡️ ספרייה כשרה');showDisplayConfirmation(labels,active.length);}
       catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}finally{apply.disabled=false;}
     },'tw-apply-display');
     displayBox.append(displayChoices,apply,status);actions.append(displayBox);
