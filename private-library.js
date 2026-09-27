@@ -89,7 +89,14 @@
    // whole library because a teacher has no published stories yet or an access
    // grant/rules deployment is temporarily unavailable.
    try{
-     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:userId});
+     const memberSnap=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
+     if(!memberSnap.exists)throw Error('membership');
+     const member=memberSnap.data()||{};
+     // On teacher-created cards the reader's auth UID can change/reclaim while
+     // the stable membership document id remains the card id. Keep the grant
+     // keyed by the current auth UID but point it at the stable card id.
+     const stableMemberId=memberSnap.id;
+     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
      state={clubId,userId,authUid:a?.uid,mode,items};return true;
