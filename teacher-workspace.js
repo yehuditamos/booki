@@ -238,6 +238,25 @@
       const done=btn('מעולה, תודה 💛',()=>overlay.remove(),'tw-confirm-done');box.append(done);overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);done.focus({preventScroll:true});
     };
     const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
+    const modeSelections={public:['public'],private:['public','private'],both:['public','private'],kosher:['public','kosher'],'kosher-private':['public','private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
+    const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});selected.add('public');};
+    const loadSavedDisplay=async()=>{
+      const a=teacher();if(!a)return;
+      status.textContent='טוענת את הבחירה השמורה…';
+      try{
+        const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});
+        const active=snap.docs.filter(d=>!d.data().hidden);
+        if(!active.length){syncDisplayChecks(['public']);status.textContent='ספריית בוקי מוצגת כברירת מחדל.';return;}
+        const modes=[...new Set(active.map(d=>d.data().libraryMode||'public'))];
+        // This control applies one configuration to all clubs. If legacy clubs differ,
+        // show the newest club's current choice and make the difference explicit.
+        const newest=active.slice().sort((x,y)=>String(y.data().createdAt||'').localeCompare(String(x.data().createdAt||'')))[0];
+        const mode=newest?.data().libraryMode||'public';syncDisplayChecks(modeSelections[mode]||['public']);
+        status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. לחצי „החל על כל המועדונים” כדי לאחד אותן.':'זו הבחירה השמורה כרגע בכל המועדונים.';
+      }catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה. הבחירה בשרת לא השתנתה.';}
+    };
+    loadSavedDisplay();
+
     const apply=btn('החל על כל המועדונים',async()=>{
       const a=teacher();selected.add('public');if(!a)return;
       apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
