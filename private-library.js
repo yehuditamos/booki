@@ -89,9 +89,11 @@
    // whole library because a teacher has no published stories yet or an access
    // grant/rules deployment is temporarily unavailable.
    try{
-     const memberSnap=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
-     if(!memberSnap.exists)throw Error('membership');
-     const member=memberSnap.data()||{};
+     let memberSnap=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
+     if(!memberSnap.exists){
+       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).limit(1).get({source:'server'});
+       if(claimed.empty)throw Error('membership');memberSnap=claimed.docs[0];
+     }
      // On teacher-created cards the reader's auth UID can change/reclaim while
      // the stable membership document id remains the card id. Keep the grant
      // keyed by the current auth UID but point it at the stable card id.
