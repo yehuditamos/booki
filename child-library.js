@@ -85,7 +85,15 @@
   try{
    const ready=await window.BookiPrivateLibrary.refresh();if(!current())return false;
    if(ready===false)throw Error('catalog-unavailable');
-   items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);loaded=context;folders();return true;
+   items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);
+   // Defensive merge: private stories are scoped by BookiPrivateLibrary state.
+   // getAllStories may be wrapped/cached by older catalog code, so merge the
+   // scoped visible result explicitly before folder construction.
+   const scoped=window.BookiPrivateLibrary.visible(Array.isArray(STORIES)?[...STORIES]:items);
+   if(Array.isArray(scoped)){
+     const byId=new Map(items.map(x=>[String(x.id),x]));scoped.forEach(x=>{if(x?.id!=null&&Array.isArray(x.pages))byId.set(String(x.id),x);});items=[...byId.values()];
+   }
+   loaded=context;folders();return true;
   }catch(error){if(current()){items=[];loaded=null;status('לא הצלחנו לטעון את הספרייה. אפשר לנסות שוב.',true);}return false;}
   finally{if(generation===token)root.removeAttribute('aria-busy');}
  }
