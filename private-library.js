@@ -132,6 +132,11 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   return r?.clubId?prepare(r.clubId,r.userId):true;
  }
+ function childState(){
+  const r=typeof getActiveReader==='function'?getActiveReader():null;
+  const valid=!!r?.clubId&&state.clubId===r.clubId&&state.userId===r.userId&&state.authUid===auth()?.uid;
+  return {valid,mode:state.mode,teacherStories:valid?[...state.items]:[],teacherEnabled:valid&&['private','both','kosher-private','all'].includes(state.mode)};
+ }
  function privateCategories(){
   const reader=typeof getActiveReader==='function'?getActiveReader():null;
   if(teacher()||!reader?.clubId||state.mode==='public'||(state.mode==='both'&&state.authUid===auth()?.uid&&state.clubId===reader.clubId&&state.userId===reader.userId))return false;
@@ -251,5 +256,5 @@
   await list();
  }
  async function openKosherPreview(){const all=Array.isArray(STORIES)?STORIES:[];const items=kosherStories(all);if(!items.length){alert('הספרייה הכשרה עדיין נטענת. נסי שוב.');return;}if(typeof showScreen==='function'){showScreen('screen-library');setTimeout(()=>{const root=document.getElementById('booki-child-library');if(root&&window.BookiChildLibrary)window.BookiChildLibrary.openKosher?.();else if(typeof filterLibrary==='function')filterLibrary('all');},0);}}
- window.BookiPrivateLibrary={open,openKosherPreview,prepare,visible,refresh,privateCategories,appendPrivateCategory,forTeacherClub,validate,toStory};
+ window.BookiPrivateLibrary={open,openKosherPreview,prepare,visible,refresh,childState,privateCategories,appendPrivateCategory,forTeacherClub,validate,toStory};
 })();
