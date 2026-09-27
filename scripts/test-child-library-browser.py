@@ -18,7 +18,7 @@ STUB=r'''(() => {
  qa.docs.set('clubs/test-class/memberships/test-child',{claimedByUid:'test-auth',createdByTeacher:true,status:'active',cachedStats:{}});
  qa.docs.set('clubs/test-class/economy/wallet',{balance:0,lifetimeEarned:0});
  const snap=p=>({exists:qa.docs.has(p),data:()=>clone(qa.docs.get(p))});
- const ref=p=>({path:p,collection:n=>ref(p+'/'+n),doc:n=>ref(p+'/'+n),where:()=>ref(p),get:async()=>{
+ const ref=p=>({path:p,collection:n=>ref(p+'/'+n),doc:n=>ref(p+'/'+n),where:()=>ref(p),limit:()=>ref(p),get:async()=>{
   qa.reads.push(p);if(qa.delay)await new Promise(r=>setTimeout(r,qa.delay));if(qa.fail)throw Error('network test');
   if(/^clubs\/[^/]+$/.test(p))return {exists:true,data:()=>({libraryMode:qa.mode,teacherUid:'test-teacher'})};
   if(p==='teacherLibraries/test-teacher/stories')return {docs:[{id:'story-a',data:()=>({title:'סיפור הכיתה לבדיקה',text:'אָב\n\nבָּא',status:'published'})}]};
