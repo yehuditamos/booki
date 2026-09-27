@@ -12,7 +12,7 @@
     'pilot-reading-dial-2026-09-10.js?v=8',
     'pilot-home-clean-2026-09-10.js?v=2',
     'pilot-niqud-context-2026-09-10.js?v=1',
-    'pilot-class-slots-2026-09-11.js?v=20260915-unified',
+    'pilot-class-slots-2026-09-11.js?v=20260927-pin-offer',
     'pilot-class-slots-hardening-2026-09-11.js?v=1',
     'pilot-class-slots-safety-2026-09-11.js?v=20260915-capacity',
     'pilot-class-slots-copy-2026-09-11.js?v=20260915-unified',
