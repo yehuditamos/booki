@@ -111,6 +111,13 @@ service cloud.firestore {
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                   && request.resource.data.status == 'left')
               ))
+          // Teacher can reset a student's optional card PIN, but can never set/read the PIN itself.
+          || (isClubTeacher(clubId)
+              && resource.data.get('pinHash', null) != null
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['pinHash', 'pinSalt', 'updatedAt'])
+              && request.resource.data.get('pinHash', null) == null
+              && request.resource.data.get('pinSalt', null) == null)
           // CLAIM: any signed-in session can personalize a teacher-created card not yet personalized
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
