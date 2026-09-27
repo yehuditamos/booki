@@ -40,10 +40,11 @@
   if(!items.length){root.append(el('p','המורה מכינה כאן סיפורים לכיתה. אפשר לחזור בהמשך.'),button('רענון הספרייה',open));return;}
   const grid=el('div',null,'folders');
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
-  const teacherStories=items.filter(teacherTopic.match);
+  const privateState=window.BookiPrivateLibrary?.childState?.()||{};
+  const teacherStories=privateState.teacherEnabled&&privateState.valid?(privateState.teacherStories||[]):[];
   const folderTopics=teacherStories.length?[teacherTopic,...topics.filter(t=>t.id!==teacherTopic.id)]:topics;
   for(const t of folderTopics){
-   const stories=items.filter(t.match);if(!stories.length)continue;
+   const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
    const b=button('',()=>shelf(t.id),'folder');b.dataset.folder=t.id;
    b.setAttribute('aria-label',t.label+' · '+stories.length+' סיפורים. בפנים: '+available.map(f=>f.label).join(', '));
@@ -60,12 +61,15 @@
   h.focus({preventScroll:true});window.scrollTo(0,0);
  }
  function mixed(){
-  const all=catalog(),queues=BookiChoice.formats.map(f=>all.filter(s=>BookiChoice.profile(s).format.id===f.id));
+  const privateState=window.BookiPrivateLibrary?.childState?.();
+  const all=activeTopic?.id===teacherTopic.id?(privateState?.teacherStories||[]):catalog(),queues=BookiChoice.formats.map(f=>all.filter(s=>BookiChoice.profile(s).format.id===f.id));
   const out=[];while(queues.some(q=>q.length))for(const q of queues)if(q.length)out.push(q.shift());return out;
  }
  function shelf(id){
   if(!valid())return open();
   closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
+  const privateState=id===teacherTopic.id?window.BookiPrivateLibrary?.childState?.():null;
+  if(id===teacherTopic.id&&(!privateState?.teacherEnabled||!privateState?.valid)){folders();return;}
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
   heading.append(h,el('p','איזה סיפור מסקרן אותך? לוחצים ומציצים.'));root.append(heading);
   const host=el('div',null,'shelf-view');root.append(host);
