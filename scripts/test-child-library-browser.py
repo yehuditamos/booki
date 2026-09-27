@@ -22,7 +22,7 @@ STUB=r'''(() => {
   qa.reads.push(p);if(qa.delay)await new Promise(r=>setTimeout(r,qa.delay));if(qa.fail)throw Error('network test');
   if(/^clubs\/[^/]+$/.test(p))return {exists:true,data:()=>({libraryMode:qa.mode,teacherUid:'test-teacher'})};
   if(p==='teacherLibraries/test-teacher/stories')return {docs:[{id:'story-a',data:()=>({title:'סיפור הכיתה לבדיקה',text:'אָב\n\nבָּא',status:'published'})}]};
-  return snap(p);
+  const one=snap(p);return {...one,docs:one.exists?[{id:p.split('/').pop(),data:one.data}]:[],empty:!one.exists};
  },set:async v=>{qa.writes.push(p);qa.docs.set(p,clone(v));}});
  window.db={collection:n=>ref(n),runTransaction:async fn=>{
   const writes=[];const result=await fn({get:async r=>snap(r.path),set:(r,v)=>writes.push([r.path,clone(v)]),update:(r,v)=>writes.push([r.path,{...qa.docs.get(r.path),...clone(v)}])});
