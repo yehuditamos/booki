@@ -1320,6 +1320,7 @@ function _renderReaderCardContent(s) {
       <div class="card-rank" style="color:${rank.color}">${rank.icon} ${rank.name}</div>
     </div>
     ${badgesSection}
+    ${window.currentClubId ? `<div class="reader-pin-card"><div><strong>🔒 הכרטיס שלי</strong><small style="display:block">רוצה שרק מי שיודע את הקוד יוכל להיכנס?</small></div><button type="button" onclick="bookiConfigureCardPin()">הגדרת קוד 4 ספרות</button></div>` : ''}
     <div class="stats-grid">
       <div class="stat-box">
         <span class="stat-icon-big">⏱️</span>
@@ -1355,6 +1356,20 @@ function _renderReaderCardContent(s) {
   `;
 }
 
+async function bookiConfigureCardPin(){
+  const r=typeof getActiveReader==='function'?getActiveReader():null,clubId=window.currentClubId||r?.clubId,userId=r?.userId||currentStudentId;
+  if(!clubId||!userId)return;
+  const m=typeof fbLoadClubMembership==='function'?await fbLoadClubMembership(clubId,userId):null;if(!m)return;
+  if(m.pinHash){
+    if(!confirm('הכרטיס נעול עכשיו. להסיר את הקוד?'))return;
+    try{await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).update({pinHash:firebase.firestore.FieldValue.delete(),pinSalt:firebase.firestore.FieldValue.delete(),updatedAt:new Date().toISOString()});alert('הנעילה הוסרה 💛');showReaderCard();}catch(e){alert('לא הצלחנו להסיר את הקוד.');}
+    return;
+  }
+  const first=prompt('בחרו קוד של 4 ספרות בלבד');if(first===null)return;if(!/^\\d{4}$/.test(first)){alert('הקוד צריך להכיל בדיוק 4 ספרות.');return;}
+  const second=prompt('הקלידו שוב את הקוד');if(second!==first){alert('הקודים לא זהים. נסו שוב.');return;}
+  const salt=String(userId)+'-'+Date.now().toString(36),hash=typeof _bookiPinHash==='function'?_bookiPinHash(first,salt):null;if(!hash)return;
+  try{await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).update({pinHash:hash,pinSalt:salt,updatedAt:new Date().toISOString()});alert('הכרטיס נעול 🔒 מעכשיו צריך את הקוד כדי להיכנס.');showReaderCard();}catch(e){console.warn('[booki] pin save',e.code||e.message);alert('לא הצלחנו לשמור את הקוד.');}
+}
 // ─── הכיתה שלנו — Firebase real-time ────────────────────────────────
 
 /** בוקי ליד העץ במסך הכיתה — תנוחה לפי מצב היעד (חוגג כשהעץ פרח, אחרת מעודד). */
