@@ -12,6 +12,7 @@
  const root=el('div');root.id='booki-child-library';screen.append(root);
  let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve();
  const topics=window.BookiChildTopics;
+ const teacherTopic={id:'teacher-stories',label:'הַסִּפּוּרִים מֵהַמּוֹרָה',icon:'💌',match:s=>s?.libraryId==='teacher-private'};
  const allTopic={id:'all',label:'כָּל הַסִּפּוּרִים',icon:'📚',match:()=>true};
  const valid=()=>canUse()&&loaded===key()&&screen.classList.contains('active');
  const catalog=()=>valid()?items.filter(s=>activeTopic?.match(s)??true):[];
@@ -39,7 +40,8 @@
   if(!items.length){root.append(el('p','המורה מכינה כאן סיפורים לכיתה. אפשר לחזור בהמשך.'),button('רענון הספרייה',open));return;}
   const grid=el('div',null,'folders');
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
-  for(const t of topics){
+  const folderTopics=items.some(teacherTopic.match)?[teacherTopic,...topics]:topics;
+  for(const t of folderTopics){
    const stories=items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
    const b=button('',()=>shelf(t.id),'folder');b.dataset.folder=t.id;
@@ -62,7 +64,7 @@
  }
  function shelf(id){
   if(!valid())return open();
-  closeChoice();activeTopic=topics.find(t=>t.id===id)||allTopic;root.replaceChildren();header(true);
+  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
   heading.append(h,el('p','איזה סיפור מסקרן אותך? לוחצים ומציצים.'));root.append(heading);
   const host=el('div',null,'shelf-view');root.append(host);
