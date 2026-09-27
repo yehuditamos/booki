@@ -713,6 +713,25 @@ function selectLegacyProfile(index) {
   _enterPersonalHome(`legacy_${index}`, syntheticProfile);
 }
 
+function _bookiPinHash(pin,salt){
+  // Client-side verifier: the PIN itself is never stored. This protects normal
+  // shared-device entry; it is not a substitute for server authentication.
+  let h=2166136261;const v=String(salt||'booki')+':'+String(pin);
+  for(let round=0;round<1200;round++)for(let i=0;i<v.length;i++){h^=v.charCodeAt(i)+(round&255);h=Math.imul(h,16777619);}
+  return (h>>>0).toString(36);
+}
+function _bookiAskPin(name){
+ return new Promise(resolve=>{
+  document.getElementById('booki-pin-gate')?.remove();
+  const o=document.createElement('div');o.id='booki-pin-gate';o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(25,42,34,.55);display:flex;align-items:center;justify-content:center;padding:18px';
+  const b=document.createElement('div');b.style.cssText='width:min(360px,100%);background:#fffdf7;border-radius:24px;padding:24px;text-align:center;box-sizing:border-box';
+  b.innerHTML='<h2 style="margin:0 0 8px">🔒 הכרטיס של '+String(name||'')+'</h2><p>הקלידו את 4 הספרות</p><input id="booki-pin-entry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:28px;letter-spacing:12px;text-align:center;width:180px;padding:10px;border:2px solid #bdd2c3;border-radius:14px"><p id="booki-pin-error" style="color:#a33;min-height:20px"></p>';
+  const ok=document.createElement('button');ok.textContent='כניסה';ok.style.cssText='padding:12px 28px;border:0;border-radius:14px;background:#2d7957;color:white;font-weight:800';
+  const cancel=document.createElement('button');cancel.textContent='ביטול';cancel.style.cssText='margin-right:8px;padding:12px 20px;border:0;background:transparent';
+  b.append(ok,cancel);o.append(b);document.body.append(o);const input=b.querySelector('#booki-pin-entry');setTimeout(()=>input.focus(),50);
+  const done=v=>{o.remove();resolve(v)};ok.onclick=()=>done(input.value);cancel.onclick=()=>done(null);input.onkeydown=e=>{if(e.key==='Enter')ok.click();};
+ });
+}
 async function selectProfile(userId, clubIdHint) {
   const targetClubId = clubIdHint || null;
 
@@ -722,6 +741,13 @@ async function selectProfile(userId, clubIdHint) {
     targetClubId && typeof fbLoadClubMembership === 'function'
       ? fbLoadClubMembership(targetClubId, userId) : Promise.resolve(null),
   ]);
+  if(membership?.pinHash){
+    const pin=await _bookiAskPin(membership.name||profile?.name||userId);
+    if(pin===null)return;
+    if(!/^\d{4}$/.test(pin)||_bookiPinHash(pin,membership.pinSalt||userId)!==membership.pinHash){
+      alert('הקוד לא נכון. נסו שוב.');return selectProfile(userId,clubIdHint);
+    }
+  }
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
   if (membership?.createdByTeacher) {
