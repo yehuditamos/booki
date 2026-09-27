@@ -40,7 +40,8 @@
   if(!items.length){root.append(el('p','המורה מכינה כאן סיפורים לכיתה. אפשר לחזור בהמשך.'),button('רענון הספרייה',open));return;}
   const grid=el('div',null,'folders');
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
-  const folderTopics=items.some(teacherTopic.match)?[teacherTopic,...topics]:topics;
+  const teacherStories=items.filter(teacherTopic.match);
+  const folderTopics=teacherStories.length?[teacherTopic,...topics.filter(t=>t.id!==teacherTopic.id)]:topics;
   for(const t of folderTopics){
    const stories=items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
