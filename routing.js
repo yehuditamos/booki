@@ -732,6 +732,23 @@ function _bookiAskPin(name){
   const done=v=>{o.remove();resolve(v)};ok.onclick=()=>done(input.value);cancel.onclick=()=>done(null);input.onkeydown=e=>{if(e.key==='Enter')ok.click();};
  });
 }
+function _bookiOfferPin(name){
+ return new Promise(resolve=>{
+  document.getElementById('booki-pin-offer')?.remove();
+  const o=document.createElement('div');o.id='booki-pin-offer';o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(25,42,34,.55);display:flex;align-items:center;justify-content:center;padding:18px';
+  const b=document.createElement('div');b.style.cssText='width:min(380px,100%);background:#fffdf7;border-radius:24px;padding:26px 20px;text-align:center;box-sizing:border-box';
+  const h=document.createElement('h2');h.textContent=(name||'')+', זה הכרטיס שלך? 👋';const p=document.createElement('p');p.textContent='אפשר לשמור עליו עם קוד סודי של 4 ספרות 🔒';
+  const yes=document.createElement('button');yes.textContent='כן, אני רוצה קוד';yes.style.cssText='display:block;width:100%;padding:13px;border:0;border-radius:14px;background:#2d7957;color:#fff;font-weight:800;margin:16px 0 8px';
+  const no=document.createElement('button');no.textContent='להיכנס בלי קוד';no.style.cssText='display:block;width:100%;padding:12px;border:1px solid #cbd9ce;border-radius:14px;background:#fff;color:#315f4b;font-weight:700';
+  b.append(h,p,yes,no);o.append(b);document.body.append(o);const done=v=>{o.remove();resolve(v)};yes.onclick=()=>done(true);no.onclick=()=>done(false);
+ });
+}
+async function _bookiCreatePinForCard(clubId,userId){
+ const first=prompt('בחרו קוד של 4 ספרות בלבד');if(first===null)return false;if(!/^\d{4}$/.test(first)){alert('הקוד צריך להכיל בדיוק 4 ספרות.');return _bookiCreatePinForCard(clubId,userId);}
+ const second=prompt('הקלידו שוב את הקוד');if(second!==first){alert('הקודים לא זהים. נסו שוב.');return _bookiCreatePinForCard(clubId,userId);}
+ const salt=String(userId)+'-'+Date.now().toString(36),hash=_bookiPinHash(first,salt);
+ try{await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).update({pinHash:hash,pinSalt:salt,pinOfferSeen:true,updatedAt:new Date().toISOString()});return true;}catch(e){console.warn('[booki] pin create',e.code||e.message);alert('לא הצלחנו לשמור את הקוד. אפשר להיכנס בלי קוד ולנסות שוב אחר כך.');return false;}
+}
 async function selectProfile(userId, clubIdHint) {
   const targetClubId = clubIdHint || null;
 
@@ -741,7 +758,18 @@ async function selectProfile(userId, clubIdHint) {
     targetClubId && typeof fbLoadClubMembership === 'function'
       ? fbLoadClubMembership(targetClubId, userId) : Promise.resolve(null),
   ]);
+  if(membership && targetClubId && !membership.pinHash && !membership.pinOfferSeen){
+    const wants=await _bookiOfferPin(membership.name||profile?.name||userId);
+    if(wants){
+      const saved=await _bookiCreatePinForCard(targetClubId,userId);
+      if(saved)membership.pinHash=true;
+    }else{
+      try{await window.db.collection('clubs').doc(targetClubId).collection('memberships').doc(String(userId)).update({pinOfferSeen:true,updatedAt:new Date().toISOString()});membership.pinOfferSeen=true;}catch(e){console.warn('[booki] pin offer seen',e.code||e.message);}
+    }
+  }
   if(membership?.pinHash){
+    // A PIN created in this same click has already been verified twice while setting it.
+    if(membership.pinHash===true){membership.pinHash='';}else{
     const pin=await _bookiAskPin(membership.name||profile?.name||userId);
     if(pin===null)return;
     const lockKey='booki_pin_fail_'+targetClubId+'_'+userId,lock=JSON.parse(sessionStorage.getItem(lockKey)||'{"n":0,"until":0}');
@@ -751,6 +779,7 @@ async function selectProfile(userId, clubIdHint) {
       alert(lock.until>Date.now()?'ניסינו כמה פעמים. נחכה דקה וננסה שוב 💛':'הקוד לא נכון. נסו שוב.');return;
     }
     sessionStorage.removeItem(lockKey);
+    }
   }
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
