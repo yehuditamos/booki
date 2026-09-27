@@ -74,7 +74,7 @@ with sync_playwright() as pw:
  for mode,n in [('private',1),('both',7),('public',6)]:
   p.evaluate('(mode)=>{qa.mode=mode;}',mode);p.evaluate('showLibrary()')
   assert p.locator('#booki-child-library .folder').count()==n,(mode,p.locator('#booki-child-library').inner_text())
-  private=p.locator('[data-folder="teacher-private"]')
+  private=p.locator('[data-folder="teacher-stories"]')
   if mode!='public':
    private.click();assert p.locator('.shelf-view .cc-browse .cc-card').count()==1
    assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text()
