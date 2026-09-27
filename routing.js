@@ -725,10 +725,10 @@ function _bookiAskPin(name){
   document.getElementById('booki-pin-gate')?.remove();
   const o=document.createElement('div');o.id='booki-pin-gate';o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(25,42,34,.55);display:flex;align-items:center;justify-content:center;padding:18px';
   const b=document.createElement('div');b.style.cssText='width:min(360px,100%);background:#fffdf7;border-radius:24px;padding:24px;text-align:center;box-sizing:border-box';
-  b.innerHTML='<h2 style="margin:0 0 8px">🔒 הכרטיס של '+String(name||'')+'</h2><p>הקלידו את 4 הספרות</p><input id="booki-pin-entry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:28px;letter-spacing:12px;text-align:center;width:180px;padding:10px;border:2px solid #bdd2c3;border-radius:14px"><p id="booki-pin-error" style="color:#a33;min-height:20px"></p>';
+  b.innerHTML='<h2 style="margin:0 0 8px">🔒 הכרטיס של '+String(name||'')+'</h2><p>הקלידו את 4 הספרות</p><input id="booki-pin-entry" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" style="font-size:28px;letter-spacing:12px;text-align:center;width:180px;padding:10px;border:2px solid #bdd2c3;border-radius:14px"><p id="booki-pin-error" style="color:#a33;min-height:20px"></p><button type="button" id="booki-pin-forgot" style="display:block;margin:10px auto;border:0;background:transparent;color:#456b58;text-decoration:underline">שכחתי את הקוד 😕</button>';
   const ok=document.createElement('button');ok.textContent='כניסה';ok.style.cssText='padding:12px 28px;border:0;border-radius:14px;background:#2d7957;color:white;font-weight:800';
   const cancel=document.createElement('button');cancel.textContent='ביטול';cancel.style.cssText='margin-right:8px;padding:12px 20px;border:0;background:transparent';
-  b.append(ok,cancel);o.append(b);document.body.append(o);const input=b.querySelector('#booki-pin-entry');setTimeout(()=>input.focus(),50);
+  b.append(ok,cancel);o.append(b);document.body.append(o);const input=b.querySelector('#booki-pin-entry');const forgot=b.querySelector('#booki-pin-forgot');if(forgot)forgot.onclick=()=>{b.querySelector('#booki-pin-error').textContent='לא נורא 💛 בקשו מהמורה לאפס לכם את הקוד.';};setTimeout(()=>input.focus(),50);
   const done=v=>{o.remove();resolve(v)};ok.onclick=()=>done(input.value);cancel.onclick=()=>done(null);input.onkeydown=e=>{if(e.key==='Enter')ok.click();};
  });
 }
@@ -744,9 +744,13 @@ async function selectProfile(userId, clubIdHint) {
   if(membership?.pinHash){
     const pin=await _bookiAskPin(membership.name||profile?.name||userId);
     if(pin===null)return;
+    const lockKey='booki_pin_fail_'+targetClubId+'_'+userId,lock=JSON.parse(sessionStorage.getItem(lockKey)||'{"n":0,"until":0}');
+    if(lock.until>Date.now()){alert('נחכה עוד רגע לפני שמנסים שוב 💛');return;}
     if(!/^\d{4}$/.test(pin)||_bookiPinHash(pin,membership.pinSalt||userId)!==membership.pinHash){
-      alert('הקוד לא נכון. נסו שוב.');return selectProfile(userId,clubIdHint);
+      lock.n=(lock.n||0)+1;if(lock.n>=5){lock.n=0;lock.until=Date.now()+60000;}sessionStorage.setItem(lockKey,JSON.stringify(lock));
+      alert(lock.until>Date.now()?'ניסינו כמה פעמים. נחכה דקה וננסה שוב 💛':'הקוד לא נכון. נסו שוב.');return;
     }
+    sessionStorage.removeItem(lockKey);
   }
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
