@@ -106,16 +106,22 @@
        if(self.exists)stableMemberId=self.id;
      }
      if(!stableMemberId)throw Error('membership');
-     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
+     // The access grant is an optimization for server-side scoping. If an old
+     // rules deployment rejects writing it, do not silently erase the teacher
+     // shelf: try the already-authorized published read first and surface a real
+     // failure only if that read is denied too.
+     try{await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});}
+     catch(grantError){console.warn('[booki] teacher-library grant write',grantError?.code||grantError?.message);}
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
      state={clubId,userId,authUid:a?.uid,mode,items};return true;
    }catch(privateError){
      console.warn('[booki] private catalog unavailable; keeping selected public catalog',privateError?.code||privateError?.message);
      if(request!==version||auth()?.uid!==a.uid)return false;
-     if(mode==='both'){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
-     if(mode==='kosher-private'){state={clubId,userId,authUid:a?.uid,mode:'kosher',items:[]};return true;}
-     if(mode==='all'){state={clubId,userId,authUid:a?.uid,mode:'public',items:[]};return true;}
+     // Do not lie about the saved selection by mutating mode to public. Keep the
+     // selected mode visible to the child UI; an empty teacher folder is simply
+     // omitted until its stories can be read.
+     if(['both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode,items:[],privateError:true};return true;}
      // Only "private alone" has no safe public fallback.
      throw privateError;
    }
