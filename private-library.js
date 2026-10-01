@@ -21,9 +21,8 @@
  const kosherStories=stories=>stories.filter(story=>story?.libraryId==='kosher'||story?.tags?.includes?.('כשר'));
  const publicCatalog=()=>typeof STORIES!=='undefined'&&Array.isArray(STORIES)?[...STORIES]:[];
  function visiblePublicByMode(publicStories,mode){
-   if(mode==='kosher')return kosherStories(publicStories);
-   // kosher-public deliberately means the normal Booki catalog (which already
-   // contains the kosher shelf) with no private reads.
+   // Booki is the permanent base library. "Kosher" is an additional shelf,
+   // never a replacement for Booki, so public content stays available.
    return publicStories;
  }
  function ensureTeacherLibraryStyles(){
@@ -132,7 +131,7 @@
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
   if(state.clubId!==r.clubId||state.authUid!==auth()?.uid)return [];
-  return ['public','kosher','kosher-public'].includes(state.mode)?visiblePublicByMode(publicStories,state.mode):state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
+  return ['public','kosher','kosher-public'].includes(state.mode)?publicStories:state.mode==='private'||state.mode==='both'||state.mode==='kosher-private'||state.mode==='all'?[...publicStories,...state.items]:publicStories;
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
