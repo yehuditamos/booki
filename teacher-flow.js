@@ -411,15 +411,7 @@
       const last=element('small','קריאה אחרונה: '+lastRead(st.lastReadAt));
       const storyToggle=button('📚 אילו סיפורים?',()=>_toggleTeacherReadingDetail(card,id,m),'booki-reading-stories-toggle');
       card.append(top,detail,last,storyToggle);
-      if(m.pinHash){
-        const pinRow=element('div',undefined,'booki-pin-teacher-row');pinRow.append(element('span','🔒 מוגן בקוד'));
-        const reset=button('איפוס קוד',async()=>{
-          if(!confirm('לאפס את הקוד של '+name+'? הכרטיס והקריאות יישארו בדיוק כפי שהם. רק הקוד יימחק.'))return;
-          reset.disabled=true;reset.textContent='מאפס…';
-          try{
-            await window.db.collection('clubs').doc(id).collection('memberships').doc(String(m.id||m.userId)).update({pinHash:firebase.firestore.FieldValue.delete(),pinSalt:firebase.firestore.FieldValue.delete(),updatedAt:new Date().toISOString()});
-            pinRow.replaceChildren(element('span','🔓 הקוד אופס'));m.pinHash=null;m.pinSalt=null;
-          }catch(e){reset.disabled=false;reset.textContent='איפוס קוד';alert('לא הצלחנו לאפס את הקוד. נסי שוב.');}
+catch(e){reset.disabled=false;reset.textContent='איפוס קוד';alert('לא הצלחנו לאפס את הקוד. נסי שוב.');}
         },'booki-pin-reset');pinRow.append(reset);card.append(pinRow);
       }
       if(!empty){
