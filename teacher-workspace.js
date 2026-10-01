@@ -201,19 +201,15 @@
     b.append(el('span', icon, 'tw-action-icon'));
     const text = el('span'); text.append(el('strong', title), el('small', copy)); b.append(text, el('span', '←', 'tw-action-arrow')); return b;
   }
-  function install(force=false) {
-    const body = document.querySelector('#screen-teacher-dashboard .td-body'); if (!body) return;
-    if(force){$('tw-dashboard-actions')?.remove();document.querySelector('.tw-club-bar')?.replaceWith(document.querySelector('.tw-club-bar .td-section-title')||'');document.querySelector('.tw-home-footer')?.remove();}
-    if($('tw-dashboard-actions')) return;
+  function install() {
+    const body = document.querySelector('#screen-teacher-dashboard .td-body'); if (!body || $('tw-dashboard-actions')) return;
     const screen = $('screen-teacher-dashboard');
     screen.classList.add('tw-home');
     const heading = screen.querySelector('h2');
     heading.textContent = teacher()?.name ? 'היי, ' + teacher().name : 'טוב לראות אותך';
     body.querySelectorAll('.teacher-management-only,.teacher-dashboard-guide,.btn-td-primary').forEach(node => node.remove());
     const head = screen.querySelector('.screen-header');
-    // Keep exactly one workspace brand label even after repeated dashboard rebuilds.
-    [...head.querySelectorAll('p,span,strong')].filter(n=>n.textContent.trim().replace(/\s+/g,' ')==='בוקי · המרחב שלך').forEach(n=>n.remove());
-    head.prepend(el('p','בוקי · המרחב שלך','tw-brand-label'));
+    head.prepend(el('p', 'בוקי · המרחב שלך', 'tw-brand-label'));
     const actions = el('section', undefined, 'tw-dashboard-actions'); actions.id = 'tw-dashboard-actions'; actions.setAttribute('aria-label', 'ספריות הסיפורים');
     const sectionTitle = body.querySelector('.td-section-title');
     const clubBar = el('div', undefined, 'tw-club-bar');
@@ -221,50 +217,70 @@
     const intro = el('div', undefined, 'tw-library-heading');
     intro.append(el('span', 'מילים שפותחות עולמות', 'tw-eyebrow'), el('h3', 'הסיפורים מתחילים כאן'));
     actions.append(intro);
-    const status=el('p','טוענת את הבחירה השמורה…','tw-display-status');
-    const modeSelections={public:['public'],private:['private'],both:['public','private'],kosher:['kosher'],'kosher-private':['private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
+    const displayBox=el('section',undefined,'tw-display-folders');
+    displayBox.append(el('strong','מה יוצג לילדים?'),el('p','סמני את הספריות שתרצי להציג. אפשר לבחור יותר מאחת.'));
+    const displayChoices=el('div',undefined,'tw-display-choice-grid');
+    const defs=[['public','📚','ספריית בוקי'],['private','✍️','הספרייה הפרטית שלי'],['kosher','✡️','ספרייה כשרה']];
     const selected=new Set(['public']);
-    const cards=new Map();
-    const defs=[
-      ['public','סיפורי בוקי','לעיון בסיפורים של בוקי',()=>openLibrary(),false],
-      ['private','הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true],
-      ['kosher','ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>openLibrary('kosher'),false]
-    ];
-    const saveSelection=async()=>{
-      const a=teacher();if(!a)return;
-      const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
-      const mode=map[key];if(!mode){status.textContent='בחרי לפחות ספרייה אחת להצגה.';return;}
-      status.textContent='שומרת…';
-      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));status.textContent='נשמר ✓ הבחירה חלה על כל המועדונים.';}
-      catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}
-    };
-    const renderSelected=()=>cards.forEach((card,value)=>{const on=selected.has(value);card.classList.toggle('is-selected',on);card.querySelector('.tw-library-check').textContent=on?'✓':'';card.querySelector('.tw-library-check').setAttribute('aria-label',on?'מוצג לילדים':'לא מוצג לילדים');});
-    const pair=el('div',undefined,'tw-library-pair');
-    defs.forEach(([value,title,copy,run,personal])=>{
-      const card=el('div',undefined,'tw-library-link tw-library-selectable'+(personal?' tw-library-personal':''));
-      const toggle=btn('',async e=>{},'tw-library-check');toggle.setAttribute('aria-label','בחירת הצגה לילדים');
-      toggle.onclick=async ev=>{ev.stopPropagation();selected.has(value)?selected.delete(value):selected.add(value);if(!selected.size){selected.add(value);status.textContent='לפחות ספרייה אחת צריכה להישאר מוצגת.';}renderSelected();await saveSelection();};
-      const nav=btn('',run,'tw-library-main');
-      const art=el('span',undefined,'tw-book-art');art.setAttribute('aria-hidden','true');for(let i=0;i<3;i++)art.append(el('i'));
-      const text=el('span',undefined,'tw-library-copy');text.append(el('strong',title),el('small',copy));
-      nav.append(art,text,el('span','←','tw-library-arrow'));card.append(toggle,nav);pair.append(card);cards.set(value,card);
+    const checks=[];
+    defs.forEach(([value,icon,label])=>{
+      const lab=el('label',undefined,'tw-display-choice');const input=document.createElement('input');input.type='checkbox';input.value=value;input.checked=value==='public';
+      if(value==='public'){input.checked=true;input.disabled=true;input.setAttribute('aria-label','ספריית בוקי תמיד מוצגת');selected.add('public');}
+      input.onchange=()=>{if(value==='public'){input.checked=true;selected.add('public');return;}input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
+      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));if(value==='public')lab.append(el('small','ברירת מחדל · תמיד מוצגת','tw-default-library'));displayChoices.append(lab);checks.push(input);
     });
-    actions.append(pair,status);body.append(actions);renderSelected();
-    (async()=>{const a=teacher();if(!a)return;try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);const union=new Set();active.forEach(d=>(modeSelections[d.data().libraryMode||'public']||['public']).forEach(v=>union.add(v)));selected.clear();(union.size?union:new Set(['public'])).forEach(v=>selected.add(v));renderSelected();status.textContent='✓ מסומן מה מוצג לילדים';}catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה.';}})();
+    const showDisplayConfirmation=(labels,clubCount)=>{
+      document.getElementById('tw-display-confirmation')?.remove();
+      const overlay=el('div',undefined,'tw-confirm-overlay');overlay.id='tw-display-confirmation';
+      const box=el('div',undefined,'tw-confirm-box');
+      box.append(el('div','✓','tw-confirm-check'),el('h2','הספריות עודכנו!'),el('p','מעכשיו הילדים בכל המועדונים שלך רואים:'));
+      const list=el('div',undefined,'tw-confirm-list');labels.forEach(x=>list.append(el('div',x)));box.append(list,el('small','הוחל על '+clubCount+' מועדונים'));
+      const done=btn('מעולה, תודה 💛',()=>overlay.remove(),'tw-confirm-done');box.append(done);overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);done.focus({preventScroll:true});
+    };
+    const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
+    const modeSelections={public:['public'],private:['public','private'],both:['public','private'],kosher:['public','kosher'],'kosher-private':['public','private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
+    const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});selected.add('public');};
+    const loadSavedDisplay=async()=>{
+      const a=teacher();if(!a)return;
+      status.textContent='טוענת את הבחירה השמורה…';
+      try{
+        const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});
+        const active=snap.docs.filter(d=>!d.data().hidden);
+        if(!active.length){syncDisplayChecks(['public']);status.textContent='ספריית בוקי מוצגת כברירת מחדל.';return;}
+        const modes=[...new Set(active.map(d=>d.data().libraryMode||'public'))];
+        // This control applies one configuration to all clubs. If legacy clubs differ,
+        // show the newest club's current choice and make the difference explicit.
+        const newest=active.slice().sort((x,y)=>String(y.data().createdAt||'').localeCompare(String(x.data().createdAt||'')))[0];
+        const mode=newest?.data().libraryMode||'public';syncDisplayChecks(modeSelections[mode]||['public']);
+        status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. לחצי „החל על כל המועדונים” כדי לאחד אותן.':'זו הבחירה השמורה כרגע בכל המועדונים.';
+      }catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה. הבחירה בשרת לא השתנתה.';}
+    };
+    loadSavedDisplay();
 
+    const apply=btn('החל על כל המועדונים',async()=>{
+      const a=teacher();selected.add('public');if(!a)return;
+      apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
+      const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
+      const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
+      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));status.textContent='נשמר ✓ מעכשיו רק הספריות המסומנות יוצגו לילדים בכל המועדונים.';const labels=[];if(selected.has('public'))labels.push('📚 ספריית בוקי');if(selected.has('private'))labels.push('💌 הסיפורים מהמורה');if(selected.has('kosher'))labels.push('✡️ ספרייה כשרה');showDisplayConfirmation(labels,active.length);}
+      catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}finally{apply.disabled=false;}
+    },'tw-apply-display');
+    displayBox.append(displayChoices,apply,status);actions.append(displayBox);
+    const pair = el('div', undefined, 'tw-library-pair');
+    const shelf = (title, copy, run, personal) => {
+      const card = btn('', run, 'tw-library-link' + (personal ? ' tw-library-personal' : ''));
+      const art = el('span', undefined, 'tw-book-art'); art.setAttribute('aria-hidden','true');
+      for(let i=0;i<3;i++) art.append(el('i'));
+      const text = el('span', undefined, 'tw-library-copy');
+      text.append(el('strong',title),el('small',copy));
+      card.append(art,text,el('span','←','tw-library-arrow'));return card;
+    };
+    pair.append(shelf('סיפורי בוקי','לעיון בסיפורים של בוקי',openLibrary,false),shelf('הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true),shelf('ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>openLibrary('kosher'),false));
+    actions.append(pair); body.append(actions);
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
-    let existingActions=screen.querySelector('.header-actions')||screen.querySelector('.tw-home-footer .header-actions');
-    if(!existingActions){
-      existingActions=el('div',undefined,'header-actions');
-      const share=btn('שיתוף בוקי',()=>typeof shareApp==='function'&&shareApp(),'btn-share-app');
-      const logout=btn('יציאה',()=>typeof teacherSignOut==='function'&&teacherSignOut(),'btn-logout');
-      existingActions.append(share,logout);
-    }else{
-      existingActions.querySelector('.btn-share-app')?.replaceChildren('שיתוף בוקי');
-      if(!existingActions.querySelector('.btn-logout'))existingActions.append(btn('יציאה',()=>typeof teacherSignOut==='function'&&teacherSignOut(),'btn-logout'));
-    }
-    footer.append(existingActions);
+    const existingActions=screen.querySelector('.header-actions');
+    if(existingActions){footer.append(existingActions);existingActions.querySelector('.btn-share-app').textContent='שיתוף בוקי';}
     body.append(footer);
     const clubNotice = document.querySelector('#screen-teacher-club .teacher-management-only');
     if (clubNotice) clubNotice.replaceWith(btn('📚 ספריית בוקי — לעיון בתכנים', openLibrary, 'tw-text-button'));
@@ -303,20 +319,9 @@
     @media(max-width:760px){.tw-dashboard-actions{grid-template-columns:1fr;gap:20px}.tw-dashboard-action{min-height:114px}.tw-story-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tw-action-primary-group .tw-dashboard-action{min-height:100px}}
     @media(max-width:420px){.tw-secondary-pair{grid-template-columns:1fr}.tw-dashboard-action{min-height:88px}.tw-body{padding:16px 14px 120px}.tw-library-tools{grid-template-columns:1fr}.tw-story-grid{gap:10px}.tw-story-card{padding:12px;min-height:185px}.tw-story-card strong{font-size:18px}.tw-story-text{padding:20px 16px}.tw-page-nav{gap:6px}.tw-page-nav .tw-button{padding:10px;font-size:14px}.tw-screen h2{font-size:20px}}
   `;
-  style.textContent += "\n    #screen-teacher-dashboard.tw-home{background:#fcf7eb;font-family:Arial,sans-serif;color:#263f36}\n    .tw-home .screen-header{background:transparent;border:0;padding:30px 24px 16px;position:static;box-shadow:none;max-width:900px;margin:auto;box-sizing:border-box}\n    .tw-home .header-row{display:block}.tw-home .screen-header h2{font:700 clamp(26px,5vw,36px)/1.3 Arial,sans-serif;text-align:right;margin:0;overflow-wrap:anywhere;color:#203e32}\n    .tw-brand-label{font-size:12px;letter-spacing:.04em;color:#526b5d;margin:0 0 12px;font-weight:700}\n    .tw-home #td-teacher-name{display:none}\n    .tw-home .td-body{max-width:900px;margin:auto;padding:10px 24px 110px;box-sizing:border-box}\n    .tw-club-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}\n    .tw-home .td-section-title{margin:0;font-size:18px;color:#294536}\n    .tw-new-club{font:700 14px Arial,sans-serif;min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:#28694e;color:#fff;cursor:pointer;white-space:nowrap}\n    .tw-home .td-clubs-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\n    .tw-home .teacher-club-card{display:flex;align-items:center;gap:14px;background:#fffefb;border:1px solid #e2e7dc;border-radius:18px;padding:18px;margin:0;min-height:96px;box-shadow:0 4px 14px #264e3610;box-sizing:border-box;transition:transform .15s,border-color .15s}\n    .tw-home .teacher-club-card:hover{border-color:#7caa8e;transform:translateY(-2px)}\n    .tw-home .tc-emoji{font-size:32px;flex-shrink:0;max-width:48px}.tw-home .tc-emoji img{width:44px;height:44px;object-fit:contain}\n    .tw-home .tc-info{min-width:0;flex:1}.tw-home .tc-name{display:block;font:700 19px/1.35 Arial,sans-serif;color:#263e34;overflow-wrap:anywhere}\n    .tw-home .tc-meta{display:block;font:14px/1.6 Arial,sans-serif;color:#375e4a;margin-top:6px}\n    .tw-home .tc-actions{flex-shrink:0;margin:0}.tw-home .btn-tc-delete{min-width:44px;min-height:44px;border:0;background:transparent;font-size:17px;opacity:.7}\n    .tw-home .td-empty{grid-column:1/-1;background:#edf3e6;border:1px dashed #abc1aa;border-radius:18px;text-align:center;padding:26px 18px}\n    .tw-home .tw-dashboard-actions{display:block;margin:30px 0 0;padding:22px;background:#efeedd;border:0;border-radius:22px}\n    .tw-library-heading .tw-eyebrow{font-size:12px;color:#58705d;margin:0 0 5px}.tw-library-heading h3{font-size:21px;line-height:1.4;margin:0 0 18px;color:#2f4838}\n    .tw-library-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n    .tw-library-link{position:relative;display:flex;align-items:center;gap:12px;text-align:right;font-family:Arial,sans-serif;color:#294537;border:0;border-radius:15px;padding:18px;background:#fffdf5;cursor:pointer;min-width:0}\n    .tw-library-selectable{position:relative!important;padding:0!important;overflow:hidden;background:#fffdf5;border-radius:15px}.tw-library-main{width:100%;min-height:82px;border:0;background:transparent;padding:15px 48px 15px 15px;display:flex;align-items:center;gap:12px;text-align:right;color:inherit;font-family:Arial,sans-serif;cursor:pointer}.tw-library-check{position:absolute;top:10px;right:10px;z-index:3;width:26px;height:26px;min-height:26px;padding:0;border:2px solid #789889;border-radius:50%;background:#fff;color:#fff;font:900 16px Arial;display:grid;place-items:center;cursor:pointer}.tw-library-selectable.is-selected .tw-library-check{background:#327455;border-color:#327455}.tw-library-selectable.is-selected{box-shadow:inset 0 0 0 2px #82ad92}.tw-display-status{margin:10px 2px 0;font:12px Arial,sans-serif;color:#536b5d}
-    .tw-library-personal{background:#e1eadb}.tw-library-copy{min-width:0;flex:1}.tw-library-copy strong{display:block;font-size:17px;line-height:1.4}.tw-library-copy small{display:block;font-size:13px;line-height:1.5;margin-top:4px;color:#49634f}\n    .tw-library-arrow{font-size:20px}.tw-book-art{position:relative;display:block;width:42px;height:45px;flex:0 0 42px;transform:rotate(-9deg)}\n    .tw-book-art i{position:absolute;bottom:0;width:12px;height:36px;border-radius:3px 3px 1px 1px;background:#728e69;border-top:5px solid #a7b795;box-shadow:inset 2px 0 #0000000b}\n    .tw-book-art i:nth-child(1){right:0;height:42px;background:#cf9a5e;border-color:#e4ba88}.tw-book-art i:nth-child(2){right:14px}.tw-book-art i:nth-child(3){right:28px;height:30px;background:#668c86;border-color:#aac1ad}\n    .tw-home-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 2px;margin-top:8px}\n    .tw-home-footer .header-actions{display:flex;gap:12px}.tw-footer-link,.tw-home-footer .btn-share-app,.tw-home-footer .btn-logout{font:13px Arial,sans-serif!important;color:#506655!important;min-height:44px;padding:8px 2px!important;border:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer}\n    .tw-home button:focus-visible,.tw-home [role=button]:focus-visible{outline:3px solid #276d50;outline-offset:3px}\n    @media(max-width:600px){.tw-home .screen-header{padding:24px 18px 12px}.tw-home .td-body{padding:6px 16px 110px}.tw-home .td-clubs-list{grid-template-columns:1fr}.tw-home .teacher-club-card{padding:16px;min-height:90px}.tw-home .tw-dashboard-actions{padding:18px;margin-top:26px}.tw-library-pair{grid-template-columns:1fr;gap:9px}.tw-library-link{padding:15px;min-height:82px}.tw-library-heading h3{font-size:20px;margin-bottom:14px}}\n    @media(prefers-reduced-motion:reduce){.tw-home .teacher-club-card{transition:none}}\n";
+  style.textContent += "\n    #screen-teacher-dashboard.tw-home{background:#fcf7eb;font-family:Arial,sans-serif;color:#263f36}\n    .tw-home .screen-header{background:transparent;border:0;padding:30px 24px 16px;position:static;box-shadow:none;max-width:900px;margin:auto;box-sizing:border-box}\n    .tw-home .header-row{display:block}.tw-home .screen-header h2{font:700 clamp(26px,5vw,36px)/1.3 Arial,sans-serif;text-align:right;margin:0;overflow-wrap:anywhere;color:#203e32}\n    .tw-brand-label{font-size:12px;letter-spacing:.04em;color:#526b5d;margin:0 0 12px;font-weight:700}\n    .tw-home #td-teacher-name{display:none}\n    .tw-home .td-body{max-width:900px;margin:auto;padding:10px 24px 110px;box-sizing:border-box}\n    .tw-club-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px}\n    .tw-home .td-section-title{margin:0;font-size:18px;color:#294536}\n    .tw-new-club{font:700 14px Arial,sans-serif;min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:#28694e;color:#fff;cursor:pointer;white-space:nowrap}\n    .tw-home .td-clubs-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\n    .tw-home .teacher-club-card{display:flex;align-items:center;gap:14px;background:#fffefb;border:1px solid #e2e7dc;border-radius:18px;padding:18px;margin:0;min-height:96px;box-shadow:0 4px 14px #264e3610;box-sizing:border-box;transition:transform .15s,border-color .15s}\n    .tw-home .teacher-club-card:hover{border-color:#7caa8e;transform:translateY(-2px)}\n    .tw-home .tc-emoji{font-size:32px;flex-shrink:0;max-width:48px}.tw-home .tc-emoji img{width:44px;height:44px;object-fit:contain}\n    .tw-home .tc-info{min-width:0;flex:1}.tw-home .tc-name{display:block;font:700 19px/1.35 Arial,sans-serif;color:#263e34;overflow-wrap:anywhere}\n    .tw-home .tc-meta{display:block;font:14px/1.6 Arial,sans-serif;color:#375e4a;margin-top:6px}\n    .tw-home .tc-actions{flex-shrink:0;margin:0}.tw-home .btn-tc-delete{min-width:44px;min-height:44px;border:0;background:transparent;font-size:17px;opacity:.7}\n    .tw-home .td-empty{grid-column:1/-1;background:#edf3e6;border:1px dashed #abc1aa;border-radius:18px;text-align:center;padding:26px 18px}\n    .tw-home .tw-dashboard-actions{display:block;margin:30px 0 0;padding:22px;background:#efeedd;border:0;border-radius:22px}\n    .tw-library-heading .tw-eyebrow{font-size:12px;color:#58705d;margin:0 0 5px}.tw-library-heading h3{font-size:21px;line-height:1.4;margin:0 0 18px;color:#2f4838}\n    .tw-library-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}\n    .tw-library-link{position:relative;display:flex;align-items:center;gap:12px;text-align:right;font-family:Arial,sans-serif;color:#294537;border:0;border-radius:15px;padding:18px;background:#fffdf5;cursor:pointer;min-width:0}\n    .tw-library-personal{background:#e1eadb}.tw-library-copy{min-width:0;flex:1}.tw-library-copy strong{display:block;font-size:17px;line-height:1.4}.tw-library-copy small{display:block;font-size:13px;line-height:1.5;margin-top:4px;color:#49634f}\n    .tw-library-arrow{font-size:20px}.tw-book-art{position:relative;display:block;width:42px;height:45px;flex:0 0 42px;transform:rotate(-9deg)}\n    .tw-book-art i{position:absolute;bottom:0;width:12px;height:36px;border-radius:3px 3px 1px 1px;background:#728e69;border-top:5px solid #a7b795;box-shadow:inset 2px 0 #0000000b}\n    .tw-book-art i:nth-child(1){right:0;height:42px;background:#cf9a5e;border-color:#e4ba88}.tw-book-art i:nth-child(2){right:14px}.tw-book-art i:nth-child(3){right:28px;height:30px;background:#668c86;border-color:#aac1ad}\n    .tw-home-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:18px 2px;margin-top:8px}\n    .tw-home-footer .header-actions{display:flex;gap:12px}.tw-footer-link,.tw-home-footer .btn-share-app,.tw-home-footer .btn-logout{font:13px Arial,sans-serif!important;color:#506655!important;min-height:44px;padding:8px 2px!important;border:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer}\n    .tw-home button:focus-visible,.tw-home [role=button]:focus-visible{outline:3px solid #276d50;outline-offset:3px}\n    @media(max-width:600px){.tw-home .screen-header{padding:24px 18px 12px}.tw-home .td-body{padding:6px 16px 110px}.tw-home .td-clubs-list{grid-template-columns:1fr}.tw-home .teacher-club-card{padding:16px;min-height:90px}.tw-home .tw-dashboard-actions{padding:18px;margin-top:26px}.tw-library-pair{grid-template-columns:1fr;gap:9px}.tw-library-link{padding:15px;min-height:82px}.tw-library-heading h3{font-size:20px;margin-bottom:14px}}\n    @media(prefers-reduced-motion:reduce){.tw-home .teacher-club-card{transition:none}}\n";
   document.head.append(style);
-  const originalShowTeacherDashboard=window.showTeacherDashboard;
-  if(typeof originalShowTeacherDashboard==='function'){
-    window.showTeacherDashboard=async function(){
-      const result=await originalShowTeacherDashboard.apply(this,arguments);
-      // The teacher screen is reused between logins. Rebuild this stateful block
-      // every time so its controls re-read Firestore instead of keeping a stale
-      // Set captured on the first install.
-      setTimeout(()=>install(true),0);return result;
-    };
-  }
-  window.BookiTeacherWorkspace = { version: '20260927-stateful', openLibrary, openFeedback };
+  window.BookiTeacherWorkspace = { version: '20260909.1', openLibrary, openFeedback };
   window.showTeacherBookiLibrary = openLibrary;
   window.showTeacherFeedback = openFeedback;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true }); else install();
