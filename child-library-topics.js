@@ -10,8 +10,7 @@
   {id:'imagine',label:'דִּמְיוֹן וְהַרְפַּתְקָאוֹת',icon:'⛵',match:s=>['familiar','adventure','booki'].includes(s.libraryId)||/הרפתקה|תעלומה|מסתורין|פנטזיה|קסם|חלומות/.test(tags(s))},
   {id:'discover',label:'מְגַלִּים דְּבָרִים',icon:'🔭',match:s=>['science','history'].includes(s.libraryId)||/שאלות|חלל|המצאות|יצירה/.test(tags(s))||s.id==='bookworms-fourth-grade-contest'},
   {id:'celebrate',label:'חַגִּים וַחֲגִיגוֹת',icon:'🍎',match:s=>s.libraryId==='holidays'||s.id==='long-bear-birthday'},
-  {id:'tanakh',label:'סִפּוּרֵי תַּנַ״ךְ',icon:'📜',match:s=>s.libraryId==='tanakh'},
-  {id:'teacher-private',label:'סִפּוּרֵי הַכִּתָּה',icon:'📚',match:s=>s.libraryId==='teacher-private'}
+  {id:'tanakh',label:'סִפּוּרֵי תַּנַ״ךְ',icon:'📜',match:s=>s.libraryId==='tanakh'}
  ];
  window.BookiChildTopics=Object.freeze(topics);
 })();
