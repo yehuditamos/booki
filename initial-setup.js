@@ -113,7 +113,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadTeacherWorkspace() {
   if (document.querySelector('script[data-booki-teacher-workspace]')) return;
   const s = document.createElement('script');
-  s.src = 'teacher-workspace.js?v=20261001-dashboard-repair-2';
+  s.src = 'teacher-workspace.js?v=20261001-stable-dashboard-restore';
   s.async = false;
   s.dataset.bookiTeacherWorkspace = '1';
   s.onerror = () => console.warn('[booki] teacher workspace did not load');
