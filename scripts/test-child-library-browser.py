@@ -71,16 +71,20 @@ with sync_playwright() as pw:
   assert not errs,errs
   report.append({'width':width,'public_ui':'passed','preview_no_reading':'passed','native_start_pause_resume_completion_wallet_goal':'passed','bounds':bounds});ctx.close()
  ctx,p,errs=fresh()
- for mode,n in [('private',1),('both',7),('public',6)]:
+ cases=[('private',True,False,False),('both',True,False,True),('kosher',False,True,False),('kosher-private',True,True,False),('kosher-public',False,True,True),('all',True,True,True),('public',False,False,True)]
+ for mode,want_teacher,want_kosher,want_public in cases:
   p.evaluate('(mode)=>{qa.mode=mode;}',mode);p.evaluate('showLibrary()')
-  assert p.locator('#booki-child-library .folder').count()==n,(mode,p.locator('#booki-child-library').inner_text())
-  private=p.locator('[data-folder="teacher-stories"]')
-  if mode!='public':
-   assert private.count()==1,(mode,p.locator('#booki-child-library').inner_text(),p.evaluate("({reads:qa.reads,writes:qa.writes,state:BookiPrivateLibrary.childState()})"))
+  private=p.locator('[data-folder="teacher-stories"]');kosher=p.locator('[data-folder="kosher-stories"]')
+  assert (private.count()==1)==want_teacher,(mode,'teacher',p.locator('#booki-child-library').inner_text(),p.evaluate("BookiPrivateLibrary.childState()"))
+  assert (kosher.count()==1)==want_kosher,(mode,'kosher',p.locator('#booki-child-library').inner_text())
+  if want_teacher:
    assert p.locator('#booki-child-library .folder').first.get_attribute('data-folder')=='teacher-stories'
    private.click();assert p.locator('.shelf-view .cc-browse .cc-card').count()==1
-   assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text()
-  elif mode=='public':assert private.count()==0
+   assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text();p.evaluate('BookiChildLibrary.back()')
+  if want_public:
+   assert p.locator('[data-folder="friends"]').count()==1,(mode,'public missing')
+  else:
+   assert p.locator('[data-folder="friends"]').count()==0,(mode,'public leaked')
  report.append({'actual_private_library_module':'public/private/both passed'})
  # Broken refresh must fail closed, retry recovers without stale private text.
  p.evaluate("qa.fail=true;showLibrary()");assert 'ניסיון נוסף' in p.locator('#booki-child-library').inner_text();assert p.locator('#booki-child-library .folder').count()==0
