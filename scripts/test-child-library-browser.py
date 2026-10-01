@@ -74,10 +74,13 @@ with sync_playwright() as pw:
   report.append({'width':width,'public_ui':'passed','preview_no_reading':'passed','native_start_pause_resume_completion_wallet_goal':'passed','bounds':bounds});ctx.close()
  ctx,p,errs=fresh()
  cases=[('private',True,False,False),('both',True,False,True),('kosher',False,True,False),('kosher-private',True,True,False),('kosher-public',False,True,True),('all',True,True,True),('public',False,False,True)]
+ diagnostics=[]
  for mode,want_teacher,want_kosher,want_public in cases:
   p.evaluate('(mode)=>{qa.mode=mode;}',mode);p.evaluate('showLibrary()')
-  p.locator('#booki-child-library .folder').first.wait_for()
+  p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null")
   private=p.locator('[data-folder="teacher-stories"]');kosher=p.locator('[data-folder="kosher-stories"]')
+  diag=p.evaluate("""() => ({mode:qa.mode,privateState:BookiPrivateLibrary.childState(),folders:[...document.querySelectorAll('#booki-child-library .folder')].map(x=>x.dataset.folder),reads:qa.reads.slice(-12),writes:qa.writes.slice(-12),storyIds:(typeof getAllStories==='function'?getAllStories():[]).map(x=>x.id).filter(x=>String(x).includes('private_')||String(x).includes('kosher'))})""")
+  diagnostics.append(diag);print('LIBRARY_DIAG',json.dumps(diag,ensure_ascii=False))
   assert (private.count()==1)==want_teacher,(mode,'teacher',p.locator('#booki-child-library').inner_text(),p.evaluate("BookiPrivateLibrary.childState()"))
   assert (kosher.count()==1)==want_kosher,(mode,'kosher',p.locator('#booki-child-library').inner_text())
   if want_teacher:
@@ -88,7 +91,7 @@ with sync_playwright() as pw:
    assert p.locator('[data-folder="friends"]').count()==1,(mode,'public missing')
   else:
    assert p.locator('[data-folder="friends"]').count()==0,(mode,'public leaked')
- report.append({'actual_private_library_module':'public/private/both passed'})
+ report.append({'seven_mode_library_contract':'passed','diagnostics':diagnostics})
  # Broken refresh must fail closed, retry recovers without stale private text.
  p.evaluate("qa.fail=true;showLibrary()");assert 'ניסיון נוסף' in p.locator('#booki-child-library').inner_text();assert p.locator('#booki-child-library .folder').count()==0
  p.evaluate('qa.fail=false');p.locator('#booki-child-library button',has_text='ניסיון נוסף').click();p.locator('.folder').first.wait_for()
