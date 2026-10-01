@@ -22,6 +22,7 @@ STUB=r'''(() => {
  const ref=p=>({path:p,collection:n=>ref(p+'/'+n),doc:n=>ref(p+'/'+n),where:()=>ref(p),limit:()=>ref(p),get:async()=>{
   qa.reads.push(p);if(qa.delay)await new Promise(r=>setTimeout(r,qa.delay));if(qa.fail)throw Error('network test');
   if(/^clubs\/[^/]+$/.test(p))return {exists:true,data:()=>({libraryMode:qa.mode,teacherUid:'test-teacher'})};
+  if(p==='clubs/test-class/memberships/test-child')return {exists:true,id:'test-child',data:()=>clone(qa.docs.get(p))};
   if(p==='teacherLibraries/test-teacher/stories')return {docs:[{id:'story-a',data:()=>({title:'סיפור הכיתה לבדיקה',text:'אָב\n\nבָּא',status:'published'})}]};
   const one=snap(p);return {...one,docs:one.exists?[{id:p.split('/').pop(),data:one.data}]:[],empty:!one.exists};
  },set:async v=>{qa.writes.push(p);qa.docs.set(p,clone(v));}});
