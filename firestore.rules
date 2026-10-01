@@ -353,7 +353,7 @@ service cloud.firestore {
     }
     match /teacherLibraries/{teacherUid}/stories/{storyId} {
       allow read: if (isTeacher() && isMe(teacherUid))
-        || (resource.data.status == 'published' && canReadTeacherLibrary(teacherUid));
+        || (isSignedIn() && resource.data.status == 'published');
       allow create, update: if isTeacher() && isMe(teacherUid)
         && request.resource.data.keys().hasOnly(['teacherUid','title','text','status','createdAt','updatedAt'])
         && request.resource.data.teacherUid == teacherUid
