@@ -253,8 +253,17 @@
 
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
-    const existingActions=screen.querySelector('.header-actions');
-    if(existingActions){footer.append(existingActions);existingActions.querySelector('.btn-share-app').textContent='שיתוף בוקי';}
+    let existingActions=screen.querySelector('.header-actions')||screen.querySelector('.tw-home-footer .header-actions');
+    if(!existingActions){
+      existingActions=el('div',undefined,'header-actions');
+      const share=btn('שיתוף בוקי',()=>typeof shareApp==='function'&&shareApp(),'btn-share-app');
+      const logout=btn('יציאה',()=>typeof teacherSignOut==='function'&&teacherSignOut(),'btn-logout');
+      existingActions.append(share,logout);
+    }else{
+      existingActions.querySelector('.btn-share-app')?.replaceChildren('שיתוף בוקי');
+      if(!existingActions.querySelector('.btn-logout'))existingActions.append(btn('יציאה',()=>typeof teacherSignOut==='function'&&teacherSignOut(),'btn-logout'));
+    }
+    footer.append(existingActions);
     body.append(footer);
     const clubNotice = document.querySelector('#screen-teacher-club .teacher-management-only');
     if (clubNotice) clubNotice.replaceWith(btn('📚 ספריית בוקי — לעיון בתכנים', openLibrary, 'tw-text-button'));
