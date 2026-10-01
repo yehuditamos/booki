@@ -4,9 +4,13 @@
     "test": "node catalog.cjs && node editor.cjs && node photo.cjs && firebase emulators:exec --only firestore --project demo-booki-private --config firebase.json \"node rules.cjs\""
   },
   "devDependencies": {
-    "firebase": "12.19.0",
-    "firebase-tools": "13.35.1",
     "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.32.1",
     "jsdom": "30.1.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.5",
+    "basic-ftp": "6.2.1"
   }
 }
