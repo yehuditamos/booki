@@ -13,6 +13,7 @@
  let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve();
  const topics=window.BookiChildTopics;
  const teacherTopic={id:'teacher-stories',label:'הַסִּפּוּרִים מֵהַמּוֹרָה',icon:'💌',match:s=>s?.libraryId==='teacher-private'};
+ const kosherTopic={id:'kosher-stories',label:'הַסִּפְרִיָּה הַכְּשֵׁרָה',icon:'✡️',match:s=>s?.libraryId==='kosher'||s?.tags?.includes?.('כשר')};
  const allTopic={id:'all',label:'כָּל הַסִּפּוּרִים',icon:'📚',match:()=>true};
  const valid=()=>canUse()&&loaded===key()&&screen.classList.contains('active');
  const catalog=()=>valid()?items.filter(s=>activeTopic?.match(s)??true):[];
@@ -42,8 +43,11 @@
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
   const privateState=window.BookiPrivateLibrary?.childState?.()||{};
   const teacherStories=privateState.teacherEnabled&&privateState.valid?(privateState.teacherStories||[]):[];
-  const publicTopics=topics.filter(t=>t.id!=='teacher-private'&&t.id!=='teacher-stories');
-  const folderTopics=teacherStories.length?[teacherTopic,...publicTopics]:publicTopics;
+  const publicTopics=topics.filter(t=>!['teacher-private','teacher-stories','kosher-stories'].includes(t.id));
+  const selectedTopics=[];
+  if(teacherStories.length)selectedTopics.push(teacherTopic);
+  if(privateState.valid&&['kosher','kosher-public','kosher-private','all'].includes(privateState.mode)&&items.some(kosherTopic.match))selectedTopics.push(kosherTopic);
+  const folderTopics=[...selectedTopics,...publicTopics];
   for(const t of folderTopics){
    const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
@@ -68,7 +72,7 @@
  }
  function shelf(id){
   if(!valid())return open();
-  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
+  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:id===kosherTopic.id?kosherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
   const privateState=id===teacherTopic.id?window.BookiPrivateLibrary?.childState?.():null;
   if(id===teacherTopic.id&&(!privateState?.teacherEnabled||!privateState?.valid)){folders();return;}
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
