@@ -13,9 +13,14 @@ assert(list.compareDocumentPosition(libraries)&w.Node.DOCUMENT_POSITION_FOLLOWIN
 home.querySelector('.tw-new-club').click();assert.equal(created,1);
 home.querySelector('.tw-library-personal').click();assert.equal(privateOpened,1);
 assert(home.querySelector('footer .btn-share-app'));assert(home.querySelector('footer .btn-logout'));
-assert.equal(home.querySelectorAll('.tw-library-link').length,2);
+assert.equal(home.querySelectorAll('.tw-library-link').length,3);
 assert.equal(home.querySelectorAll('.tw-dashboard-action').length,0);
 home.querySelector('.tw-library-link').click();assert(doc.querySelector('#screen-teacher-booki-library').classList.contains('active'));
 assert(doc.querySelector('#screen-teacher-booki-library').textContent.includes('סיפורים'));
 assert(!home.textContent.includes('מתחילות כאן'));
-console.log('PASS teacher home hierarchy, greeting, club creation, both libraries, footer actions and public library navigation');
+const brandCount=()=>home.querySelectorAll('.tw-brand-label').length;
+assert.equal(brandCount(),1);
+// Simulate dashboard re-entry/rebuild; brand must remain singular.
+w.showTeacherDashboard?.();w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+assert.equal(brandCount(),1);
+console.log('PASS teacher home hierarchy, greeting, club creation, three libraries, footer actions, navigation and no duplicate brand on re-entry');
