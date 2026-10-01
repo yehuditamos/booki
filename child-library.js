@@ -70,11 +70,17 @@
   const all=activeTopic?.id===teacherTopic.id?(privateState?.teacherStories||[]):catalog(),queues=BookiChoice.formats.map(f=>all.filter(s=>BookiChoice.profile(s).format.id===f.id));
   const out=[];while(queues.some(q=>q.length))for(const q of queues)if(q.length)out.push(q.shift());return out;
  }
- function shelf(id){
+ async function shelf(id){
   if(!valid())return open();
-  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:id===kosherTopic.id?kosherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
-  const privateState=id===teacherTopic.id?window.BookiPrivateLibrary?.childState?.():null;
-  if(id===teacherTopic.id&&(!privateState?.teacherEnabled||!privateState?.valid)){folders();return;}
+  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:id===kosherTopic.id?kosherTopic:topics.find(t=>t.id===id))||allTopic;
+  if(id===teacherTopic.id){
+    root.replaceChildren();header(true);root.append(el('p','טוענים את הסיפורים מהמורה…'));
+    try{const r=reader(),teacher=await loadTeacherStoriesDirect(r?.clubId);teacherStories=teacher.stories||[];
+      if(!teacherStories.length){root.replaceChildren();header(true);root.append(el('p','המורה עדיין לא פרסמה כאן סיפורים. אפשר לחזור בהמשך.'));return;}
+      const byId=new Map(items.map(x=>[String(x.id),x]));teacherStories.forEach(x=>byId.set(String(x.id),x));items=[...byId.values()];
+    }catch(e){root.replaceChildren();header(true);root.append(el('p','לא הצלחנו לטעון את סיפורי המורה. נסו שוב בעוד רגע.'),button('ניסיון נוסף',()=>shelf(id)));return;}
+  }
+  root.replaceChildren();header(true);
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
   heading.append(h,el('p','איזה סיפור מסקרן אותך? לוחצים ומציצים.'));root.append(heading);
   const host=el('div',null,'shelf-view');root.append(host);
