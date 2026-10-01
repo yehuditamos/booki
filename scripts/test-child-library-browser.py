@@ -78,7 +78,7 @@ with sync_playwright() as pw:
  # independent of kosher/mixed modes until the teacher shelf path is proven.
  p.evaluate("showScreen('screen-main');qa.mode='private';qa.reads=[];qa.writes=[]")
  p.evaluate('showLibrary()')
- p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null")
+ p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null && BookiPrivateLibrary.childState().mode!=='loading'")
  diag=p.evaluate("""() => ({mode:qa.mode,state:BookiPrivateLibrary.childState(),folders:[...document.querySelectorAll('#booki-child-library .folder')].map(x=>x.dataset.folder),reads:qa.reads,writes:qa.writes})""")
  print('PRIVATE_ONLY_DIAG',json.dumps(diag,ensure_ascii=False))
  assert diag['state']['mode']=='private',diag
