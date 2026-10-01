@@ -81,3 +81,6 @@ scripts/goal_baseline_backup_*.json
 
 # Ad-hoc verification screenshots (puppeteer, for user review) — not project source.
 /review-screenshots/
+
+# Generated tested Pages artifact
+.pages-public/

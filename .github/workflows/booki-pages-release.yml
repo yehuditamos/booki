@@ -1,0 +1,39 @@
+name: Booki Tested Pages Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: booki-tested-pages
+  cancel-in-progress: false
+jobs:
+  runtime:
+    uses: ./.github/workflows/booki-runtime-qa.yml
+  authorization:
+    uses: ./.github/workflows/booki-security.yml
+  package:
+    needs: [runtime, authorization]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package tracked public assets only
+        run: python3 scripts/package-pages.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .pages-public
+  deploy:
+    needs: [runtime, authorization, package]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - name: Deploy the tested SHA
+        id: deployment
+        uses: actions/deploy-pages@v4
