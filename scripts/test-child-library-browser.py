@@ -77,6 +77,7 @@ with sync_playwright() as pw:
  cases=[('private',True,False,False),('both',True,False,True),('kosher',False,True,False),('kosher-private',True,True,False),('kosher-public',False,True,True),('all',True,True,True),('public',False,False,True)]
  diagnostics=[]
  for mode,want_teacher,want_kosher,want_public in cases:
+  p.evaluate("showScreen('screen-main')")
   p.evaluate('(mode)=>{qa.mode=mode;}',mode);p.evaluate('showLibrary()')
   p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null")
   private=p.locator('[data-folder="teacher-stories"]');kosher=p.locator('[data-folder="kosher-stories"]')
