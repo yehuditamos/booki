@@ -120,7 +120,7 @@
      // selected mode visible to the child UI; an empty teacher folder is simply
      // omitted until its stories can be read.
      if(['both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode,items:[],privateError:true};return true;}
-     // Only "private alone" has no safe public fallback.
+     if(mode==='private'){state={clubId,userId,authUid:a?.uid,mode:'private',items:[],privateError:true};return true;}
      throw privateError;
    }
   }catch(e){if(request===version)state={clubId,userId,authUid:a?.uid,mode:'error',items:[]};return false;}
