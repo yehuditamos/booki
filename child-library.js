@@ -42,7 +42,8 @@
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
   const privateState=window.BookiPrivateLibrary?.childState?.()||{};
   const teacherStories=privateState.teacherEnabled&&privateState.valid?(privateState.teacherStories||[]):[];
-  const folderTopics=teacherStories.length?[teacherTopic,...topics.filter(t=>t.id!==teacherTopic.id)]:topics;
+  const publicTopics=topics.filter(t=>t.id!=='teacher-private'&&t.id!=='teacher-stories');
+  const folderTopics=teacherStories.length?[teacherTopic,...publicTopics]:publicTopics;
   for(const t of folderTopics){
    const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
