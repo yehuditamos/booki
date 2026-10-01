@@ -22,6 +22,8 @@
  const publicCatalog=()=>typeof STORIES!=='undefined'&&Array.isArray(STORIES)?[...STORIES]:[];
  function visiblePublicByMode(publicStories,mode){
    if(mode==='kosher')return kosherStories(publicStories);
+   // kosher-public deliberately means the normal Booki catalog (which already
+   // contains the kosher shelf) with no private reads.
    return publicStories;
  }
  function ensureTeacherLibraryStyles(){
@@ -87,16 +89,32 @@
    // whole library because a teacher has no published stories yet or an access
    // grant/rules deployment is temporarily unavailable.
    try{
-     // The active reader id is the stable membership/card id. The routing flow
-     // already reclaims teacher-created cards to the current anonymous auth UID
-     // before entering the child home, so there is no need for a second identity
-     // discovery query here.
-     const stableMemberId=String(userId||'');
+     // Resolve the membership without assuming activeReader.userId equals the
+     // stable membership document id. Teacher-created cards often use a stable
+     // card id plus claimedByUid.
+     let stableMemberId=null;
+     const direct=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
+     if(direct.exists)stableMemberId=direct.id;
+     if(!stableMemberId){
+       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).get({source:'server'});
+       const activeClaim=claimed.docs.find(d=>(d.data()?.status||'active')!=='left');
+       if(activeClaim)stableMemberId=activeClaim.id;
+     }
+     // Self-joined cards are keyed by auth uid.
+     if(!stableMemberId){
+       const self=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(a.uid).get({source:'server'});
+       if(self.exists)stableMemberId=self.id;
+     }
      if(!stableMemberId)throw Error('membership');
-     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
+     // The access grant is an optimization for server-side scoping. If an old
+     // rules deployment rejects writing it, do not silently erase the teacher
+     // shelf: try the already-authorized published read first and surface a real
+     // failure only if that read is denied too.
+     try{await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});}
+     catch(grantError){console.warn('[booki] teacher-library grant write',grantError?.code||grantError?.message);}
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
-     state={clubId,userId,authUid:a.uid,mode,items};return true;
+     state={clubId,userId,authUid:a?.uid,mode,items};return true;
    }catch(privateError){
      console.warn('[booki] private catalog unavailable; keeping selected public catalog',privateError?.code||privateError?.message);
      if(request!==version||auth()?.uid!==a.uid)return false;
@@ -104,7 +122,7 @@
      // selected mode visible to the child UI; an empty teacher folder is simply
      // omitted until its stories can be read.
      if(['both','kosher-private','all'].includes(mode)){state={clubId,userId,authUid:a?.uid,mode,items:[],privateError:true};return true;}
-     if(mode==='private'){state={clubId,userId,authUid:a?.uid,mode:'private',items:[],privateError:true};return true;}
+     // Only "private alone" has no safe public fallback.
      throw privateError;
    }
   }catch(e){if(request===version)state={clubId,userId,authUid:a?.uid,mode:'error',items:[]};return false;}
@@ -113,8 +131,8 @@
   if(teacher())return publicStories;
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
-  if(state.clubId!==r.clubId||state.authUid!==auth()?.uid)return [];
-  return state.mode==='public'?publicStories:state.mode==='kosher'?kosherStories(publicStories):state.mode==='kosher-public'?publicStories:state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:publicStories;
+  if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
+  return ['public','kosher','kosher-public'].includes(state.mode)?visiblePublicByMode(publicStories,state.mode):state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
  }
  async function refresh(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
@@ -122,10 +140,7 @@
  }
  function childState(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
-  // club + auth are the security context. activeReader.userId may legitimately
-  // differ from the stable teacher-created card id after reclaim, so it must not
-  // suppress a library that was already server-scoped to this authenticated child.
-  const valid=!!r?.clubId&&state.clubId===r.clubId&&state.authUid===auth()?.uid;
+  const valid=!!r?.clubId&&state.clubId===r.clubId&&state.userId===r.userId&&state.authUid===auth()?.uid;
   return {valid,mode:state.mode,teacherStories:valid?[...state.items]:[],teacherEnabled:valid&&['private','both','kosher-private','all'].includes(state.mode)};
  }
  function privateCategories(){
@@ -178,7 +193,7 @@
     await window.db.collection('libraryConfig').doc('availability').get({source:'server'});
     const [ss,cs]=await Promise.all([ref(a.uid).get({source:'server'}),window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'})]);
     if(!valid())return;
-    const intro=el('p','כאן מוסיפים ועורכים את הסיפורים שלך. ההצגה לילדים נקבעת במסך בחירת הספריות.');intro.className='pl-intro';
+    const intro=el('p','כאן מנהלים את הסיפורים שכתבת ובוחרים בפשטות מה הילדים רואים.');intro.className='pl-intro';
     const add=btn('📝 הוספת סיפור',()=>edit(null));add.className='pl-add';
     body.replaceChildren(intro,add);
     const publishedCount=ss.docs.filter(d=>d.data().status==='published').length;
@@ -188,7 +203,7 @@
     for(const s of ss.docs.sort((x,y)=>String(y.data().updatedAt).localeCompare(String(x.data().updatedAt)))){
      const row=el('article');row.className='pl-story';
      const storyState=el('span',s.data().status==='published'?'פורסם בספרייה שלי':'טיוטה — הילדים לא רואים');storyState.className='pl-story-state';
-     row.append(el('strong',s.data().title),storyState,btn('עריכת סיפור',()=>edit(s)));stories.append(row);
+     row.append(el('strong',s.data().title),storyState,btn('עריכה וניקוד',()=>edit(s)));stories.append(row);
     }
     body.append(stories);status.textContent='';body.append(status);
    }catch(e){if(valid())body.replaceChildren(el('p','הספרייה הפרטית עדיין אינה זמינה. נדרשת הפעלת הרשאות הפרטיות במערכת.'),btn('ניסיון נוסף',list));}
@@ -196,7 +211,7 @@
   function edit(doc){
    body.replaceChildren();const record=doc?.data()||{},storyRef=doc?.ref||ref(a.uid).doc();
    const heading=el('input');heading.value=record.title||'';heading.maxLength=120;heading.setAttribute('aria-label','שם הסיפור');heading.placeholder='שם הסיפור';
-   const text=el('textarea');text.value=record.text||'';text.rows=12;text.maxLength=20000;text.setAttribute('aria-label','טקסט הסיפור');text.placeholder='מדביקים או כותבים כאן את הסיפור.';
+   const text=el('textarea');text.value=record.text||'';text.rows=12;text.maxLength=20000;text.setAttribute('aria-label','טקסט הסיפור לעריכה ולניקוד');text.placeholder='מדביקים או כותבים כאן את הסיפור.';
    const pageTip=el('div');pageTip.className='pl-page-tip';pageTip.append(el('strong','📄 איך יוצרים עמוד חדש?'),el('span',' משאירים שורה אחת ריקה בין קטע לקטע — וכל קטע יהפוך לעמוד חדש.'));
    heading.oninput=text.oninput=()=>{dirty=true;preview.textContent=text.value;};
    const file=el('input');file.type='file';file.accept='.txt,text/plain';file.multiple=true;file.hidden=true;
@@ -204,15 +219,22 @@
    const info=el('div');info.className='private-library-text-tip';
    const badge=el('strong','מומלץ');badge.className='private-library-recommended';
    const paste=btn('כתיבה או הדבקת טקסט',()=>{text.focus();text.scrollIntoView?.({block:'center',behavior:'smooth'});});
-   info.append(badge,paste,el('p','העתיקי מהמסמך והדביקי כאן, או כתבי ישירות. בוקי יטפל בתצוגת הניקוד בזמן הקריאה. אפשר גם להעלות קובץ טקסט (TXT).'));
+   info.append(badge,paste,el('p','העתיקי מהמסמך והדביקי בתוכן הסיפור — הטקסט והניקוד נשמרים כפי שהועתקו. אפשר גם להעלות קובץ טקסט (TXT).'));
+   const palette=el('div');palette.className='private-library-niqud';palette.append(el('p','ניקוד: מקמי את הסמן אחרי אות ולחצי על הסימן.'));
+   let selected=text;
+   for(const input of [heading,text])input.onfocus=()=>{selected=input;};
+   for(const [label,mark] of [['קמץ','ָ'],['פתח','ַ'],['צירה','ֵ'],['סגול','ֶ'],['חיריק','ִ'],['חולם','ֹ'],['קובוץ','ֻ'],['שורוק / דגש','ּ'],['שווא','ְ'],['שׁ','ׁ'],['שׂ','ׂ'],['חטף פתח','ֲ'],['חטף סגול','ֱ'],['חטף קמץ','ֳ']]){
+    const b=btn('א'+mark,()=>{const input=selected;input.setRangeText(mark,input.selectionStart,input.selectionEnd,'end');input.focus();input.dispatchEvent(new Event('input'));});b.title=label;b.setAttribute('aria-label',label);b.onmousedown=e=>e.preventDefault();palette.append(b);
+   }
+   palette.append(btn('הסרת ניקוד מהבחירה',()=>{const i=selected,start=i.selectionStart,end=i.selectionEnd;if(start===end){status.textContent='סמני תחילה את המילה שתרצי להסיר ממנה ניקוד.';return;}i.setRangeText(i.value.slice(start,end).replace(/[\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7]/g,''),start,end,'end');i.dispatchEvent(new Event('input'));}));
    const preview=el('pre',text.value);preview.className='private-library-preview';
    const actions=el('div'),draft=btn('שמירת טיוטה',()=>save('draft')),publish=btn('שמירה ופרסום לתלמידים שלי',()=>save('published')),back=btn('חזרה לספרייה',()=>{if(!dirty||confirm('לחזור בלי לשמור?'))list();});
    async function save(statusValue){
     draft.disabled=publish.disabled=true;status.textContent='שומרת…';
     try{const v=validate(heading.value,text.value);if(!valid())return;await storyRef.set({teacherUid:a.uid,...v,status:statusValue,createdAt:record.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()});dirty=false;
      if(statusValue==='published'){
-      try{const clubs=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=clubs.docs.filter(c=>!c.data().hidden),shown=active.some(c=>['private','both','kosher-private','all'].includes(c.data().libraryMode||'public'));
-       savedNotice=shown?'הסיפור פורסם 💛 הוא יוצג במועדונים שבהם סימנת “הסיפורים מהמורה”.':'הסיפור פורסם 💛 כדי להציג אותו לילדים, סמני “הסיפורים מהמורה” במסך בחירת הספריות.';
+      try{const clubs=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=clubs.docs.filter(c=>!c.data().hidden),shown=active.some(c=>['private','both'].includes(c.data().libraryMode||'public'));
+       savedNotice=shown?'הסיפור פורסם 💛 הוא זמין בכיתות שבחרת להן “הסיפורים שלי” או “גם וגם”.':'הסיפור פורסם 💛 שימי לב: הילדים עדיין לא רואים את הסיפורים שלך. בחרי למטה “הסיפורים שלי” או “גם וגם”.';
       }catch(_){savedNotice='הסיפור פורסם 💛 בדקי למטה מה הילדים רואים עכשיו.';}
      }
      if(valid())await list();}
@@ -231,11 +253,11 @@
      const combined=(text.value.trim()?text.value.trim()+'\n\n':'')+clean(output).trim();
      if(!output.trim())throw Error('הקובץ ריק. בחרי קובץ טקסט אחר או הדביקי טקסט.');
      if(combined.length>20000)throw Error('הטקסט ארוך מדי. העלי סיפור קצר יותר.');
-     text.value=combined;text.dispatchEvent(new Event('input'));status.textContent='הטקסט מוכן לבדיקה. הוא עדיין לא פורסם.';
+     text.value=combined;text.dispatchEvent(new Event('input'));status.textContent='הטקסט מוכן לבדיקה ולניקוד. הוא עדיין לא פורסם.';
     }catch(e){if(valid())status.textContent=e.message||'לא הצלחתי לקרוא את הקובץ. נסי שוב או הדביקי את הטקסט.';}
     finally{upload.disabled=draft.disabled=publish.disabled=back.disabled=false;file.value='';}
    };
-   actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),pageTip,text,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
+   actions.append(draft,publish,back);status.textContent='';body.append(upload,file,info,el('label','שם הסיפור'),heading,el('label','תוכן הסיפור'),pageTip,text,palette,el('h3','תצוגה מקדימה'),preview,actions,status);heading.focus();
   }
   await list();
  }
