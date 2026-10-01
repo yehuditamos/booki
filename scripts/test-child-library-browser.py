@@ -25,7 +25,7 @@ STUB=r'''(() => {
   if(p==='clubs/test-class/memberships/test-child')return {exists:true,id:'test-child',data:()=>clone(qa.docs.get(p))};
   if(p==='teacherLibraries/test-teacher/stories')return {docs:[{id:'story-a',data:()=>({title:'סיפור הכיתה לבדיקה',text:'אָב\n\nבָּא',status:'published'})}]};
   const one=snap(p);return {...one,docs:one.exists?[{id:p.split('/').pop(),data:one.data}]:[],empty:!one.exists};
- },set:async v=>{qa.writes.push(p);qa.docs.set(p,clone(v));}});
+ },set:async v=>{qa.writes.push(p);qa.docs.set(p,clone(v));},update:async v=>{qa.writes.push(p);qa.docs.set(p,{...(qa.docs.get(p)||{}),...clone(v)});}});
  window.db={collection:n=>ref(n),runTransaction:async fn=>{
   const writes=[];const result=await fn({get:async r=>snap(r.path),set:(r,v)=>writes.push([r.path,clone(v)]),update:(r,v)=>writes.push([r.path,{...qa.docs.get(r.path),...clone(v)}])});
   if(qa.fail)throw Error('network test');for(const [p,v] of writes){qa.docs.set(p,v);qa.writes.push(p);}return result;
