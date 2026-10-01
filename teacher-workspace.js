@@ -241,7 +241,7 @@
     const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
     const modeSelections={public:['public'],private:['private'],both:['public','private'],kosher:['kosher'],'kosher-private':['private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
     const modeRank={public:0,kosher:1,'kosher-public':1,private:2,both:2,'kosher-private':3,all:3};
-    const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});selected.add('public');};
+    const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});};
     const loadSavedDisplay=async()=>{
       const a=teacher();if(!a)return;
       status.textContent='טוענת את הבחירה השמורה…';
