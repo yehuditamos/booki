@@ -154,6 +154,13 @@
       }
 
       const oldStats = clubId ? normalizedStats(target.cachedStats || {}) : normalizedStats({ ...target, totalPoints: target.points });
+      // Immutable session ID is the durable idempotency key, even after the
+      // rolling 50-completion cache has expired. All reads precede writes.
+      const sessionRef = clubId && target.createdByTeacher === true
+        ? targetRef.collection('sessions').doc(opts.id)
+        : db.collection('users').doc(authUid).collection('readingSessions').doc(opts.id);
+      const savedSession = await tx.get(sessionRef);
+      if (savedSession.exists) return { stats: oldStats, duplicate: true, target };
       const advanced = advanceStats(oldStats, opts.id, opts.entry, opts.delta, opts.completedAt);
       if (advanced.duplicate) {
         return { stats: advanced.stats, duplicate: true, target };
@@ -172,10 +179,8 @@
       };
 
       if (clubId && target.createdByTeacher === true) {
-        const sessionRef = targetRef.collection('sessions').doc(opts.id);
         tx.set(sessionRef, { ...sessionPayload, clubId, studentCardId: userId, claimedByUid: authUid });
       } else {
-        const sessionRef = db.collection('users').doc(authUid).collection('readingSessions').doc(opts.id);
         tx.set(sessionRef, sessionPayload);
       }
 
@@ -225,6 +230,8 @@
     };
     if (!opts.id || opts.id.length < 8 || opts.userId === null || opts.userId === undefined) fail('reading/invalid-completion');
     validateEntry(opts.entry);
+    opts.entry.minutes = Number(opts.entry.minutes);
+    opts.entry.points = Number(opts.entry.points);
     return Number.isInteger(opts.userId) ? saveLegacy(opts) : saveModern(opts);
   }
 

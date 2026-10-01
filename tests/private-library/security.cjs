@@ -1,0 +1,60 @@
+'use strict';
+const fs=require('node:fs');
+const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
+const {doc,setDoc,getDoc,deleteDoc,updateDoc,runTransaction}=require('firebase/firestore');
+(async()=>{
+ const env=await initializeTestEnvironment({projectId:'demo-booki-private',firestore:{host:'127.0.0.1',port:8088,rules:fs.readFileSync(__dirname+'/../../firestore.rules','utf8')}});
+ const db=(uid,provider='anonymous',extra={})=>env.authenticatedContext(uid,{firebase:{sign_in_provider:provider},...extra}).firestore();
+ const child=db('reader'),stranger=db('stranger'),teacher=db('teacher','password',{email:'teacher@example.test',email_verified:false}),other=db('other','password',{email:'teacher@example.test',email_verified:false}),owner=db('owner','password');
+ const guest=env.unauthenticatedContext().firestore(),card='clubs/class/memberships/card';
+ let checks=0; const denied=async p=>{await assertFails(p);checks++;},allowed=async p=>{await assertSucceeds(p);checks++;};
+ try{
+ await env.clearFirestore();
+ await env.withSecurityRulesDisabled(async c=>{
+  const d=c.firestore();
+  await setDoc(doc(d,'users/owner'),{role:'owner'});
+  await setDoc(doc(d,'users/reader'),{role:'student',email:'private@example.test'});
+  await setDoc(doc(d,'users/reader/profile/main'),{name:'Private child'});
+  await setDoc(doc(d,'clubs/class'),{teacherUid:'teacher',teacherEmail:'teacher@example.test'});
+  await setDoc(doc(d,card),{userId:'card',clubId:'class',createdByTeacher:true,personalized:true,claimedByUid:'reader',status:'active',cachedStats:{totalMinutes:2}});
+ });
+ await allowed(setDoc(doc(stranger,'users/stranger'),{name:'New child'}));
+ await denied(setDoc(doc(stranger,'users/stranger-teacher'),{role:'teacher'}));
+ await env.withSecurityRulesDisabled(async c=>setDoc(doc(c.firestore(),'clubs/class/memberships/new-card'),{createdByTeacher:true,personalized:false,status:'active'}));
+ await denied(updateDoc(doc(stranger,'clubs/class/memberships/new-card'),{claimedByUid:'stranger',personalized:true,emoji:'x'}));
+ await allowed(updateDoc(doc(teacher,'clubs/class/memberships/new-card'),{claimedByUid:'stranger',updatedAt:'now'}));
+ await allowed(updateDoc(doc(stranger,'clubs/class/memberships/new-card'),{claimedByUid:'stranger',personalized:true,emoji:'x'}));
+ await denied(getDoc(doc(guest,'users/reader')));
+ await denied(getDoc(doc(stranger,'users/reader/profile/main')));
+ await allowed(getDoc(doc(child,'users/reader/profile/main')));
+ await allowed(getDoc(doc(owner,'users/reader')));
+ await denied(updateDoc(doc(stranger,card),{claimedByUid:'stranger'}));
+ await denied(updateDoc(doc(stranger,card),{cachedStats:{totalMinutes:999}}));
+ await denied(updateDoc(doc(stranger,card),{avatar:'other'}));
+ await denied(deleteDoc(doc(other,card)));
+ await denied(updateDoc(doc(other,'clubs/class'),{name:'hijacked'}));
+ await denied(setDoc(doc(other,'users/other'),{role:'owner'}));
+ await denied(updateDoc(doc(child,'users/reader'),{role:'owner'}));
+ await denied(setDoc(doc(child,'config/setup'),{ownerUid:'reader'}));
+ const session={studentCardId:'card',claimedByUid:'stranger',minutes:2,points:3};
+ await denied(setDoc(doc(stranger,card+'/sessions/forged'),session));
+ await allowed(setDoc(doc(child,card+'/sessions/good'),{...session,claimedByUid:'reader'}));
+ await allowed(getDoc(doc(child,card+'/sessions/good')));
+ await allowed(updateDoc(doc(child,card),{cachedStats:{totalMinutes:3}}));
+ await allowed(updateDoc(doc(teacher,card),{claimedByUid:'replacement',updatedAt:'now'}));
+ await denied(setDoc(doc(child,card+'/sessions/after-revocation'),{...session,claimedByUid:'reader'}));
+ await allowed(updateDoc(doc(teacher,card),{claimedByUid:'reader',updatedAt:'now'}));
+ const request='deviceAccessRequests/request-1';
+ await allowed(setDoc(doc(stranger,request),{requesterUid:'stranger',clubId:'class',cardId:'card',status:'pending',createdAt:'now'}));
+ await denied(getDoc(doc(child,request)));
+ await denied(updateDoc(doc(stranger,request),{status:'approved'}));
+ await allowed(getDoc(doc(teacher,request)));
+ await allowed(runTransaction(teacher,async tx=>{
+  await tx.get(doc(teacher,request)); await tx.get(doc(teacher,card));
+  tx.update(doc(teacher,card),{claimedByUid:'stranger',updatedAt:'now'});
+  tx.update(doc(teacher,request),{status:'approved',reviewedAt:'now',reviewedBy:'teacher'});
+ }));
+ await allowed(getDoc(doc(stranger,request)));
+ console.log(`PASS: ${checks} security assertions; privacy, owner escalation, forged sessions, cross-teacher writes, takeover, revocation, approved device recovery.`);
+ }finally{await env.cleanup();}
+})().catch(e=>{console.error(e);process.exitCode=1});

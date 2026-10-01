@@ -925,6 +925,7 @@ window.addEventListener('pageshow', function (e) {
       <p id="tc-class-summary" role="status">טוען את הכיתה…</p>
       <button id="tc-next-action" type="button" class="btn-giant btn-green" disabled>טוען…</button>
       <button class="tc-secondary-action" type="button" onclick="showTeacherChildDemo()">איך זה נראה מהצד של הילדים?</button>
+      <button class="tc-secondary-action" type="button" onclick="bookiReviewDeviceAccess()">אישור מכשירים לילדים</button>
       <button class="tc-secondary-action" type="button" onclick="showClubStudents()">ילדי המועדון</button>
       <button class="tc-secondary-action" type="button" onclick="showShopManagement()">🎯 יעד וחנות</button>
     </section>
@@ -1385,7 +1386,7 @@ window.addEventListener('pageshow', function (e) {
 <!-- Club System — חייבים לטעון לפני firebase-clubs.js -->
 <script src="data-club-types.js?v=2"></script>
 <script src="seed-clubs.js?v=3"></script>
-<script src="firebase-clubs.js?v=20260915-consistent-goal"></script>
+<script src="firebase-clubs.js?v=20261001-device-approval"></script>
 <!-- Class story feature paused. Existing story data is retained. -->
 <script src="firebase-shop.js?v=20260915-consistent-goal"></script>
 <script src="firebase-messages.js?v=20260917-recommend"></script>
@@ -1421,7 +1422,7 @@ window.addEventListener('pageshow', function (e) {
 
 <!-- Club System UI — routing, admin, onboarding -->
 <script src="private-library.js?v=20260927-authoritative-teacher-folder"></script>
-<script src="routing.js?v=20261001-no-student-pin"></script>
+<script src="routing.js?v=20261001-device-approval"></script>
 <script src="admin-setup.js?v=20260915-capacity"></script>
 <script src="onboarding.js?v=6"></script>
 
@@ -1554,6 +1555,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="child-choice.js?v=20260918-live-topics"></script>
 <script src="child-library-topics.js?v=20260918-live-topics"></script>
 <script src="child-library.js?v=20260927-dedicated-teacher-folder"></script>
+<script src="device-access.js?v=20261001"></script>
 </body>
 </html>
 
