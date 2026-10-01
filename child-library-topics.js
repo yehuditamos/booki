@@ -4,6 +4,7 @@
  const plain=s=>String(s||'').normalize('NFC').replace(/[\u0591-\u05BD\u05BF-\u05C2\u05C4-\u05C5\u05C7]/g,'');
  const tags=s=>plain((s.tags||[]).join(' '));
  const topics=[
+  {id:'letters-syllables',label:'אוֹתִיּוֹת וַהֲבָרוֹת',icon:'🌱',match:s=>s.category==='אותיות והברות'||/אותיות והברות|הברות|קוראים יחד/.test(tags(s))},
   {id:'animals',label:'חַיּוֹת וְטֶבַע',icon:'🦊',match:s=>s.libraryId==='animals'||/חיות|טבע|יער|ירקות|חתול/.test(tags(s))||['familiar-fisherman-goldfish','familiar-frog-prince','long-bear-birthday','long-puppy-learns-read'].includes(s.id)},
   {id:'friends',label:'חֲבֵרִים וּמִשְׁפָּחָה',icon:'🏡',match:s=>/חבר|משפחה|שייכות|אח ואחות|אהבת אם|אחים/.test(tags(s))||['one-word','back-to-school'].includes(s.libraryId)||['beginner-i-eat','beginner-letter-alef'].includes(s.id)},
   {id:'imagine',label:'דִּמְיוֹן וְהַרְפַּתְקָאוֹת',icon:'⛵',match:s=>['familiar','adventure','booki'].includes(s.libraryId)||/הרפתקה|תעלומה|מסתורין|פנטזיה|קסם|חלומות/.test(tags(s))},
