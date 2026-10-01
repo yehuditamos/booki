@@ -92,7 +92,9 @@ with sync_playwright() as pw:
  assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text()
  report.append({'private_only_teacher_folder':'passed','diagnostic':diag})
  # Broken refresh must fail closed, retry recovers without stale private text.
- p.evaluate("qa.fail=true;showLibrary()");assert 'ניסיון נוסף' in p.locator('#booki-child-library').inner_text();assert p.locator('#booki-child-library .folder').count()==0
+ p.evaluate("showScreen('screen-main');qa.fail=true;showLibrary()")
+ p.wait_for_function("document.querySelector('#booki-child-library')?.textContent.includes('ניסיון נוסף')")
+ assert p.locator('#booki-child-library .folder').count()==0
  p.evaluate('qa.fail=false');p.locator('#booki-child-library button',has_text='ניסיון נוסף').click();p.locator('.folder').first.wait_for()
  # A late catalog reply cannot pull the reader back from another screen.
  p.evaluate("qa.delay=150;showLibrary();showScreen('screen-main');");p.wait_for_timeout(200)
