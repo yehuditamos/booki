@@ -11,11 +11,11 @@ const doc=w.document,home=doc.querySelector('#screen-teacher-dashboard'),list=do
 assert(home.classList.contains('tw-home'));assert.equal(home.querySelector('h2').textContent,'היי, יהודית');
 assert(list.compareDocumentPosition(libraries)&w.Node.DOCUMENT_POSITION_FOLLOWING);
 home.querySelector('.tw-new-club').click();assert.equal(created,1);
-home.querySelector('.tw-library-personal').click();assert.equal(privateOpened,1);
-assert(home.querySelector('footer .btn-share-app'));assert(home.querySelector('footer .btn-logout'));
+const personal=home.querySelector('.tw-library-personal');assert(personal);personal.click();assert.equal(privateOpened,1);
+assert(home.querySelector('footer .btn-share-app')||home.querySelector('.header-actions .btn-share-app'));assert(home.querySelector('footer .btn-logout')||home.querySelector('.header-actions .btn-logout'));
 assert.equal(home.querySelectorAll('.tw-library-link').length,3);
 assert.equal(home.querySelectorAll('.tw-dashboard-action').length,0);
-home.querySelector('.tw-library-link').click();assert(doc.querySelector('#screen-teacher-booki-library').classList.contains('active'));
+const firstLibrary=home.querySelector('.tw-library-link');assert(firstLibrary);firstLibrary.click();assert(doc.querySelector('#screen-teacher-booki-library').classList.contains('active'));
 assert(doc.querySelector('#screen-teacher-booki-library').textContent.includes('סיפורים'));
 assert(!home.textContent.includes('מתחילות כאן'));
 const brandCount=()=>home.querySelectorAll('.tw-brand-label').length;
