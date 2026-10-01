@@ -91,18 +91,8 @@
      // already reclaims teacher-created cards to the current anonymous auth UID
      // before entering the child home, so there is no need for a second identity
      // discovery query here.
-     let stableMemberId=String(userId||'');
+     const stableMemberId=String(userId||'');
      if(!stableMemberId)throw Error('membership');
-     // Verify the active reader id really is the membership document used by
-     // security rules. If routing supplied an auth/profile alias, resolve the
-     // claimed card once and write the grant with that stable document id.
-     let member=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(stableMemberId).get({source:'server'});
-     if(!member.exists){
-       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).get({source:'server'});
-       const active=claimed.docs.find(d=>(d.data()?.status||'active')!=='left');
-       if(active){stableMemberId=active.id;member=active;}
-     }
-     if(!member?.exists&&member?.id==null)throw Error('membership');
      await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
