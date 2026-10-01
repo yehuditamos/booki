@@ -76,6 +76,7 @@ with sync_playwright() as pw:
  cases=[('private',True,False,False),('both',True,False,True),('kosher',False,True,False),('kosher-private',True,True,False),('kosher-public',False,True,True),('all',True,True,True),('public',False,False,True)]
  for mode,want_teacher,want_kosher,want_public in cases:
   p.evaluate('(mode)=>{qa.mode=mode;}',mode);p.evaluate('showLibrary()')
+  p.locator('#booki-child-library .folder').first.wait_for()
   private=p.locator('[data-folder="teacher-stories"]');kosher=p.locator('[data-folder="kosher-stories"]')
   assert (private.count()==1)==want_teacher,(mode,'teacher',p.locator('#booki-child-library').inner_text(),p.evaluate("BookiPrivateLibrary.childState()"))
   assert (kosher.count()==1)==want_kosher,(mode,'kosher',p.locator('#booki-child-library').inner_text())
