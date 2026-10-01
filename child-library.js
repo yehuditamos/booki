@@ -10,15 +10,13 @@
  const key=()=>{const r=reader();return JSON.stringify([r?.clubId??null,r?.userId??null,auth()?.uid??null]);};
  const canUse=()=>!!reader()?.userId&&!!auth()?.isAnonymous&&!!window.BookiPrivateLibrary;
  const root=el('div');root.id='booki-child-library';screen.append(root);
- let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve(),libraryMode='public',teacherStories=[];
+ let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve();
  const topics=window.BookiChildTopics;
- const teacherTopic={id:'teacher-stories',label:'הַסִּפּוּרִים מֵהַמּוֹרָה',icon:'💌',match:s=>s?.libraryId==='teacher-private'};
- const kosherTopic={id:'kosher-stories',label:'הַסִּפְרִיָּה הַכְּשֵׁרָה',icon:'✡️',match:s=>s?.libraryId==='kosher'||s?.tags?.includes?.('כשר')};
  const allTopic={id:'all',label:'כָּל הַסִּפּוּרִים',icon:'📚',match:()=>true};
  const valid=()=>canUse()&&loaded===key()&&screen.classList.contains('active');
  const catalog=()=>valid()?items.filter(s=>activeTopic?.match(s)??true):[];
  const closeChoice=()=>{chooser?.destroy();chooser=null;};
- function clear(){++generation;loaded=null;items=[];teacherStories=[];libraryMode='public';activeTopic=null;closeChoice();root.replaceChildren();root.removeAttribute('aria-busy');}
+ function clear(){++generation;loaded=null;items=[];activeTopic=null;closeChoice();root.replaceChildren();root.removeAttribute('aria-busy');}
  function status(text,retry){
   root.replaceChildren();const p=el('p',text);p.setAttribute('role','status');root.append(p);
   if(retry)root.append(button('ניסיון נוסף',()=>open()));
@@ -41,21 +39,14 @@
   if(!items.length){root.append(el('p','המורה מכינה כאן סיפורים לכיתה. אפשר לחזור בהמשך.'),button('רענון הספרייה',open));return;}
   const grid=el('div',null,'folders');
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
-  const publicTopics=topics.filter(t=>!['teacher-private','teacher-stories','kosher-stories'].includes(t.id));
-  const selectedTopics=[];
-  const teacherEnabled=['private','both','kosher-private','all'].includes(libraryMode);
-  if(teacherEnabled)selectedTopics.push(teacherTopic);
-  if(['kosher','kosher-public','kosher-private','all'].includes(libraryMode)&&items.some(kosherTopic.match))selectedTopics.push(kosherTopic);
-  const publicEnabled=['public','both','kosher-public','all'].includes(libraryMode);
-  const folderTopics=[...selectedTopics,...(publicEnabled?publicTopics:[])];
-  for(const t of folderTopics){
-   const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length&&t.id!==teacherTopic.id)continue;
+  for(const t of topics){
+   const stories=items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
    const b=button('',()=>shelf(t.id),'folder');b.dataset.folder=t.id;
-   b.setAttribute('aria-label',t.label+(stories.length?' · '+stories.length+' סיפורים':'')+(available.length?'. בפנים: '+available.map(f=>f.label).join(', '):''));
+   b.setAttribute('aria-label',t.label+' · '+stories.length+' סיפורים. בפנים: '+available.map(f=>f.label).join(', '));
    const art=el('span',t.icon,'folder-art');art.setAttribute('aria-hidden','true');
    const dots=el('span',null,'folder-formats');dots.setAttribute('aria-hidden','true');available.forEach(f=>dots.append(formatDot(f)));
-   b.append(art,el('span',t.label,'folder-title'),el('span',stories.length?stories.length+' סיפורים':'מהמורה שלך','folder-count'),dots);grid.append(b);
+   b.append(art,el('span',t.label,'folder-title'),el('span',stories.length+' סיפורים','folder-count'),dots);grid.append(b);
   }
   root.append(grid);
   const legend=el('details',null,'folder-format-key');legend.append(el('summary','מה אומרים הצבעים?'));const row=el('div',null,'folder-format-legend');
@@ -66,21 +57,12 @@
   h.focus({preventScroll:true});window.scrollTo(0,0);
  }
  function mixed(){
-  const privateState=window.BookiPrivateLibrary?.childState?.();
-  const all=activeTopic?.id===teacherTopic.id?(privateState?.teacherStories||[]):catalog(),queues=BookiChoice.formats.map(f=>all.filter(s=>BookiChoice.profile(s).format.id===f.id));
+  const all=catalog(),queues=BookiChoice.formats.map(f=>all.filter(s=>BookiChoice.profile(s).format.id===f.id));
   const out=[];while(queues.some(q=>q.length))for(const q of queues)if(q.length)out.push(q.shift());return out;
  }
- async function shelf(id){
+ function shelf(id){
   if(!valid())return open();
-  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:id===kosherTopic.id?kosherTopic:topics.find(t=>t.id===id))||allTopic;
-  if(id===teacherTopic.id){
-    root.replaceChildren();header(true);root.append(el('p','טוענים את הסיפורים מהמורה…'));
-    try{const r=reader(),teacher=await loadTeacherStoriesDirect(r?.clubId);teacherStories=teacher.stories||[];
-      if(!teacherStories.length){root.replaceChildren();header(true);root.append(el('p','המורה עדיין לא פרסמה כאן סיפורים. אפשר לחזור בהמשך.'));return;}
-      const byId=new Map(items.map(x=>[String(x.id),x]));teacherStories.forEach(x=>byId.set(String(x.id),x));items=[...byId.values()];
-    }catch(e){root.replaceChildren();header(true);root.append(el('p','לא הצלחנו לטעון את סיפורי המורה. נסו שוב בעוד רגע.'),button('ניסיון נוסף',()=>shelf(id)));return;}
-  }
-  root.replaceChildren();header(true);
+  closeChoice();activeTopic=topics.find(t=>t.id===id)||allTopic;root.replaceChildren();header(true);
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
   heading.append(h,el('p','איזה סיפור מסקרן אותך? לוחצים ומציצים.'));root.append(heading);
   const host=el('div',null,'shelf-view');root.append(host);
@@ -94,37 +76,13 @@
   }});
   h.focus({preventScroll:true});window.scrollTo(0,0);
  }
- async function loadTeacherStoriesDirect(clubId){
-  const a=auth();if(!a?.isAnonymous||!clubId)return {enabled:false,stories:[]};
-  const club=await window.db.collection('clubs').doc(clubId).get({source:'server'});
-  if(!club.exists)return {enabled:false,stories:[]};
-  const data=club.data()||{},mode=data.libraryMode||'public';
-  const enabled=['private','both','kosher-private','all'].includes(mode);
-  if(!enabled)return {enabled:false,stories:[],mode};
-  const uid=data.teacherUid;if(!uid)return {enabled:true,stories:[],mode};
-  // Published stories are readable to signed-in readers. Fetch them directly
-  // from the owning teacher; folder visibility is still controlled by libraryMode.
-  const snap=await window.db.collection('teacherLibraries').doc(uid).collection('stories').where('status','==','published').get({source:'server'});
-  const stories=snap.docs.map(doc=>window.BookiPrivateLibrary.toStory(doc,uid));
-  return {enabled:true,stories,mode};
- }
  async function load(){
   clear();const token=generation,context=key();screen.classList.add('booki-child-library-active');root.setAttribute('aria-busy','true');status('הסיפורים בדרך…');
   const current=()=>generation===token&&key()===context&&canUse()&&screen.classList.contains('active');
   try{
-   const r=reader(),club=await window.db.collection('clubs').doc(r.clubId).get({source:'server'});if(!current())return false;
-   if(!club.exists)throw Error('club-unavailable');
-   libraryMode=club.data().libraryMode||'public';
-   const teacherEnabled=['private','both','kosher-private','all'].includes(libraryMode);
-   teacherStories=[];
-   // Do not fetch teacher stories on the folder list. The folder exists from
-   // libraryMode and stories are fetched only when the child opens it.
-   if(!current())return false;
-   const ready=teacherEnabled?true:await window.BookiPrivateLibrary.refresh();if(!current())return false;
+   const ready=await window.BookiPrivateLibrary.refresh();if(!current())return false;
    if(ready===false)throw Error('catalog-unavailable');
-   items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);
-   if(teacherStories.length){const byId=new Map(items.map(x=>[String(x.id),x]));teacherStories.forEach(x=>byId.set(String(x.id),x));items=[...byId.values()];}
-   loaded=context;folders();return true;
+   items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);loaded=context;folders();return true;
   }catch(error){if(current()){items=[];loaded=null;status('לא הצלחנו לטעון את הספרייה. אפשר לנסות שוב.',true);}return false;}
   finally{if(generation===token)root.removeAttribute('aria-busy');}
  }
