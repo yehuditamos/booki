@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -100,11 +101,14 @@ jobs:
           if grep -q "toggleStudentCardPin" script.js; then echo "PIN control still active"; exit 1; fi
           echo "PIN-free card entry: OK"
 
+      - name: Package the production artifact
+        run: python3 scripts/package-pages.py
+
       - name: Static server smoke check
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m http.server 8080 --bind 127.0.0.1 >/tmp/booki-http.log 2>&1 &
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory .pages-public >/tmp/booki-http.log 2>&1 &
           server_pid=$!
           trap 'kill $server_pid 2>/dev/null || true' EXIT
           sleep 1
@@ -121,7 +125,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m http.server 8081 --bind 127.0.0.1 >/tmp/booki-browser-http.log 2>&1 &
+          python3 -m http.server 8081 --bind 127.0.0.1 --directory .pages-public >/tmp/booki-browser-http.log 2>&1 &
           server_pid=$!
           trap 'kill $server_pid 2>/dev/null || true' EXIT
           sleep 1

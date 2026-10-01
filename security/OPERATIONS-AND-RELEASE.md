@@ -49,10 +49,13 @@ retry/backlog growth. These targets have not yet been measured in production.
 
 ## Deployment controls
 
-Require Booki Runtime QA and Booki Security before merging main. Switch hosting to
-an explicit deployment workflow whose deploy job depends on both checks, then
-verify a deliberately failing staging change cannot deploy. The current branch
-Pages automation is not yet a protected deployment gate. Rules and client releases
+A tested Pages workflow is prepared: runtime and authorization jobs must both
+pass before the artifact can be packaged and deployed. Public artifacts omit
+recovery snapshots, security archives, test tooling and diagnostic repair scripts.
+Enable it by switching Pages source to GitHub Actions, and protect main with
+required Runtime QA and Security checks. Then verify a deliberately failing
+staging change cannot deploy. Until the Pages setting is changed and the workflow
+is exercised, the current branch Pages automation is not a protected deployment gate. Rules and client releases
 must be versioned together and validated against the actual active rules.
 
 ## Spend control

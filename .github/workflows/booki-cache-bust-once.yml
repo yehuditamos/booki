@@ -1,11 +1,10 @@
 name: Booki Cache Bust Once
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   cache-bust:
@@ -38,8 +37,4 @@ jobs:
           echo 'Changed runtime URLs:'
           git diff -- index.html initial-setup.js booki-local-listening.js pilot-loader-2026-09-10.js
 
-          git config user.name 'booki-runtime-bot'
-          git config user.email 'actions@users.noreply.github.com'
-          git add index.html initial-setup.js booki-local-listening.js pilot-loader-2026-09-10.js
-          git commit -m 'Force fresh Booki runtime assets [cache-bust-done]'
-          git push origin HEAD:main
+          echo 'Review these cache changes in a pull request; this workflow never pushes to main.'
