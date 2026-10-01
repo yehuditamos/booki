@@ -772,31 +772,20 @@ async function selectProfile(userId, clubIdHint) {
       await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
     }
 
-    // Sprint 11 — Part 2 (real fix): אחרי ensureStudentAuth(), אם ה-session החי כבר
-    // לא תואם ל-claimedByUid שנשמר (מהפעם שהכרטיס נתבע לראשונה) — ה-session המקורי
-    // אבד (private/incognito, ניקוי מטמון וכו', בדיוק כמו שכבר תועד ל-cachedStats/avatar
-    // למעלה). מתעדת מחדש (fbReclaimCard) כדי ש-ballots/messages, שבודקים claimedByUid
-    // בדיוק, ימשיכו לעבוד — ולא נשארים שבורים לצמיתות רק כי הדפדפן איפס session.
-    if (!isTeacherSession && membership.personalized && membership.claimedByUid) {
-      const _cardAuthUser = (typeof firebase !== 'undefined' && firebase.auth) ? firebase.auth().currentUser : null;
-      if (_cardAuthUser && _cardAuthUser.uid !== membership.claimedByUid) {
-        console.error('[SELECT PROFILE IDENTITY MISMATCH] (teacher-created card) — reclaiming', {
-          expected: membership.claimedByUid, received: _cardAuthUser.uid,
-          comparison: `membership.claimedByUid (${membership.claimedByUid}) vs live firebase.auth().currentUser.uid (${_cardAuthUser.uid}) after ensureStudentAuth()`,
-          sourceOfExpected: 'membership.claimedByUid — set at last (re-)claim of this card',
-          sourceOfReceived: 'firebase.auth().currentUser.uid — right after ensureStudentAuth()',
-          cardId: userId,
-        });
-        const reclaimed = typeof fbReclaimCard === 'function' ? await fbReclaimCard(targetClubId, userId) : false;
-        console.log('[SELECT PROFILE RECLAIM RESULT]', { cardId: userId, newClaimedByUid: _cardAuthUser.uid, ok: reclaimed });
-        if (reclaimed) membership.claimedByUid = _cardAuthUser.uid;
+    // A replacement anonymous identity must not silently take over an existing card.
+    if (!isTeacherSession) {
+      const reader = typeof firebase !== 'undefined' && firebase.auth
+        ? firebase.auth().currentUser : null;
+      if (!reader || reader.uid !== membership.claimedByUid) {
+        await window.bookiRequestDeviceAccess(targetClubId, userId, membership.name || userId);
+        return;
       }
     }
 
     _activeClubId        = targetClubId;
     window.currentClubId = targetClubId;
 
-    // Personalization only on first access; any device can enter once personalized
+    // Personalization follows teacher approval of this device identity.
     if (!membership.personalized && !isTeacherSession) {
       showMiniPersonalization(userId, targetClubId, membership.name || userId);
       return;

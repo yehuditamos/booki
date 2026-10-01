@@ -16,6 +16,15 @@ assert.equal((await ctx.window.BookiReadingSave.commit(input)).alreadySaved,true
 failCommit=true;await assert.rejects(ctx.window.BookiReadingSave.commit({...input,id:'qa_completion_2'}));assert.equal(data.get(key).cachedStats.totalMinutes,2);assert(!data.has(key+'/sessions/qa_completion_2'));failCommit=false;
 uid='other';await assert.rejects(ctx.window.BookiReadingSave.commit({...input,id:'qa_completion_3'}),e=>e.code==='reading/card-not-owned');uid='reader';
 await assert.rejects(ctx.window.BookiReadingSave.commit({...input,id:'qa_completion_4',entry:{type:'app',minutes:9999,points:3}}));
+// Retry a durable session after it has fallen out of the 50-entry cache.
+for(let i=0;i<55;i++)await ctx.window.BookiReadingSave.commit({...input,id:'qa_later_'+i});
+const beforeRetry=clone(data.get(key).cachedStats),beforeWallet=clone(data.get(wallet));
+assert(!beforeRetry.recentCompletionIds.includes(input.id));
+assert.equal((await ctx.window.BookiReadingSave.commit(input)).alreadySaved,true);
+assert.deepEqual(data.get(key).cachedStats,beforeRetry);assert.deepEqual(data.get(wallet),beforeWallet);
+await ctx.window.BookiReadingSave.commit({...input,id:'qa_numeric',entry:{type:'app',minutes:'2',points:'3'}});
+assert.equal(data.get(key).cachedStats.totalMinutes,beforeRetry.totalMinutes+2);
+assert.equal(data.get(wallet).balance,beforeWallet.balance+3);
 const r=vm.createContext({window:{}});vm.runInContext(source('roster-store.js'),r);const roster=r.window.BookiRosterStore;
 const slots=Array.from({length:30},(_,i)=>({userId:'slot'+i,name:'כרטיס פנוי '+String(i+1).padStart(2,'0'),createdByTeacher:true,cachedStats:{}}));
 const planned=roster.plan({rosterCapacity:30},slots,['א','ב','ג']);assert.equal(planned.rename.length,3);assert.equal(planned.create.length,0);assert.equal(planned.archive.length,0);

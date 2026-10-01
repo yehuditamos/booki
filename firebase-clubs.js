@@ -326,13 +326,9 @@ async function fbLoadClub(clubId) {
  */
 /** בודק אם קיים owner כלשהו ב-users — ללא hardcode של UID/email. */
 async function fbCheckOwnerExists() {
-  if (!_db()) return false;
-  try {
-    const snap = await _db().collection('users').where('role', '==', 'owner').limit(1).get();
-    return !snap.empty;
-  } catch {
-    return false;
-  }
+  // Production initialization is closed. Do not enumerate private user documents
+  // or reopen owner setup when a request fails or a sentinel is missing.
+  return true;
 }
 
 /**
@@ -591,26 +587,11 @@ async function fbUpdateMemberAvatar(clubId, userId, avatar) {
   }
 }
 
-/**
- * Sprint 11 — Part 2 (real fix): כרטיס שנוצר ע"י מורה ונתבע בעבר, אבל ה-session
- * האנונימי שתבע אותו אבד (private/incognito, ניקוי מטמון וכו') — claimedByUid
- * הישן כבר לא תואם ל-auth.uid החי, ו-ballots/messages (שבודקים claimedByUid==auth.uid
- * במדויק) נכשלים. מתעדת מחדש את claimedByUid ל-session הנוכחי — בדיוק אותה סיבה
- * שכבר קיימת בהערה ל-cachedStats/avatar (ר' firestore.rules), עכשיו גם ל-claimedByUid עצמו.
- */
-async function fbReclaimCard(clubId, cardId) {
-  if (!_db() || !clubId || !cardId) return false;
-  const authUser = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
-  if (!authUser) return false;
-  try {
-    await _db().collection('clubs').doc(clubId)
-      .collection('memberships').doc(cardId)
-      .update({ claimedByUid: authUser.uid, updatedAt: _now() });
-    return true;
-  } catch (e) {
-    console.warn('[firebase-clubs] fbReclaimCard error:', e.code, e.message);
-    return false;
-  }
+/** Silent card reassignment is disabled; use teacher-approved device recovery. */
+async function fbReclaimCard() {
+  // Selecting a name is not authorization to replace another device's identity.
+  // Recovery must be approved by the owning teacher; no student PIN is required.
+  return false;
 }
 
 // ─── ClubMembership ───────────────────────────────────────────────────────────

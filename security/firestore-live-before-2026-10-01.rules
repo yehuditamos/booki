@@ -31,10 +31,8 @@ service cloud.firestore {
       let c = get(/databases/$(database)/documents/clubs/$(clubId)).data;
       return isTeacher()
           && (c.get('teacherUid',   null) == request.auth.uid
-              || (request.auth.token.get('email_verified', false) == true
-                  && request.auth.token.get('email', null) != null
-                  && (c.get('teacherEmail', null) == request.auth.token.email
-                      || c.get('ownerEmail', null) == request.auth.token.email)));
+              || c.get('teacherEmail', null) == request.auth.token.email
+              || c.get('ownerEmail',   null) == request.auth.token.email);
     }
 
     function validMemberStatus(status) {
@@ -57,20 +55,16 @@ service cloud.firestore {
       allow update: if isOwner()
                     || (isTeacher() && (
                         resource.data.get('teacherUid',   null) == request.auth.uid
-                        || (request.auth.token.get('email_verified', false) == true
-                            && request.auth.token.get('email', null) != null
-                            && (resource.data.get('teacherEmail', null) == request.auth.token.email
-                                || resource.data.get('ownerEmail', null) == request.auth.token.email))))
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email))
                     // תלמיד (anonymous) יכול לעדכן memberCount בלבד — denormalization בטוחה
                     || (isSignedIn() &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']));
       allow delete: if isOwner()
                     || (isTeacher() && (
                         resource.data.get('teacherUid',   null) == request.auth.uid
-                        || (request.auth.token.get('email_verified', false) == true
-                            && request.auth.token.get('email', null) != null
-                            && (resource.data.get('teacherEmail', null) == request.auth.token.email
-                                || resource.data.get('ownerEmail', null) == request.auth.token.email))));
+                        || resource.data.get('teacherEmail', null) == request.auth.token.email
+                        || resource.data.get('ownerEmail',   null) == request.auth.token.email));
 
       match /memberships/{userId} {
         allow read: if true;
@@ -117,11 +111,10 @@ service cloud.firestore {
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                   && request.resource.data.status == 'left')
               ))
-          // Personalization requires a device identity already approved by the teacher.
+          // CLAIM: any signed-in session can personalize a teacher-created card not yet personalized
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
               && resource.data.get('personalized', false) == false
-              && resource.data.get('claimedByUid', null) == request.auth.uid
               && request.resource.data.claimedByUid == request.auth.uid
               && request.resource.data.get('personalized', false) == true
               && request.resource.data.diff(resource.data).affectedKeys()
@@ -133,37 +126,38 @@ service cloud.firestore {
               && resource.data.get('claimedByUid', null) == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'seenMessageIds', 'updatedAt']))
-          // Only the currently authorized device can update card stats and avatar.
+          // cachedStats + avatar: כרטיס שנוצר ע"י מורה ונתבע — מאפשר כל session מחובר
+          // נדרש כי ה-anonymous UID עשוי להשתנות בין sessions על אותו מכשיר
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
-              && resource.data.get('claimedByUid', null) == request.auth.uid
+              && resource.data.get('claimedByUid', null) != null
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'updatedAt', 'emoji', 'avatar']))
-          // A lost anonymous session is not proof of card ownership.
-          // Only the owning teacher/owner may approve a replacement device UID.
-          || ((isClubTeacher(clubId) || isOwner())
+          // RE-CLAIM (Sprint 11): אותה סיבה בדיוק כמו הענף הקודם (anon UID יכול להתחלף
+          // בין sessions על אותו מכשיר — session פרטי/incognito, ניקוי מטמון וכו') —
+          // אבל בעבר תוקן רק ל-cachedStats/avatar, לא ל-claimedByUid עצמו. בלי זה,
+          // ברגע שה-session המקורי שתבע כרטיס אבד, ballots/messages (שבודקים
+          // claimedByUid==auth.uid במדויק) נשארים שבורים לצמיתות גם אחרי חידוש ה-session.
+          // מוגבל בכוונה לשדה claimedByUid בלבד, ורק לזהות של הכותב/ת עצמו/ה — אף פעם לא מאפשר
+          // להשתלט על claimedByUid של מישהו אחר.
+          || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
-              && request.resource.data.claimedByUid is string
-              && request.resource.data.claimedByUid.size() > 0
-              && request.resource.data.claimedByUid.size() <= 128
+              && resource.data.get('claimedByUid', null) != null
+              && request.resource.data.claimedByUid == request.auth.uid
               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimedByUid', 'updatedAt']))
           // cachedStats/seenMessageIds: תלמיד רגיל (userId == auth.uid, ללא claimedByUid)
           || (isSignedIn()
               && isMe(userId)
               && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['cachedStats', 'seenMessageIds', 'updatedAt']));
-        allow delete: if isClubTeacher(clubId) || isOwner();
+        allow delete: if isTeacher();
 
         // sessions sub-collection — כרטיסי תלמיד שנוצרו ע"י מורה (Option B)
         match /sessions/{sessionId} {
-          allow read: if isOwner() || isClubTeacher(clubId)
-                        || (isSignedIn()
-                            && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(userId)).data.get('claimedByUid', null) == request.auth.uid);
+          allow read: if isOwner() || isClubTeacher(clubId);
           allow create: if isSignedIn()
                         && request.resource.data.claimedByUid == request.auth.uid
-                        && request.resource.data.studentCardId == userId
-                        && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(userId)).data.get('claimedByUid', null) == request.auth.uid
-                        && get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(userId)).data.get('status', 'active') != 'left';
+                        && request.resource.data.studentCardId == userId;
           allow update: if false;
           allow delete: if false;
         }
@@ -303,26 +297,6 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // A new device may ask, but only the owning teacher can authorize replacement.
-    match /deviceAccessRequests/{requestId} {
-      allow create: if isSignedIn()
-        && request.resource.data.keys().hasOnly(['requesterUid','clubId','cardId','status','createdAt'])
-        && request.resource.data.requesterUid == request.auth.uid
-        && request.resource.data.clubId is string && request.resource.data.clubId.size() <= 128
-        && request.resource.data.cardId is string && request.resource.data.cardId.size() <= 128
-        && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 40
-        && request.resource.data.status == 'pending'
-        && get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)/memberships/$(request.resource.data.cardId)).data.get('createdByTeacher', false) == true
-        && get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)/memberships/$(request.resource.data.cardId)).data.get('status', 'active') != 'left';
-      allow read: if isSignedIn() && (resource.data.requesterUid == request.auth.uid
-        || isClubTeacher(resource.data.clubId) || isOwner());
-      allow update: if (isClubTeacher(resource.data.clubId) || isOwner())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','reviewedAt','reviewedBy'])
-        && request.resource.data.status in ['approved','rejected']
-        && request.resource.data.reviewedBy == request.auth.uid;
-      allow delete: if false;
-    }
-
     // ─── Invitations ──────────────────────────────────────────────────────────
     match /invitations/{code} {
       allow read:   if true;
@@ -338,7 +312,7 @@ service cloud.firestore {
     // לאחר יצירה: immutable — רק Owner יכול למחוק (Dev Reset בלבד).
     match /config/setup {
       allow read:   if true;
-      allow create: if isOwner()
+      allow create: if isSignedIn()
                     && !exists(/databases/$(database)/documents/config/setup);
       allow update: if false;
       allow delete: if isOwner();
@@ -349,7 +323,7 @@ service cloud.firestore {
       let club = get(/databases/$(database)/documents/clubs/$(access.clubId)).data;
       let member = get(/databases/$(database)/documents/clubs/$(access.clubId)/memberships/$(access.memberId)).data;
       return isSignedIn() && club.teacherUid == teacherUid
-        && club.get('libraryMode', 'public') in ['private', 'both', 'kosher-private', 'all']
+        && club.get('libraryMode', 'public') in ['private', 'both']
         && member.get('status', 'active') != 'left'
         && (member.get('claimedByUid', null) == request.auth.uid || access.memberId == request.auth.uid);
     }
@@ -386,20 +360,30 @@ service cloud.firestore {
 
     // ─── Users ────────────────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isMe(userId) || isOwner();
+      allow read: if true;
 
-      // Production is already initialized. Ownership is never client-bootstrapped.
-      allow create: if isMe(userId)
-                    && request.resource.data.get('role', 'student') in ['student', 'teacher']
-                    && (request.resource.data.get('role', 'student') != 'teacher' || isTeacher());
+      // יצירה: role:'teacher' תמיד (הרשמה רגילה).
+      // role:'owner' מותר אך ורק כאשר config/setup עדיין אינו קיים (Initial Setup בלבד).
+      allow create: if isMe(userId) && (
+                      request.resource.data.get('role', 'teacher') == 'teacher'
+                      || (request.resource.data.role == 'owner'
+                          && !exists(/databases/$(database)/documents/config/setup))
+                    );
+
+      // עדכון: owner יכול לשנות כל שדה; מורה לא יכולה לשנות role.
+      // חריג: role:'owner' מותר כאשר config/setup אינו קיים (פונקציית dev חד-פעמית).
       allow update: if isOwner()
-                    || (isMe(userId)
-                        && request.resource.data.get('role', 'teacher') == resource.data.get('role', 'teacher'));
+                    || (isMe(userId) &&
+                        request.resource.data.get('role', resource.data.get('role', 'teacher'))
+                        == resource.data.get('role', 'teacher'))
+                    || (isMe(userId) &&
+                        request.resource.data.role == 'owner' &&
+                        !exists(/databases/$(database)/documents/config/setup));
 
       allow delete: if false;
 
       match /profile/{doc} {
-        allow read:  if isMe(userId) || isOwner();
+        allow read:  if true;
         allow write: if isMe(userId);
       }
 
