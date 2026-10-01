@@ -91,6 +91,16 @@ jobs:
           node scripts/test-booki-local-listening.js
           node scripts/test-release-flows.js
 
+      - name: Teacher dashboard lifecycle regression
+        run: node teacher-home.test.cjs
+
+      - name: Student PIN removal regression
+        shell: bash
+        run: |
+          if grep -q "membership?.pinHash" routing.js; then echo "PIN gate still active"; exit 1; fi
+          if grep -q "toggleStudentCardPin" script.js; then echo "PIN control still active"; exit 1; fi
+          echo "PIN-free card entry: OK"
+
       - name: Static server smoke check
         shell: bash
         run: |
