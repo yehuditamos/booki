@@ -81,9 +81,9 @@ with sync_playwright() as pw:
  p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null && BookiPrivateLibrary.childState().mode!=='loading'")
  diag=p.evaluate("""() => ({mode:qa.mode,state:BookiPrivateLibrary.childState(),folders:[...document.querySelectorAll('#booki-child-library .folder')].map(x=>x.dataset.folder),reads:qa.reads,writes:qa.writes})""")
  print('PRIVATE_ONLY_DIAG',json.dumps(diag,ensure_ascii=False))
- assert diag['state']['mode']=='private',diag
- assert diag['state']['teacherEnabled'] is True,diag
- assert len(diag['state']['teacherStories'])==1,diag
+ if diag['state']['mode']!='private': raise AssertionError('PRIVATE_STAGE_MODE '+json.dumps(diag,ensure_ascii=False))
+ if diag['state']['teacherEnabled'] is not True: raise AssertionError('PRIVATE_STAGE_ENABLED '+json.dumps(diag,ensure_ascii=False))
+ if len(diag['state']['teacherStories'])!=1: raise AssertionError('PRIVATE_STAGE_STORIES '+json.dumps(diag,ensure_ascii=False))
  assert diag['folders']==['teacher-stories'],diag
  private=p.locator('[data-folder="teacher-stories"]');assert private.count()==1,diag
  private.click()
