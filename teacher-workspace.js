@@ -211,7 +211,8 @@
     heading.textContent = teacher()?.name ? 'היי, ' + teacher().name : 'טוב לראות אותך';
     body.querySelectorAll('.teacher-management-only,.teacher-dashboard-guide,.btn-td-primary').forEach(node => node.remove());
     const head = screen.querySelector('.screen-header');
-    head.prepend(el('p', 'בוקי · המרחב שלך', 'tw-brand-label'));
+    head.querySelectorAll('.tw-brand-label').forEach(n=>n.remove());
+    if(!head.textContent.includes('בוקי · המרחב שלך'))head.prepend(el('p','בוקי · המרחב שלך','tw-brand-label'));
     const actions = el('section', undefined, 'tw-dashboard-actions'); actions.id = 'tw-dashboard-actions'; actions.setAttribute('aria-label', 'ספריות הסיפורים');
     const sectionTitle = body.querySelector('.td-section-title');
     const clubBar = el('div', undefined, 'tw-club-bar');
@@ -219,66 +220,37 @@
     const intro = el('div', undefined, 'tw-library-heading');
     intro.append(el('span', 'מילים שפותחות עולמות', 'tw-eyebrow'), el('h3', 'הסיפורים מתחילים כאן'));
     actions.append(intro);
-    const displayBox=el('section',undefined,'tw-display-folders');
-    displayBox.append(el('strong','מה יוצג לילדים?'),el('p','סמני את הספריות שתרצי להציג. אפשר לבחור יותר מאחת.'));
-    const displayChoices=el('div',undefined,'tw-display-choice-grid');
-    const defs=[['public','📚','ספריית בוקי'],['private','✍️','הספרייה הפרטית שלי'],['kosher','✡️','ספרייה כשרה']];
-    const selected=new Set(['public']);
-    const checks=[];
-    defs.forEach(([value,icon,label])=>{
-      const lab=el('label',undefined,'tw-display-choice');const input=document.createElement('input');input.type='checkbox';input.value=value;input.checked=value==='public';
-      input.onchange=()=>{input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
-      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));if(value==='public')lab.append(el('small','ברירת מחדל ראשונית · אפשר להסתיר','tw-default-library'));displayChoices.append(lab);checks.push(input);
-    });
-    const showDisplayConfirmation=(labels,clubCount)=>{
-      document.getElementById('tw-display-confirmation')?.remove();
-      const overlay=el('div',undefined,'tw-confirm-overlay');overlay.id='tw-display-confirmation';
-      const box=el('div',undefined,'tw-confirm-box');
-      box.append(el('div','✓','tw-confirm-check'),el('h2','הספריות עודכנו!'),el('p','מעכשיו הילדים בכל המועדונים שלך רואים:'));
-      const list=el('div',undefined,'tw-confirm-list');labels.forEach(x=>list.append(el('div',x)));box.append(list,el('small','הוחל על '+clubCount+' מועדונים'));
-      const done=btn('מעולה, תודה 💛',()=>overlay.remove(),'tw-confirm-done');box.append(done);overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);done.focus({preventScroll:true});
-    };
-    const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
+    const status=el('p','טוענת את הבחירה השמורה…','tw-display-status');
     const modeSelections={public:['public'],private:['private'],both:['public','private'],kosher:['kosher'],'kosher-private':['private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
-    const modeRank={public:0,kosher:1,'kosher-public':1,private:2,both:2,'kosher-private':3,all:3};
-    const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});};
-    const loadSavedDisplay=async()=>{
+    const selected=new Set(['public']);
+    const cards=new Map();
+    const defs=[
+      ['public','סיפורי בוקי','לעיון בסיפורים של בוקי',()=>openLibrary(),false],
+      ['private','הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true],
+      ['kosher','ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>openLibrary('kosher'),false]
+    ];
+    const saveSelection=async()=>{
       const a=teacher();if(!a)return;
-      status.textContent='טוענת את הבחירה השמורה…';
-      try{
-        const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});
-        const active=snap.docs.filter(d=>!d.data().hidden);
-        if(!active.length){syncDisplayChecks(['public']);status.textContent='ספריית בוקי מוצגת כברירת מחדל.';return;}
-        const modes=[...new Set(active.map(d=>d.data().libraryMode||'public'))];
-        // Never let a legacy/default club visually erase a saved optional library.
-        // This is a global control, so show the union of what is currently enabled
-        // anywhere; Apply then normalizes that exact selection to every club.
-        const union=new Set();modes.forEach(mode=>(modeSelections[mode]||['public']).forEach(v=>union.add(v)));syncDisplayChecks([...union]);
-        status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. הסימון מציג את כולן; לחצי „החל על כל המועדונים” כדי לאחד.':'זו הבחירה השמורה כרגע בכל המועדונים.';
-      }catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה. הבחירה בשרת לא השתנתה.';}
-    };
-    loadSavedDisplay();
-
-    const apply=btn('החל על כל המועדונים',async()=>{
-      const a=teacher();if(!a)return;
-      apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
       const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
-      const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
-      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));const verify=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const bad=verify.docs.filter(d=>!d.data().hidden&&(d.data().libraryMode||'public')!==mode);if(bad.length)throw Error('library-mode-not-persisted');status.textContent='נשמר ✓ מעכשיו רק הספריות המסומנות יוצגו לילדים בכל המועדונים.';const labels=[];if(selected.has('public'))labels.push('📚 ספריית בוקי');if(selected.has('private'))labels.push('💌 הסיפורים מהמורה');if(selected.has('kosher'))labels.push('✡️ ספרייה כשרה');showDisplayConfirmation(labels,active.length);}
-      catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}finally{apply.disabled=false;}
-    },'tw-apply-display');
-    displayBox.append(displayChoices,apply,status);actions.append(displayBox);
-    const pair = el('div', undefined, 'tw-library-pair');
-    const shelf = (title, copy, run, personal) => {
-      const card = btn('', run, 'tw-library-link' + (personal ? ' tw-library-personal' : ''));
-      const art = el('span', undefined, 'tw-book-art'); art.setAttribute('aria-hidden','true');
-      for(let i=0;i<3;i++) art.append(el('i'));
-      const text = el('span', undefined, 'tw-library-copy');
-      text.append(el('strong',title),el('small',copy));
-      card.append(art,text,el('span','←','tw-library-arrow'));return card;
+      const mode=map[key];if(!mode){status.textContent='בחרי לפחות ספרייה אחת להצגה.';return;}
+      status.textContent='שומרת…';
+      try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);await Promise.all(active.map(d=>d.ref.update({libraryMode:mode})));status.textContent='נשמר ✓ הבחירה חלה על כל המועדונים.';}
+      catch(e){status.textContent='לא הצלחנו לשמור. נסי שוב.';}
     };
-    pair.append(shelf('סיפורי בוקי','לעיון בסיפורים של בוקי',openLibrary,false),shelf('הספרייה הפרטית שלי','להוסיף ולערוך את הסיפורים שלך',()=>window.BookiPrivateLibrary?.open(),true),shelf('ספרייה כשרה','לעיון בסיפורי הצדיקים',()=>openLibrary('kosher'),false));
-    actions.append(pair); body.append(actions);
+    const renderSelected=()=>cards.forEach((card,value)=>{const on=selected.has(value);card.classList.toggle('is-selected',on);card.querySelector('.tw-library-check').textContent=on?'✓':'';card.querySelector('.tw-library-check').setAttribute('aria-label',on?'מוצג לילדים':'לא מוצג לילדים');});
+    const pair=el('div',undefined,'tw-library-pair');
+    defs.forEach(([value,title,copy,run,personal])=>{
+      const card=el('div',undefined,'tw-library-link tw-library-selectable'+(personal?' tw-library-personal':''));
+      const toggle=btn('',async e=>{},'tw-library-check');toggle.setAttribute('aria-label','בחירת הצגה לילדים');
+      toggle.onclick=async ev=>{ev.stopPropagation();selected.has(value)?selected.delete(value):selected.add(value);if(!selected.size){selected.add(value);status.textContent='לפחות ספרייה אחת צריכה להישאר מוצגת.';}renderSelected();await saveSelection();};
+      const nav=btn('',run,'tw-library-main');
+      const art=el('span',undefined,'tw-book-art');art.setAttribute('aria-hidden','true');for(let i=0;i<3;i++)art.append(el('i'));
+      const text=el('span',undefined,'tw-library-copy');text.append(el('strong',title),el('small',copy));
+      nav.append(art,text,el('span','←','tw-library-arrow'));card.append(toggle,nav);pair.append(card);cards.set(value,card);
+    });
+    actions.append(pair,status);body.append(actions);renderSelected();
+    (async()=>{const a=teacher();if(!a)return;try{const snap=await window.db.collection('clubs').where('teacherUid','==',a.uid).get({source:'server'});const active=snap.docs.filter(d=>!d.data().hidden);const union=new Set();active.forEach(d=>(modeSelections[d.data().libraryMode||'public']||['public']).forEach(v=>union.add(v)));selected.clear();(union.size?union:new Set(['public'])).forEach(v=>selected.add(v));renderSelected();status.textContent='✓ מסומן מה מוצג לילדים';}catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה.';}})();
+
     const footer = el('footer', undefined, 'tw-home-footer');
     footer.append(btn('יש לך רעיון לבוקי?', () => openFeedback(), 'tw-footer-link'));
     const existingActions=screen.querySelector('.header-actions');
