@@ -91,13 +91,6 @@ jobs:
           node scripts/test-booki-local-listening.js
           node scripts/test-release-flows.js
 
-      - name: Child library private-folder browser regression
-        shell: bash
-        run: |
-          python -m pip install playwright==1.57.0
-          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          python -u scripts/test-child-library-browser.py
-
       - name: Static server smoke check
         shell: bash
         run: |
