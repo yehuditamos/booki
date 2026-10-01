@@ -411,9 +411,6 @@
       const last=element('small','קריאה אחרונה: '+lastRead(st.lastReadAt));
       const storyToggle=button('📚 אילו סיפורים?',()=>_toggleTeacherReadingDetail(card,id,m),'booki-reading-stories-toggle');
       card.append(top,detail,last,storyToggle);
-catch(e){reset.disabled=false;reset.textContent='איפוס קוד';alert('לא הצלחנו לאפס את הקוד. נסי שוב.');}
-        },'booki-pin-reset');pinRow.append(reset);card.append(pinRow);
-      }
       if(!empty){
         const encouragementState=element('small','בודק אם העידוד נקרא…','booki-encouragement-state');card.append(encouragementState);
         _teacherEncouragementStatus(id,m).then(st=>{if(!encouragementState.isConnected)return;encouragementState.textContent=!st?'עדיין לא נשלח עידוד':st.seen?'✓ העידוד האחרון נקרא':'💌 העידוד האחרון עדיין לא נקרא';encouragementState.dataset.seen=st?.seen?'1':'0';});
