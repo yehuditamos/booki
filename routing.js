@@ -758,29 +758,7 @@ async function selectProfile(userId, clubIdHint) {
     targetClubId && typeof fbLoadClubMembership === 'function'
       ? fbLoadClubMembership(targetClubId, userId) : Promise.resolve(null),
   ]);
-  if(membership && targetClubId && !membership.pinHash && !membership.pinOfferSeen){
-    const wants=await _bookiOfferPin(membership.name||profile?.name||userId);
-    if(wants){
-      const saved=await _bookiCreatePinForCard(targetClubId,userId);
-      if(saved)membership.pinHash=true;
-    }else{
-      try{await window.db.collection('clubs').doc(targetClubId).collection('memberships').doc(String(userId)).update({pinOfferSeen:true,updatedAt:new Date().toISOString()});membership.pinOfferSeen=true;}catch(e){console.warn('[booki] pin offer seen',e.code||e.message);}
-    }
-  }
-  if(membership?.pinHash){
-    // A PIN created in this same click has already been verified twice while setting it.
-    if(membership.pinHash===true){membership.pinHash='';}else{
-    const pin=await _bookiAskPin(membership.name||profile?.name||userId);
-    if(pin===null)return;
-    const lockKey='booki_pin_fail_'+targetClubId+'_'+userId,lock=JSON.parse(sessionStorage.getItem(lockKey)||'{"n":0,"until":0}');
-    if(lock.until>Date.now()){alert('נחכה עוד רגע לפני שמנסים שוב 💛');return;}
-    if(!/^\d{4}$/.test(pin)||_bookiPinHash(pin,membership.pinSalt||userId)!==membership.pinHash){
-      lock.n=(lock.n||0)+1;if(lock.n>=5){lock.n=0;lock.until=Date.now()+60000;}sessionStorage.setItem(lockKey,JSON.stringify(lock));
-      alert(lock.until>Date.now()?'ניסינו כמה פעמים. נחכה דקה וננסה שוב 💛':'הקוד לא נכון. נסו שוב.');return;
-    }
-    sessionStorage.removeItem(lockKey);
-    }
-  }
+
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
   if (membership?.createdByTeacher) {
