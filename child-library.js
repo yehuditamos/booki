@@ -47,7 +47,8 @@
   const selectedTopics=[];
   if(teacherStories.length)selectedTopics.push(teacherTopic);
   if(privateState.valid&&['kosher','kosher-public','kosher-private','all'].includes(privateState.mode)&&items.some(kosherTopic.match))selectedTopics.push(kosherTopic);
-  const folderTopics=[...selectedTopics,...publicTopics];
+  const publicEnabled=!privateState.valid||['public','both','kosher-public','all'].includes(privateState.mode);
+  const folderTopics=[...selectedTopics,...(publicEnabled?publicTopics:[])];
   for(const t of folderTopics){
    const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
