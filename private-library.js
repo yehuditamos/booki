@@ -131,7 +131,7 @@
   if(teacher())return publicStories;
   const r=typeof getActiveReader==='function'?getActiveReader():null;
   if(!r?.clubId)return publicStories;
-  if(state.clubId!==r.clubId||state.userId!==r.userId||state.authUid!==auth()?.uid)return [];
+  if(state.clubId!==r.clubId||state.authUid!==auth()?.uid)return [];
   return ['public','kosher','kosher-public'].includes(state.mode)?visiblePublicByMode(publicStories,state.mode):state.mode==='private'?state.items:state.mode==='both'?[...publicStories,...state.items]:state.mode==='kosher-private'?[...kosherStories(publicStories),...state.items]:state.mode==='all'?[...publicStories,...state.items]:[];
  }
  async function refresh(){
@@ -140,7 +140,10 @@
  }
  function childState(){
   const r=typeof getActiveReader==='function'?getActiveReader():null;
-  const valid=!!r?.clubId&&state.clubId===r.clubId&&state.userId===r.userId&&state.authUid===auth()?.uid;
+  // club + auth are the security context. activeReader.userId may legitimately
+  // differ from the stable teacher-created card id after reclaim, so it must not
+  // suppress a library that was already server-scoped to this authenticated child.
+  const valid=!!r?.clubId&&state.clubId===r.clubId&&state.authUid===auth()?.uid;
   return {valid,mode:state.mode,teacherStories:valid?[...state.items]:[],teacherEnabled:valid&&['private','both','kosher-private','all'].includes(state.mode)};
  }
  function privateCategories(){
