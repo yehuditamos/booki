@@ -25,5 +25,6 @@ jobs:
       - run: npm ci --prefix tests/private-library --ignore-scripts --no-audit --no-fund
       - run: node tests/private-library/device-ui.cjs
       - run: node scripts/test-release-flows.js
+      - run: node scripts/test-pilot-containment.cjs
       - name: Firestore negative and positive authorization tests
         run: tests/private-library/node_modules/.bin/firebase emulators:exec --only firestore --project demo-booki-private --config firebase.security.json 'node tests/private-library/rules.cjs && node tests/private-library/security.cjs'

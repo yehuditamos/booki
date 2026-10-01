@@ -1,6 +1,6 @@
 # Booki security work — 2026-10-01
 
-Status: first patch tested locally; production deployment not yet completed.
+Status: first patch deployed. PR #42 merged at fb75da5c08e46d7442b38e2af36b934da94c8e28; Runtime QA and Security both passed on d10cc67531c20021e51a0e4ed007c74e8e13dc3f. New client module observed on the live Pages site. Matching rules published in Firebase console on 2026-10-01 at 20:06 UTC (console displays 23:06 local). The Supabase experiment endpoint is paused with deployed version 2. Its existing records were not modified.
 This is not an end-to-end security certification or a production load certification.
 
 ## Verified boundaries
@@ -66,9 +66,9 @@ No production child data was created, modified or removed by these tests.
   or retire them while preserving all existing reading history.
 - Wallet/stat mutations still trust client arithmetic. Move reward accounting to a
   validated, idempotent server operation; verify bounds and per-class authorization.
-- Supabase experiment must move to an isolated project or be disabled pending
-  isolation. Existing function needs request limits, expiry, abuse control and
-  awaited save confirmation. No arbitrary RLS policy should be added to shared
+- Supabase experiment is disabled pending isolation. Version 2 returns 503 and
+  makes no database calls or credential reads. Reopening requires an isolated backend,
+  request limits, expiry, abuse control and awaited save confirmation. No arbitrary RLS policy should be added to shared
   Mia Social tables without mapping its consumers.
 - Firebase is on Spark ($0/month), observed in console. Server infrastructure and
   scheduled managed backups require billing decisions. Do not silently switch plans.
