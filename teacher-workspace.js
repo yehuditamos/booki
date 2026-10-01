@@ -212,7 +212,8 @@
     body.querySelectorAll('.teacher-management-only,.teacher-dashboard-guide,.btn-td-primary').forEach(node => node.remove());
     const head = screen.querySelector('.screen-header');
     head.querySelectorAll('.tw-brand-label').forEach(n=>n.remove());
-    if(!head.textContent.includes('בוקי · המרחב שלך'))head.prepend(el('p','בוקי · המרחב שלך','tw-brand-label'));
+    const nativeBrand=[...head.querySelectorAll('p,span,strong')].find(n=>n.textContent.trim()==='בוקי · המרחב שלך');
+    if(!nativeBrand)head.prepend(el('p','בוקי · המרחב שלך','tw-brand-label'));
     const actions = el('section', undefined, 'tw-dashboard-actions'); actions.id = 'tw-dashboard-actions'; actions.setAttribute('aria-label', 'ספריות הסיפורים');
     const sectionTitle = body.querySelector('.td-section-title');
     const clubBar = el('div', undefined, 'tw-club-bar');
