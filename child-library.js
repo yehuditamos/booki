@@ -102,11 +102,11 @@
   const enabled=['private','both','kosher-private','all'].includes(mode);
   if(!enabled)return {enabled:false,stories:[],mode};
   const uid=data.teacherUid;if(!uid)return {enabled:true,stories:[],mode};
-  // Reuse the security-scoped loader only for authorization and conversion,
-  // but the child folder itself is driven directly by the club selection.
-  await window.BookiPrivateLibrary.prepare(clubId,reader()?.userId);
-  const state=window.BookiPrivateLibrary.childState?.()||{};
-  return {enabled:true,stories:Array.isArray(state.teacherStories)?state.teacherStories:[],mode};
+  // Published stories are readable to signed-in readers. Fetch them directly
+  // from the owning teacher; folder visibility is still controlled by libraryMode.
+  const snap=await window.db.collection('teacherLibraries').doc(uid).collection('stories').where('status','==','published').get({source:'server'});
+  const stories=snap.docs.map(doc=>window.BookiPrivateLibrary.toStory(doc,uid));
+  return {enabled:true,stories,mode};
  }
  async function load(){
   clear();const token=generation,context=key();screen.classList.add('booki-child-library-active');root.setAttribute('aria-busy','true');status('הסיפורים בדרך…');
@@ -117,12 +117,11 @@
    libraryMode=club.data().libraryMode||'public';
    const teacherEnabled=['private','both','kosher-private','all'].includes(libraryMode);
    teacherStories=[];
-   if(teacherEnabled){
-     try{const teacher=await loadTeacherStoriesDirect(r.clubId);teacherStories=teacher.stories||[];}catch(e){console.warn('[booki] teacher stories unavailable',e?.code||e?.message);}
-   }
+   // Do not fetch teacher stories on the folder list. The folder exists from
+   // libraryMode and stories are fetched only when the child opens it.
    if(!current())return false;
-   const ready=await window.BookiPrivateLibrary.refresh();if(!current())return false;
-   if(ready===false&&!teacherEnabled)throw Error('catalog-unavailable');
+   const ready=teacherEnabled?true:await window.BookiPrivateLibrary.refresh();if(!current())return false;
+   if(ready===false)throw Error('catalog-unavailable');
    items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);
    if(teacherStories.length){const byId=new Map(items.map(x=>[String(x.id),x]));teacherStories.forEach(x=>byId.set(String(x.id),x));items=[...byId.values()];}
    loaded=context;folders();return true;
