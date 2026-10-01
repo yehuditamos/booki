@@ -83,12 +83,13 @@ with sync_playwright() as pw:
  print('PRIVATE_ONLY_DIAG',json.dumps(diag,ensure_ascii=False))
  if diag['state']['mode']!='private': raise AssertionError('PRIVATE_STAGE_MODE '+json.dumps(diag,ensure_ascii=False))
  if diag['state']['teacherEnabled'] is not True: raise AssertionError('PRIVATE_STAGE_ENABLED '+json.dumps(diag,ensure_ascii=False))
- if len(diag['state']['teacherStories'])!=1: raise AssertionError('PRIVATE_STAGE_STORIES '+json.dumps(diag,ensure_ascii=False))
+ # New contract: folder existence is driven by saved mode, not by preloaded stories.
  assert diag['folders']==['teacher-stories'],diag
  private=p.locator('[data-folder="teacher-stories"]');assert private.count()==1,diag
  private.click()
- assert p.locator('.shelf-view .cc-browse .cc-card').count()==1,diag
- assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text(),diag
+ p.wait_for_function("document.querySelector('.shelf-view .cc-browse .cc-card') || document.querySelector('#booki-child-library')?.textContent.includes('עדיין לא פרסמה')")
+ assert p.locator('.shelf-view .cc-browse .cc-card').count()==1,p.locator('#booki-child-library').inner_text()
+ assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text()
  report.append({'private_only_teacher_folder':'passed','diagnostic':diag})
  # Broken refresh must fail closed, retry recovers without stale private text.
  p.evaluate("qa.fail=true;showLibrary()");assert 'ניסיון נוסף' in p.locator('#booki-child-library').inner_text();assert p.locator('#booki-child-library .folder').count()==0
