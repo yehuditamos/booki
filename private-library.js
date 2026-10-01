@@ -87,32 +87,16 @@
    // whole library because a teacher has no published stories yet or an access
    // grant/rules deployment is temporarily unavailable.
    try{
-     // Resolve the membership without assuming activeReader.userId equals the
-     // stable membership document id. Teacher-created cards often use a stable
-     // card id plus claimedByUid.
-     let stableMemberId=null;
-     const direct=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(String(userId)).get({source:'server'});
-     if(direct.exists)stableMemberId=direct.id;
-     if(!stableMemberId){
-       const claimed=await window.db.collection('clubs').doc(clubId).collection('memberships').where('claimedByUid','==',a.uid).get({source:'server'});
-       const activeClaim=claimed.docs.find(d=>(d.data()?.status||'active')!=='left');
-       if(activeClaim)stableMemberId=activeClaim.id;
-     }
-     // Self-joined cards are keyed by auth uid.
-     if(!stableMemberId){
-       const self=await window.db.collection('clubs').doc(clubId).collection('memberships').doc(a.uid).get({source:'server'});
-       if(self.exists)stableMemberId=self.id;
-     }
+     // The active reader id is the stable membership/card id. The routing flow
+     // already reclaims teacher-created cards to the current anonymous auth UID
+     // before entering the child home, so there is no need for a second identity
+     // discovery query here.
+     const stableMemberId=String(userId||'');
      if(!stableMemberId)throw Error('membership');
-     // The access grant is an optimization for server-side scoping. If an old
-     // rules deployment rejects writing it, do not silently erase the teacher
-     // shelf: try the already-authorized published read first and surface a real
-     // failure only if that read is denied too.
-     try{await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});}
-     catch(grantError){console.warn('[booki] teacher-library grant write',grantError?.code||grantError?.message);}
+     await window.db.collection('teacherLibraryAccess').doc(uid).collection('readers').doc(a.uid).set({clubId,memberId:stableMemberId});
      const items=await published(uid);
      if(request!==version||auth()?.uid!==a.uid)return false;
-     state={clubId,userId,authUid:a?.uid,mode,items};return true;
+     state={clubId,userId,authUid:a.uid,mode,items};return true;
    }catch(privateError){
      console.warn('[booki] private catalog unavailable; keeping selected public catalog',privateError?.code||privateError?.message);
      if(request!==version||auth()?.uid!==a.uid)return false;
