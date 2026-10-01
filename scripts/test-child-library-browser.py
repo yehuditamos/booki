@@ -88,6 +88,7 @@ with sync_playwright() as pw:
    assert p.locator('#booki-child-library .folder').first.get_attribute('data-folder')=='teacher-stories'
    private.click();assert p.locator('.shelf-view .cc-browse .cc-card').count()==1
    assert 'סיפור הכיתה לבדיקה' in p.locator('.shelf-view').inner_text();p.evaluate('BookiChildLibrary.back()')
+   p.wait_for_function("document.querySelector('#booki-child-library')?.getAttribute('aria-busy')===null")
   if want_public:
    assert p.locator('[data-folder="friends"]').count()==1,(mode,'public missing')
   else:
