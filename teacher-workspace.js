@@ -227,9 +227,8 @@
     const checks=[];
     defs.forEach(([value,icon,label])=>{
       const lab=el('label',undefined,'tw-display-choice');const input=document.createElement('input');input.type='checkbox';input.value=value;input.checked=value==='public';
-      if(value==='public'){input.checked=true;input.disabled=true;input.setAttribute('aria-label','ספריית בוקי תמיד מוצגת');selected.add('public');}
-      input.onchange=()=>{if(value==='public'){input.checked=true;selected.add('public');return;}input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
-      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));if(value==='public')lab.append(el('small','ברירת מחדל · תמיד מוצגת','tw-default-library'));displayChoices.append(lab);checks.push(input);
+      input.onchange=()=>{input.checked?selected.add(value):selected.delete(value);lab.classList.toggle('is-selected',input.checked);};
+      lab.classList.toggle('is-selected',input.checked);lab.append(input,el('span',icon,'tw-display-icon'),el('span',label));if(value==='public')lab.append(el('small','ברירת מחדל ראשונית · אפשר להסתיר','tw-default-library'));displayChoices.append(lab);checks.push(input);
     });
     const showDisplayConfirmation=(labels,clubCount)=>{
       document.getElementById('tw-display-confirmation')?.remove();
@@ -240,7 +239,7 @@
       const done=btn('מעולה, תודה 💛',()=>overlay.remove(),'tw-confirm-done');box.append(done);overlay.append(box);overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};document.body.append(overlay);done.focus({preventScroll:true});
     };
     const status=el('p','כרגע רק הספריות המסומנות יוצגו לילדים.','tw-display-status');
-    const modeSelections={public:['public'],private:['public','private'],both:['public','private'],kosher:['public','kosher'],'kosher-private':['public','private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
+    const modeSelections={public:['public'],private:['private'],both:['public','private'],kosher:['kosher'],'kosher-private':['private','kosher'],'kosher-public':['public','kosher'],all:['public','private','kosher']};
     const modeRank={public:0,kosher:1,'kosher-public':1,private:2,both:2,'kosher-private':3,all:3};
     const syncDisplayChecks=values=>{selected.clear();values.forEach(v=>selected.add(v));checks.forEach(input=>{input.checked=selected.has(input.value);input.closest('.tw-display-choice')?.classList.toggle('is-selected',input.checked);});selected.add('public');};
     const loadSavedDisplay=async()=>{
@@ -254,14 +253,14 @@
         // Never let a legacy/default club visually erase a saved optional library.
         // This is a global control, so show the union of what is currently enabled
         // anywhere; Apply then normalizes that exact selection to every club.
-        const union=new Set(['public']);modes.forEach(mode=>(modeSelections[mode]||['public']).forEach(v=>union.add(v)));syncDisplayChecks([...union]);
+        const union=new Set();modes.forEach(mode=>(modeSelections[mode]||['public']).forEach(v=>union.add(v)));syncDisplayChecks([...union]);
         status.textContent=modes.length>1?'יש כרגע בחירות שונות בין המועדונים. הסימון מציג את כולן; לחצי „החל על כל המועדונים” כדי לאחד.':'זו הבחירה השמורה כרגע בכל המועדונים.';
       }catch(e){status.textContent='לא הצלחנו לטעון את הבחירה השמורה. הבחירה בשרת לא השתנתה.';}
     };
     loadSavedDisplay();
 
     const apply=btn('החל על כל המועדונים',async()=>{
-      const a=teacher();selected.add('public');if(!a)return;
+      const a=teacher();if(!a)return;
       apply.disabled=true;status.textContent='שומרת לכל המועדונים…';
       const key=[...selected].sort().join('+'),map={'public':'public','private':'private','kosher':'kosher','private+public':'both','kosher+private':'kosher-private','kosher+public':'kosher-public','kosher+private+public':'all'};
       const mode=map[key];if(!mode){status.textContent='לא ניתן לשמור את הבחירה.';apply.disabled=false;return;}
