@@ -89,19 +89,30 @@
   }});
   h.focus({preventScroll:true});window.scrollTo(0,0);
  }
+ async function loadTeacherStoriesDirect(clubId){
+  const a=auth();if(!a?.isAnonymous||!clubId)return {enabled:false,stories:[]};
+  const club=await window.db.collection('clubs').doc(clubId).get({source:'server'});
+  if(!club.exists)return {enabled:false,stories:[]};
+  const data=club.data()||{},mode=data.libraryMode||'public';
+  const enabled=['private','both','kosher-private','all'].includes(mode);
+  if(!enabled)return {enabled:false,stories:[],mode};
+  const uid=data.teacherUid;if(!uid)return {enabled:true,stories:[],mode};
+  // Reuse the security-scoped loader only for authorization and conversion,
+  // but the child folder itself is driven directly by the club selection.
+  await window.BookiPrivateLibrary.prepare(clubId,reader()?.userId);
+  const state=window.BookiPrivateLibrary.childState?.()||{};
+  return {enabled:true,stories:Array.isArray(state.teacherStories)?state.teacherStories:[],mode};
+ }
  async function load(){
   clear();const token=generation,context=key();screen.classList.add('booki-child-library-active');root.setAttribute('aria-busy','true');status('הסיפורים בדרך…');
   const current=()=>generation===token&&key()===context&&canUse()&&screen.classList.contains('active');
   try{
+   const r=reader(),teacher=await loadTeacherStoriesDirect(r?.clubId);if(!current())return false;
    const ready=await window.BookiPrivateLibrary.refresh();if(!current())return false;
    if(ready===false)throw Error('catalog-unavailable');
    items=getAllStories().filter(s=>s?.id!=null&&Array.isArray(s.pages)&&BookiChoice.profile(s).format);
-   // Defensive merge: private stories are scoped by BookiPrivateLibrary state.
-   // getAllStories may be wrapped/cached by older catalog code, so merge the
-   // scoped visible result explicitly before folder construction.
-   const scoped=window.BookiPrivateLibrary.visible(Array.isArray(STORIES)?[...STORIES]:items);
-   if(Array.isArray(scoped)){
-     const byId=new Map(items.map(x=>[String(x.id),x]));scoped.forEach(x=>{if(x?.id!=null&&Array.isArray(x.pages))byId.set(String(x.id),x);});items=[...byId.values()];
+   if(teacher.enabled&&teacher.stories.length){
+     const byId=new Map(items.map(x=>[String(x.id),x]));teacher.stories.forEach(x=>byId.set(String(x.id),x));items=[...byId.values()];
    }
    loaded=context;folders();return true;
   }catch(error){if(current()){items=[];loaded=null;status('לא הצלחנו לטעון את הספרייה. אפשר לנסות שוב.',true);}return false;}
