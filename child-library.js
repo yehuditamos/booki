@@ -13,6 +13,7 @@
  let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve();
  const topics=window.BookiChildTopics;
  const teacherTopic={id:'teacher-stories',label:'הַסִּפּוּרִים מֵהַמּוֹרָה',icon:'💌',match:s=>s?.libraryId==='teacher-private'};
+ const kosherTopic={id:'kosher-library',label:'הַסִּפְרִיָּה הַכְּשֵׁרָה',icon:'📜',match:s=>s?.libraryId==='kosher'||s?.tags?.includes?.('כשר')};
  const allTopic={id:'all',label:'כָּל הַסִּפּוּרִים',icon:'📚',match:()=>true};
  const valid=()=>canUse()&&loaded===key()&&screen.classList.contains('active');
  const catalog=()=>valid()?items.filter(s=>activeTopic?.match(s)??true):[];
@@ -42,7 +43,9 @@
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
   const privateState=window.BookiPrivateLibrary?.childState?.()||{};
   const teacherStories=privateState.teacherEnabled&&privateState.valid?(privateState.teacherStories||[]):[];
-  const folderTopics=teacherStories.length?[teacherTopic,...topics.filter(t=>t.id!==teacherTopic.id)]:topics;
+  const kosherEnabled=privateState.valid&&['kosher','kosher-public','kosher-private','all'].includes(privateState.mode);
+  const baseTopics=topics.filter(t=>t.id!==teacherTopic.id&&t.id!==kosherTopic.id);
+  const folderTopics=[...(teacherStories.length?[teacherTopic]:[]),...(kosherEnabled?[kosherTopic]:[]),...baseTopics];
   for(const t of folderTopics){
    const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
@@ -67,7 +70,7 @@
  }
  function shelf(id){
   if(!valid())return open();
-  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
+  closeChoice();activeTopic=(id===teacherTopic.id?teacherTopic:id===kosherTopic.id?kosherTopic:topics.find(t=>t.id===id))||allTopic;root.replaceChildren();header(true);
   const privateState=id===teacherTopic.id?window.BookiPrivateLibrary?.childState?.():null;
   if(id===teacherTopic.id&&(!privateState?.teacherEnabled||!privateState?.valid)){folders();return;}
   const heading=el('header',null,'shelf-head'),h=el('h1',activeTopic.icon+' '+activeTopic.label);h.tabIndex=-1;
@@ -108,7 +111,7 @@
  function open(){showScreen('screen-library');return pending;}
  function back(){if(activeTopic)folders();else home();}
  const refreshVisible=()=>{if(screen.classList.contains('active')&&canUse())pending=load();else if(loaded!==null&&loaded!==key())clear();};
- window.BookiChildLibrary={canUse,open,folders,back,onScreenChange,version:'20260918-live-topics'};
+ window.BookiChildLibrary={canUse,open,folders,back,onScreenChange,version:'20261002-kosher-folder'};
  window.addEventListener('storage',e=>{if(!e.key||['booki_active_reader','booki_device_v1'].includes(e.key))refreshVisible();});
  window.addEventListener('pageshow',e=>{if(e.persisted)refreshVisible();});
  if(typeof firebase!=='undefined')firebase.auth().onAuthStateChanged(()=>{if(loaded!==null&&loaded!==key()){clear();if(screen.classList.contains('active')){if(canUse())pending=load();else home();}}});
