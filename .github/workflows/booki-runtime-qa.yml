@@ -92,6 +92,7 @@ jobs:
           node scripts/test-omri-word-matcher.js
           node scripts/test-booki-local-listening.js
           node scripts/test-release-flows.js
+          node scripts/test-entry-routing.cjs
 
       - name: Student PIN removal regression
         shell: bash

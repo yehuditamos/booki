@@ -1729,7 +1729,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof onTeacherAuthChange === 'function') {
     onTeacherAuthChange(teacher => {
       const entry = new URLSearchParams(window.location.search);
-      const classInvite = !!(entry.get('club') || entry.get('join'));
+      const classInvite = entry.get('teacher') !== '1' && !!(entry.get('club') || entry.get('join'));
+      if (entry.get('teacher') === '1') {
+        if (typeof routeOnLoad === 'function') routeOnLoad();
+        return;
+      }
       if (classInvite) {
         if (typeof routeOnLoad === 'function') routeOnLoad();
       } else if (teacher) {

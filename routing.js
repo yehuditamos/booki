@@ -135,10 +135,16 @@ async function routeOnLoad() {
 
   const routeParams = new URLSearchParams(window.location.search);
 
-  // קישור הצטרפות תמיד בעדיפות ראשונה (הורה לחץ על קישור)
+  // An explicit management URL must never fall through to a stored/class route.
+  // Generated class links contain only club/join; mixed legacy URLs are normalized.
+  if (routeParams.get('teacher') === '1') {
+    _activeClubId = null;
+    window.currentClubId = null;
+    goToTeacherArea(true);
+    return;
+  }
   const clubParam = routeParams.get('club');
   if (clubParam && typeof showJoinClubDirect === 'function') {
-    // קישור מועדון תמיד מתחיל בבחירת ילד — לעולם לא בילד האחרון שנשמר.
     clearActiveReader();
     showJoinClubDirect(clubParam);
     return;
@@ -146,13 +152,6 @@ async function routeOnLoad() {
   const joinCode = routeParams.get('join');
   if (joinCode && typeof showJoinClubWithCode === 'function') {
     showJoinClubWithCode(joinCode);
-    return;
-  }
-
-  // An explicit class invitation takes precedence over a remembered teacher session
-  // and over a teacher flag accidentally included in the invitation URL.
-  if (routeParams.get('teacher') === '1') {
-    goToTeacherArea(false);
     return;
   }
 
