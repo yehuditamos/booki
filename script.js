@@ -333,7 +333,18 @@ function _isStoryNew(story, now = Date.now()) {
 }
 
 async function showLibrary() {
-  if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.open();
+  // A signed-in child must always use the current folder library on every viewport.
+  // Do not silently fall back to the legacy shelf renderer while auth/reader state
+  // is still settling (this was why desktop could show the old library).
+  const activeReader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+  const currentUser = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
+  if (activeReader?.userId) {
+    if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.open();
+    if (currentUser?.isAnonymous && window.BookiChildLibrary) {
+      showScreen('screen-library');
+      return window.BookiChildLibrary.open();
+    }
+  }
   if (window.BookiPrivateLibrary) await window.BookiPrivateLibrary.refresh();
   showScreen('screen-library');
   const forYou = document.getElementById('for-you-section'); if (forYou) forYou.style.display = 'none';
