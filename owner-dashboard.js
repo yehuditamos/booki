@@ -62,7 +62,8 @@ async function _odLoad() {
     set('od-new-today',   _fmt(ev[`user_registered_${today}`]    ?? 0));
     set('od-joins-today', _fmt(ev[`join_club_completed_${today}`] ?? 0));
     set('od-opens-today', _fmt(ev[`app_open_${today}`]            ?? 0));
-    set('od-total-minutes',  _fmt(Math.round(g.totalMinutes  ?? 0)));
+    // Lifetime minutes are recalculated below from real student membership stats.
+    // Never label the aggregate owner-stats counter as minutes without verification.
     set('od-total-sessions', _fmt(g.totalSessions ?? 0));
     set('od-sessions-today', _fmt(ev[`reading_completed_${today}`] ?? 0));
 
@@ -82,6 +83,7 @@ async function _odLoad() {
         : '<div class="od-empty">אין קריאות עדיין</div>';
     }
 
+    await _odLoadVerifiedReadingPulse(clubs, set);
     _odLoadErrors();
     set('od-status', 'עודכן ' + new Date().toLocaleTimeString('he-IL'));
 
@@ -89,6 +91,69 @@ async function _odLoad() {
     const set2 = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set2('od-status', '❌ ' + err.message);
     console.error('[owner-dashboard]', err);
+  }
+}
+
+
+async function _odLoadVerifiedReadingPulse(clubs, set) {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const rows = [];
+  let verifiedLifetimeMinutes = 0;
+
+  // Owner-only audit source: the same real membership cards used by teachers.
+  // This intentionally favors correctness over the old aggregate counter.
+  for (const club of clubs) {
+    if (!club?.id || club.hidden) continue;
+    try {
+      const snap = await window.db.collection('clubs').doc(club.id).collection('memberships').get({source:'server'});
+      for (const doc of snap.docs) {
+        const m = doc.data() || {};
+        if (m.status === 'left') continue;
+        const name = String(m.name || '').trim();
+        if (!name || /^כרטיס פנוי\s+\d+$/.test(name)) continue;
+        const stats = m.cachedStats || {};
+        const totalMinutes = Number(stats.totalMinutes);
+        if (Number.isFinite(totalMinutes) && totalMinutes > 0) verifiedLifetimeMinutes += totalMinutes;
+        const raw = stats.lastReadAt;
+        const last = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
+        if (!last || Number.isNaN(last.getTime()) || last.getTime() < cutoff) continue;
+        rows.push({
+          key: club.id + '/' + doc.id,
+          name,
+          emoji: m.emoji || '📚',
+          clubName: club.name || club.id,
+          minutes: Number.isFinite(totalMinutes) ? Math.max(0, Math.round(totalMinutes)) : 0,
+          sessions: Math.max(0, Math.round(Number(stats.totalSessions) || 0)),
+          last
+        });
+      }
+    } catch (e) {
+      console.warn('[owner-dashboard] reading pulse', club.id, e);
+    }
+  }
+
+  // A child can only have one active membership card per club; keep newest if legacy duplicates exist.
+  const unique = [...new Map(rows.sort((a,b)=>b.last-a.last).map(x=>[x.key,x])).values()];
+  set('od-total-minutes', _fmt(Math.round(verifiedLifetimeMinutes)));
+  set('od-wau', String(unique.length));
+
+  const host = document.getElementById('od-active-readers-7d');
+  if (!host) return;
+  host.replaceChildren();
+  if (!unique.length) {
+    host.appendChild(_odNode('div','אין קריאות מתועדות בשבעת הימים האחרונים','od-empty'));
+    return;
+  }
+  for (const child of unique) {
+    const row = _odNode('div', undefined, 'od-row od-reader-row');
+    const who = _odNode('div'); who.style.flex='1'; who.style.minWidth='0';
+    who.appendChild(_odNode('strong', child.emoji + ' ' + child.name, 'od-row-label'));
+    who.appendChild(_odNode('span', child.clubName, 'od-reader-club'));
+    const meta = _odNode('div', undefined, 'od-reader-meta');
+    meta.appendChild(_odNode('span', child.minutes + ' דקות מצטברות'));
+    meta.appendChild(_odNode('span', child.sessions + ' קריאות'));
+    meta.appendChild(_odNode('span', 'אחרונה: ' + _odReadDate(child.last)));
+    row.append(who, meta); host.appendChild(row);
   }
 }
 
