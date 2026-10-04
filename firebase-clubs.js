@@ -587,11 +587,27 @@ async function fbUpdateMemberAvatar(clubId, userId, avatar) {
   }
 }
 
-/** Silent card reassignment is disabled; use teacher-approved device recovery. */
-async function fbReclaimCard() {
-  // Selecting a name is not authorization to replace another device's identity.
-  // Recovery must be approved by the owning teacher; no student PIN is required.
-  return false;
+/** Emergency compatibility entry: name selection is NOT proof of identity.
+ * Restores the passwordless classroom pilot; never resets reading history.
+ */
+async function fbReclaimCard(clubId, cardId) {
+  const user = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
+  if (!_db() || !clubId || !cardId || !user?.isAnonymous) return false;
+  try {
+    return await _db().runTransaction(async tx => {
+      const ref = _db().collection('clubs').doc(clubId).collection('memberships').doc(String(cardId));
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists) return false;
+      const member = snapshot.data();
+      if (!member.createdByTeacher || member.status !== 'active' || member.role !== 'member') return false;
+      if (member.claimedByUid === user.uid) return true;
+      tx.update(ref, { claimedByUid: user.uid, updatedAt: _now() });
+      return true;
+    });
+  } catch (error) {
+    console.warn('[firebase-clubs] card entry failed', error.code);
+    return false;
+  }
 }
 
 // ─── ClubMembership ───────────────────────────────────────────────────────────
