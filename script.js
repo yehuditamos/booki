@@ -340,7 +340,7 @@ async function showLibrary() {
   const currentUser = typeof firebase !== 'undefined' ? firebase.auth().currentUser : null;
   if (activeReader?.userId) {
     if (window.BookiChildLibrary?.canUse()) return window.BookiChildLibrary.open();
-    if (currentUser?.isAnonymous && window.BookiChildLibrary) {
+    if (currentUser?.uid && window.BookiChildLibrary) {
       showScreen('screen-library');
       return window.BookiChildLibrary.open();
     }

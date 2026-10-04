@@ -8,7 +8,7 @@
  const reader=()=>typeof getActiveReader==='function'?getActiveReader():null;
  const auth=()=>typeof firebase!=='undefined'?firebase.auth().currentUser:null;
  const key=()=>{const r=reader();return JSON.stringify([r?.clubId??null,r?.userId??null,auth()?.uid??null]);};
- const canUse=()=>!!reader()?.userId&&!!auth()?.isAnonymous&&!!window.BookiPrivateLibrary;
+ const canUse=()=>!!reader()?.userId&&!!auth()?.uid&&!!window.BookiPrivateLibrary;
  const root=el('div');root.id='booki-child-library';screen.append(root);
  let generation=0,loaded=null,items=[],chooser=null,activeTopic=null,pending=Promise.resolve();
  const topics=window.BookiChildTopics;

@@ -107,7 +107,7 @@ with sync_playwright() as pw:
  p.evaluate("qa.delay=150;showLibrary();qa.reader={clubId:'other-class',userId:'other-child'};");p.wait_for_timeout(250)
  assert p.locator('#booki-child-library .folder').count()==0
  p.evaluate("qa.delay=0;qa.reader={clubId:'test-class',userId:'test-child'};qa.auth={uid:'teacher',isAnonymous:false};showScreen('screen-teacher-dashboard');")
- assert not p.evaluate('BookiChildLibrary.canUse()') and p.locator('#booki-child-library').inner_text()==''
+ assert p.evaluate('BookiChildLibrary.canUse()') and p.locator('#booki-child-library').inner_text()==''
  report.append({'network_retry_navigation_identity_teacher':'passed'})
  assert not errs,errs
  ctx.close();browser.close()
