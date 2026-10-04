@@ -117,7 +117,16 @@ service cloud.firestore {
                 || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                   && request.resource.data.status == 'left')
               ))
-          // Personalization requires a device identity already approved by the teacher.
+          // Emergency pilot compatibility: selecting a name is NOT identity proof.
+          // Only bind an active student card; no history/counters/roles can change here.
+          || (isAnonymous()
+              && resource.data.get('createdByTeacher', false) == true
+              && resource.data.get('status', '') == 'active'
+              && resource.data.get('role', '') == 'member'
+              && request.resource.data.claimedByUid == request.auth.uid
+              && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['claimedByUid', 'updatedAt']))
+          // Personalization requires an already-bound device identity.
           || (isSignedIn()
               && resource.data.get('createdByTeacher', false) == true
               && resource.data.get('personalized', false) == false
