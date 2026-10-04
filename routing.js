@@ -761,15 +761,16 @@ async function selectProfile(userId, clubIdHint) {
 
   // ── כרטיסי תלמיד שנוצרו ע"י מורה ────────────────────────────────────────
   if (membership?.createdByTeacher) {
-    // מורה מחוברת (non-anonymous) — אין לקרוא ensureStudentAuth כי היא מחזירה UID מורה.
-    // הפרדה: תלמידים בלבד מקבלים anonymous UID; מורה צופה בכרטיס ישירות.
-    const currentUser = (typeof firebase !== 'undefined' && firebase.auth)
+    // A selected child card is a real student flow, even on a shared teacher PC.
+    // Teacher previews use the separate teacher-child-demo flow.
+    await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
+    const studentAuth = typeof firebase !== 'undefined' && firebase.auth
       ? firebase.auth().currentUser : null;
-    const isTeacherSession = !!(currentUser && !currentUser.isAnonymous);
-
-    if (!isTeacherSession) {
-      await (typeof ensureStudentAuth === 'function' ? ensureStudentAuth() : Promise.resolve());
+    if (!studentAuth?.isAnonymous) {
+      alert('לא הצלחנו להתחבר לכרטיס הילד. נסו שוב.');
+      return;
     }
+    const isTeacherSession = false;
 
     // Emergency compatibility entry, awaiting matching production rules.
     // Name selection is not identity verification; this is a pilot tradeoff.
