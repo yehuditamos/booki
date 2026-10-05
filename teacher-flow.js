@@ -136,11 +136,7 @@
       const info = element('div', undefined, 'tc-info');
       const meta = element('span', 'טוען מספר תלמידים…', 'tc-meta');
       info.append(element('span', c.name || 'המועדון שלי', 'tc-name'), meta);
-      const actions = element('div', undefined, 'tc-actions');
-      actions.addEventListener('click', e => e.stopPropagation());
-      const remove = button('🗑', () => confirmDeleteClub(c.id, c.name || 'המועדון שלי'), 'btn-tc-delete');
-      remove.title = 'מחק מועדון'; remove.setAttribute('aria-label', 'מחיקת ' + (c.name || 'המועדון'));
-      actions.appendChild(remove);
+      const actions = createTeacherClubActions(c.id, c.name || 'המועדון שלי');
       card.append(element('span', c.emoji || '📚', 'tc-emoji'), info, actions);
       list.appendChild(card);
       membersFor(c.id).then(members => {

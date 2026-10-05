@@ -1551,6 +1551,60 @@ async function showTeacherDashboard(teacher) {
   _renderTeacherClubs(t.uid);
 }
 
+function createTeacherClubActions(clubId, clubName) {
+  if (!document.getElementById('booki-club-actions-style')) {
+    const style = document.createElement('style');
+    style.id = 'booki-club-actions-style';
+    style.textContent = `
+      .tc-club-menu{position:relative}
+      .tc-club-menu>summary{list-style:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid #dce5dc;border-radius:12px;background:#fff;color:#315f4b;cursor:pointer;font-size:26px}
+      .tc-club-menu>summary::-webkit-details-marker{display:none}
+      .tc-club-menu>summary:focus-visible,.tc-club-menu .btn-tc-delete:focus-visible{outline:3px solid #2877b8;outline-offset:2px}
+      .tc-club-menu[open]{z-index:10}
+      .tc-club-menu-panel{position:absolute;inset-inline-end:0;top:calc(100% + 6px);min-width:160px;padding:6px;background:#fff;border:1px solid #dce5dc;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
+      .tc-club-menu .btn-tc-delete{width:100%;min-height:44px;text-align:right;color:#a52e2e;border:0;font-family:inherit;line-height:1.4}
+    `;
+    document.head.appendChild(style);
+    document.addEventListener('click', event => {
+      document.querySelectorAll('.tc-club-menu[open]').forEach(menu => {
+        if (!menu.contains(event.target)) menu.open = false;
+      });
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      document.querySelectorAll('.tc-club-menu[open]').forEach(menu => {
+        menu.open = false; menu.querySelector('summary').focus();
+      });
+    });
+  }
+  const actions = document.createElement('div');
+  actions.className = 'tc-actions';
+  actions.addEventListener('click', event => event.stopPropagation());
+  actions.addEventListener('keydown', event => { if (event.key !== 'Escape') event.stopPropagation(); });
+  const menu = document.createElement('details');
+  menu.className = 'tc-club-menu';
+  const toggle = document.createElement('summary');
+  toggle.textContent = '⋮';
+  toggle.setAttribute('aria-label', 'אפשרויות עבור ' + clubName);
+  const panel = document.createElement('div');
+  panel.className = 'tc-club-menu-panel';
+  const remove = document.createElement('button');
+  remove.type = 'button'; remove.className = 'btn-tc-delete';
+  remove.textContent = 'מחיקת מועדון';
+  remove.setAttribute('aria-label', 'מחיקת ' + clubName);
+  remove.addEventListener('click', () => {
+    menu.open = false;
+    confirmDeleteClub(clubId, clubName);
+  });
+  menu.addEventListener('toggle', () => {
+    if (menu.open) document.querySelectorAll('.tc-club-menu[open]').forEach(other => {
+      if (other !== menu) other.open = false;
+    });
+  });
+  panel.appendChild(remove); menu.append(toggle, panel); actions.appendChild(menu);
+  return actions;
+}
+
 async function _renderTeacherClubs(uid) {
   const list = document.getElementById('td-clubs-list');
   if (!list) return;
@@ -1567,17 +1621,18 @@ async function _renderTeacherClubs(uid) {
   list.innerHTML = clubs.map(c => `
     <div class="teacher-club-card" role="button" tabindex="0"
          onclick="enterTeacherClub('${c.id}')"
-         onkeydown="if(event.key==='Enter')enterTeacherClub('${c.id}')">
+         onkeydown="if(event.target===this && event.key==='Enter')enterTeacherClub('${c.id}')">
       <span class="tc-emoji">${c.emoji || '📚'}</span>
       <div class="tc-info">
         <span class="tc-name">${c.name || c.id}</span>
         <span class="tc-meta" data-member-count="${c.id}">👥 ...</span>
       </div>
-      <div class="tc-actions" onclick="event.stopPropagation()">
-        <button class="btn-tc-delete" title="מחק מועדון"
-                onclick="confirmDeleteClub('${c.id}','${(c.name || c.id).replace(/'/g, "\\'")}')">🗑</button>
-      </div>
+      <div class="tc-actions-placeholder"></div>
     </div>`).join('');
+
+  list.querySelectorAll('.tc-actions-placeholder').forEach((placeholder, i) => {
+    placeholder.replaceWith(createTeacherClubActions(clubs[i].id, clubs[i].name || clubs[i].id));
+  });
 
   // מונה חברים אמיתי — Firebase
   clubs.forEach(async c => {
