@@ -3,7 +3,7 @@
   'use strict';
   if(window.BookiPilotLoader20260910) return;
   const files=[
-    'pilot-reading-save-2026-09-10.js?v=20261001-durable-session',
+    'pilot-reading-save-2026-09-10.js?v=20261006-device-save',
     'pilot-reading-overrides-2026-09-10.js?v=20260923-bookreportfix',
     'pilot-niqud-exact-2026-09-10.js?v=1',
     'pilot-niqud-defective-2026-09-10.js?v=20260919-fullspelling2',
@@ -32,5 +32,4 @@
   window.BookiPilotLoader20260910={version:'2026-09-11.6',ready:false};
   next();
 })();
-
 

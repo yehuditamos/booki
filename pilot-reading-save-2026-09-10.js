@@ -130,6 +130,35 @@
     return { student: next, previousMinutes: Math.max(0, advanced.stats.totalMinutes - opts.entry.minutes), alreadySaved: advanced.duplicate };
   }
 
+  function isSelectedTeacherCard(clubId, userId, authUid) {
+    const user = firebase.auth().currentUser;
+    const reader = typeof getActiveReader === 'function' ? getActiveReader() : null;
+    return user?.isAnonymous && user.uid === authUid
+      && typeof currentStudentId !== 'undefined' && String(currentStudentId) === userId
+      && window.currentClubId === clubId && reader?.clubId === clubId
+      && String(reader.userId) === userId && reader.createdByTeacher === true;
+  }
+
+  async function refreshSelectedCardBinding(error, targetRef, clubId, userId, authUid) {
+    // Passwordless pilot entry already permits selecting this teacher-created
+    // card on another device. That changes its binding while an earlier reader
+    // can remain open. Reuse the same acknowledged entry operation, once, only
+    // for the card still selected here. Never repair a different/removed card,
+    // change Security Rules, or reset stats. Retry with the same completion ID.
+    if (!clubId || !['reading/card-not-owned', 'permission-denied'].includes(error?.code)
+        || typeof fbReclaimCard !== 'function'
+        || !isSelectedTeacherCard(clubId, userId, authUid)) return false;
+    try {
+      const snapshot = await targetRef.get({ source: 'server' });
+      if (!snapshot.exists || snapshot.metadata?.fromCache) return false;
+      const member = snapshot.data();
+      if (member.createdByTeacher !== true || member.status !== 'active'
+          || member.role !== 'member' || member.claimedByUid === authUid
+          || !isSelectedTeacherCard(clubId, userId, authUid)) return false;
+      return await fbReclaimCard(clubId, userId);
+    } catch (_) { return false; }
+  }
+
   async function saveModern(opts) {
     if (!window.db || typeof window.db.runTransaction !== 'function') fail('reading/database-unavailable');
     const authUid = await ensureAnonymousAuth();
@@ -141,7 +170,7 @@
       : db.collection('users').doc(authUid).collection('profile').doc('main');
     const walletRef = clubId ? db.collection('clubs').doc(clubId).collection('economy').doc('wallet') : null;
 
-    const txResult = await db.runTransaction(async tx => {
+    const saveOnce = () => db.runTransaction(async tx => {
       const targetSnap = await tx.get(targetRef);
       if (!targetSnap.exists && clubId) fail('reading/card-not-found');
       const target = targetSnap.exists ? targetSnap.data() : {};
@@ -208,6 +237,14 @@
       return { stats: advanced.stats, duplicate: false, target };
     });
 
+    let txResult;
+    try {
+      txResult = await saveOnce();
+    } catch (error) {
+      if (!await refreshSelectedCardBinding(error, targetRef, clubId, userId, authUid)) throw error;
+      txResult = await saveOnce();
+    }
+
     const next = studentFromStats(opts.student || { id: opts.userId }, txResult.stats, opts.entry, opts.id);
     if (typeof saveStudentLocal === 'function') saveStudentLocal(next);
     if (clubId && typeof evaluateGoalProgress === 'function') {
@@ -232,7 +269,20 @@
     validateEntry(opts.entry);
     opts.entry.minutes = Number(opts.entry.minutes);
     opts.entry.points = Number(opts.entry.points);
-    return Number.isInteger(opts.userId) ? saveLegacy(opts) : saveModern(opts);
+    try {
+      return await (Number.isInteger(opts.userId) ? saveLegacy(opts) : saveModern(opts));
+    } catch (error) {
+      // Record the actual failure code instead of relying on a generic screenshot.
+      // No names, auth tokens, story text or reading answers are included.
+      if (typeof analyticsError === 'function') {
+        try {
+          Promise.resolve(analyticsError('reading-save', error?.code || 'reading/save-failed', {
+            clubId: opts.clubId || null, cardId: String(opts.userId), type: opts.entry.type,
+          })).catch(() => {});
+        } catch (_) { /* Diagnostics must not change the save result. */ }
+      }
+      throw error;
+    }
   }
 
   window.BookiReadingSave = { newId, commit };

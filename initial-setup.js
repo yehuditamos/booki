@@ -124,7 +124,7 @@ window.submitInitialSetup = submitInitialSetup;
 (function loadPilotRelease20260910() {
   if (document.querySelector('script[data-booki-pilot-loader-20260910]')) return;
   const s = document.createElement('script');
-  s.src = 'pilot-loader-2026-09-10.js?v=30261002-entry';
+  s.src = 'pilot-loader-2026-09-10.js?v=20261006-device-save';
   s.async = false;
   s.dataset.bookiPilotLoader20260910 = '1';
   s.onerror = () => console.warn('[booki] pilot release loader did not load');
@@ -333,7 +333,6 @@ window.submitInitialSetup = submitInitialSetup;
     return true;
   };
 })();
-
 
 
 
