@@ -136,6 +136,7 @@ window.initCurrentStudent = function(id, data) {
 // ─── ניווט מסכים ────────────────────────────────────────────────────
 
 function showScreen(id) {
+  document.body.classList.toggle('session-complete-active', id === 'screen-session-complete');
   // מסיר את "מגן ההבזק הראשוני" של כניסה מקישור-כיתה (ר' style.css, boot-route-club):
   // הוא נועד רק למנוע פריים אחד עם המסך הלא-נכון לפני שה-JS השתלט על הניתוב —
   // ברגע ש-showScreen נקרא בכלל, ה-JS כבר בשליטה, ואם לא מסירים אותו כאן הוא

@@ -3309,3 +3309,52 @@ body.reader-confirm-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .reader-illustration { animation: none; }
 }
+
+/* Completion is a self-contained viewport: summary and return stay together. */
+body.session-complete-active{overflow:hidden}
+body.session-complete-active .booki-nav,body.session-complete-active .btn-bug-report,body.session-complete-active .btn-niqud-toggle,body.session-complete-active .app-copyright{display:none!important}
+#screen-session-complete.active{position:fixed;inset:0;z-index:100;min-height:0;height:100vh;height:100dvh;padding:0!important;overflow:visible}
+#screen-session-complete .complete-content{height:100%;max-width:480px;padding:calc(12px + env(safe-area-inset-top)) 20px calc(14px + env(safe-area-inset-bottom));gap:clamp(6px,1.2dvh,12px);justify-content:center}
+#screen-session-complete .complete-content>p,#screen-session-complete .complete-title{margin:0;line-height:1.3}
+#screen-session-complete .complete-mascot{min-height:0;flex:none;display:grid;place-items:center;width:100%;height:clamp(64px,15dvh,130px);margin:0;padding:0;background:none}
+#screen-session-complete .complete-mascot::before{display:none}
+#screen-session-complete .complete-mascot>img{position:absolute;inset:0;margin:auto;display:block;width:auto;height:100%;max-height:100%;max-width:100%;object-fit:contain;animation:none}
+#screen-session-complete .complete-title{font-size:clamp(26px,4.8dvh,38px)}
+#screen-session-complete .complete-sub{font-size:16px}
+#screen-session-complete .complete-stats{width:100%;gap:12px}
+#screen-session-complete .stat-card{flex:1;min-width:0;padding:10px 12px;gap:2px;border-radius:18px}
+#screen-session-complete .stat-icon{font-size:20px;line-height:1.1}
+#screen-session-complete .stat-number{font-size:clamp(30px,5dvh,42px);line-height:1.15}
+#screen-session-complete .stat-label{font-size:14px;line-height:1.3}
+#screen-session-complete .complete-encouragement,#screen-session-complete .complete-tree-msg,#screen-session-complete .complete-msg{font-size:14px}
+#screen-session-complete .complete-encouragement:empty{display:none}
+#screen-session-complete .complete-bonus-breakdown{flex:none;width:100%;margin:0;padding:9px 12px;gap:3px;font-size:14px;line-height:1.25;border-radius:14px}
+#screen-session-complete .complete-bonus-breakdown strong{margin:2px 0 0}
+#screen-session-complete .complete-bonus-breakdown small{font-size:13px;line-height:1.25}
+#screen-session-complete .levelup-banner{padding:5px 10px;font-size:14px;line-height:1.3}
+#screen-session-complete .btn-giant{flex:none;padding:12px 18px;min-height:48px;font-size:17px;line-height:1.3;margin-top:2px}
+@media(max-height:700px){
+ #screen-session-complete .complete-content{gap:5px;padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+ #screen-session-complete .complete-mascot{height:60px}
+ #screen-session-complete .complete-title{font-size:26px}
+ #screen-session-complete .stat-card{padding:7px 10px}
+ #screen-session-complete .stat-number{font-size:30px}
+ #screen-session-complete .complete-bonus-breakdown{padding:7px 10px;font-size:13px;gap:2px}
+ #screen-session-complete .complete-tree-msg,#screen-session-complete .complete-msg{font-size:13px}
+}
+@media(max-height:480px) and (min-width:600px){
+ #screen-session-complete .complete-content{max-width:760px;display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;align-content:center}
+ #screen-session-complete .complete-mascot{grid-column:1;grid-row:1/4;height:90px}
+ #screen-session-complete .complete-title,#screen-session-complete .complete-sub,#screen-session-complete .levelup-banner{grid-column:2}
+ #screen-session-complete .complete-stats{grid-column:1;grid-row:4/6}
+ #screen-session-complete .complete-bonus-breakdown{grid-column:2;grid-row:4/8}
+ #screen-session-complete .complete-encouragement,#screen-session-complete .complete-tree-msg,#screen-session-complete .complete-msg{grid-column:1}
+ #screen-session-complete .btn-giant{grid-column:1/-1}
+}
+@media(max-height:620px){
+ #screen-session-complete .complete-content{gap:4px;padding-inline:16px}
+ #screen-session-complete .complete-mascot{height:44px}
+ #screen-session-complete .stat-card{padding:4px 8px}
+ #screen-session-complete .stat-number{font-size:28px}
+ #screen-session-complete .complete-title{font-size:24px}
+}
