@@ -7,7 +7,7 @@ const now = Date.parse('2026-10-08T20:00:00Z');
 const row = (key,id,time,type='app',minutes=2) => ({key,id,session:{type,minutes,createdAt:time}});
 const records = [
  row('a','1','2026-10-07T18:00:00Z'), row('a','2','2026-10-07T19:00:00Z'),
- row('a','3','2026-10-08T18:00:00Z'), row('a','3','2026-10-08T18:00:00Z'),
+ row('a','3','2026-10-08T18:00:00Z','booki'), row('a','3','2026-10-08T18:00:00Z','booki'),
  // UTC dates differ, but these are the same day in Israel.
  row('b','1','2026-10-06T22:00:00Z'), row('b','2','2026-10-07T01:00:00Z'),
  row('book','1','2026-10-08T18:00:00Z','book',99),

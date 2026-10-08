@@ -175,7 +175,7 @@ function _odWeeklyReading(records, now = Date.now()) {
   const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' });
   for (const r of records) {
     const s = r.session;
-    if (s.type !== 'app') continue;
+    if (s.type !== 'app' && s.type !== 'booki') continue;
     const time = s.createdAt?.toDate ? s.createdAt.toDate().getTime() : new Date(s.createdAt).getTime();
     if (!Number.isFinite(time) || time > now || time < now - 2 * week) continue;
     const id = r.key + '/' + r.id;
