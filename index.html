@@ -95,6 +95,7 @@
 #screen-owner-dashboard button.od-metric{font:inherit;cursor:pointer;min-width:0;border-radius:16px;padding:16px 8px}
 #screen-owner-dashboard button.od-metric:hover{border-color:#26714f;background:#edf7ef}
 #screen-owner-dashboard button.od-metric:focus-visible{outline:3px solid #26714f;outline-offset:2px}
+#screen-owner-dashboard .od-metric .od-coverage{display:block;margin:6px 0 0}
 #screen-owner-dashboard .od-coverage{font-size:12px;color:#31553e;line-height:1.5;margin:8px 0 20px}
 #screen-owner-dashboard details.od-section{margin-top:16px;border-top:1px solid #d7e4d9}
 #screen-owner-dashboard .od-reader-row{align-items:flex-start;gap:12px}
@@ -1438,7 +1439,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20261003-verified-reading-pulse"></script>
+<script src="owner-dashboard.js?v=20261008-weekly-returning-readers"></script>
 <script src="initial-setup.js?v=save-device-20261006"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1461,6 +1462,7 @@ window.addEventListener('pageshow', function (e) {
         <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></button>
         <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
         <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
+        <div class="od-metric"><span class="od-val" id="od-returning-readers">—</span><span class="od-lbl">ילדים שחזרו לקרוא ב־7 ימים</span><span class="od-coverage">קריאה באפליקציה בשני ימים שונים לפחות</span></div>
       </div>
     </div>
 
@@ -1472,6 +1474,19 @@ window.addEventListener('pageshow', function (e) {
         <div class="od-metric"><span class="od-val" id="od-dau-today">—</span><span class="od-lbl">פעילים היום</span></div>
         <div class="od-metric"><span class="od-val" id="od-wau">—</span><span class="od-lbl">פעילים 7 ימים</span></div>
       </div>
+    </div>
+
+    <div class="od-section" aria-labelledby="od-week-title">
+      <div class="od-section-title" id="od-week-title">📅 סיכום שבועי · 7 הימים האחרונים</div>
+      <p class="od-coverage" id="od-week-period"></p>
+      <div class="od-grid">
+        <div class="od-metric"><span class="od-val" id="od-week-readers">—</span><span class="od-lbl">ילדים שקראו באפליקציה</span><span class="od-coverage" id="od-week-readers-change"></span></div>
+        <div class="od-metric"><span class="od-val" id="od-week-returning">—</span><span class="od-lbl">ילדים שחזרו לקרוא</span><span class="od-coverage" id="od-week-returning-change"></span></div>
+        <div class="od-metric"><span class="od-val" id="od-week-sessions">—</span><span class="od-lbl">קריאות באפליקציה</span><span class="od-coverage" id="od-week-sessions-change"></span></div>
+        <div class="od-metric"><span class="od-val" id="od-week-minutes">—</span><span class="od-lbl">דקות קריאה באפליקציה</span><span class="od-coverage" id="od-week-minutes-change"></span></div>
+      </div>
+      <p class="od-coverage">חזרו לקרוא = קראו בשני ימים שונים לפחות בתוך התקופה. ההשוואה היא לשבעת הימים שקדמו לה. דיווחים על ספרים חיצוניים אינם נכללים.</p>
+      <p class="od-coverage" id="od-week-coverage" role="status">טוען היסטוריית קריאה...</p>
     </div>
 
     <div class="od-section od-reading-pulse">

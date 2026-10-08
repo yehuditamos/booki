@@ -32,6 +32,9 @@ function showOwnerDashboard(teacher) {
 async function _odLoad() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   set('od-status', 'טוען...');
+  for (const id of ['od-returning-readers', 'od-week-readers', 'od-week-returning', 'od-week-sessions', 'od-week-minutes']) set(id, '—');
+  for (const key of ['readers', 'returning', 'sessions', 'minutes']) set('od-week-' + key + '-change', '');
+  set('od-week-coverage', 'טוען היסטוריית קריאה...');
 
   try {
     const db    = window.db;
@@ -98,6 +101,8 @@ async function _odLoad() {
 async function _odLoadVerifiedReadingPulse(clubs, set) {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = [];
+  const readerCards = new Map();
+  let failedClubs = 0;
   let verifiedLifetimeMinutes = 0;
 
   // Owner-only audit source: the same real membership cards used by teachers.
@@ -111,6 +116,8 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
         if (m.status === 'left') continue;
         const name = String(m.name || '').trim();
         if (!name || /^כרטיס פנוי\s+\d+$/.test(name)) continue;
+        const key = m.createdByTeacher ? club.id + "/" + doc.id : "user/" + (m.userId || doc.id);
+        readerCards.set(key, { key, clubId: club.id, cardId: doc.id, userId: m.userId || doc.id, createdByTeacher: !!m.createdByTeacher });
         const stats = m.cachedStats || {};
         const totalMinutes = Number(stats.totalMinutes);
         if (Number.isFinite(totalMinutes) && totalMinutes > 0) verifiedLifetimeMinutes += totalMinutes;
@@ -128,6 +135,7 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
         });
       }
     } catch (e) {
+      failedClubs++;
       console.warn('[owner-dashboard] reading pulse', club.id, e);
     }
   }
@@ -136,6 +144,8 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
   const unique = [...new Map(rows.sort((a,b)=>b.last-a.last).map(x=>[x.key,x])).values()];
   set('od-total-minutes', _fmt(Math.round(verifiedLifetimeMinutes)));
   set('od-wau', String(unique.length));
+
+  await _odLoadWeeklyReading([...readerCards.values()], set, failedClubs);
 
   const host = document.getElementById('od-active-readers-7d');
   if (!host) return;
@@ -155,6 +165,67 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
     meta.appendChild(_odNode('span', 'אחרונה: ' + _odReadDate(child.last)));
     row.append(who, meta); host.appendChild(row);
   }
+}
+
+// Count successful app-reading records, not opens, external books, or cached totals.
+function _odWeeklyReading(records, now = Date.now()) {
+  const week = 7 * 24 * 60 * 60 * 1000;
+  const buckets = [0, 1].map(() => ({ readers: new Map(), sessions: 0, minutes: 0 }));
+  const seen = new Set();
+  const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' });
+  for (const r of records) {
+    const s = r.session;
+    if (s.type !== 'app') continue;
+    const time = s.createdAt?.toDate ? s.createdAt.toDate().getTime() : new Date(s.createdAt).getTime();
+    if (!Number.isFinite(time) || time > now || time < now - 2 * week) continue;
+    const id = r.key + '/' + r.id;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const b = buckets[time >= now - week ? 0 : 1];
+    if (!b.readers.has(r.key)) b.readers.set(r.key, new Set());
+    b.readers.get(r.key).add(dayFormat.format(new Date(time)));
+    b.sessions++;
+    const minutes = Number(s.minutes);
+    if (Number.isFinite(minutes) && minutes > 0) b.minutes += minutes;
+  }
+  return buckets.map(b => ({ readers: b.readers.size, returning: [...b.readers.values()].filter(days => days.size >= 2).length, sessions: b.sessions, minutes: Math.round(b.minutes) }));
+}
+
+async function _odLoadWeeklyReading(cards, set, failedClubs = 0) {
+  const now = Date.now();
+  const from = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const records = [];
+  let next = 0, failedCards = 0;
+  // Bound simultaneous reads. Existing rules protect all sources; no permission expansion.
+  await Promise.all(Array.from({ length: Math.min(6, cards.length) }, async () => {
+    while (next < cards.length) {
+      const card = cards[next++];
+      try {
+        const source = card.createdByTeacher
+          ? window.db.collection('clubs').doc(card.clubId).collection('memberships').doc(card.cardId).collection('sessions')
+          : window.db.collection('users').doc(card.userId).collection('readingSessions');
+        const snap = await source.where('createdAt', '>=', from).get({source: 'server'});
+        for (const doc of snap.docs) records.push({ key: card.key, id: doc.id, session: doc.data() || {} });
+      } catch (e) {
+        failedCards++;
+        console.warn('[owner-dashboard] weekly reading unavailable', e.code || e.message);
+      }
+    }
+  }));
+  const [current, previous] = _odWeeklyReading(records, now);
+  const partial = failedCards > 0 || failedClubs > 0;
+  const unavailable = failedClubs > 0 || (cards.length > 0 && failedCards === cards.length);
+  for (const key of ['readers', 'returning', 'sessions', 'minutes']) {
+    set('od-week-' + key, unavailable ? '—' : _fmt(current[key]));
+    const diff = current[key] - previous[key];
+    set('od-week-' + key + '-change', partial ? 'אין השוואה מלאה' : 'לעומת ' + _fmt(previous[key]) + ' קודם · ' + (diff > 0 ? '+' : '') + _fmt(diff));
+  }
+  set('od-returning-readers', unavailable ? '—' : _fmt(current.returning));
+  set('od-week-coverage', partial
+    ? 'נתונים חלקיים: לא ניתן לטעון היסטוריה של ' + failedCards + ' כרטיסים ו־' + failedClubs + ' מועדונים. הנתונים הזמינים אינם סיכום מלא.'
+    : 'מבוסס על קריאות מתועדות באפליקציה בכרטיסי הילדים במועדונים הגלויים. כל ילד נספר פעם אחת בכל תקופה; ימים לפי שעון ישראל.');
+  const format = value => new Date(value).toLocaleString('he-IL', {timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short'});
+  set('od-week-period', format(now - 7 * 24 * 60 * 60 * 1000) + ' – ' + format(now));
 }
 
 // ─── Teacher List — pure computation ─────────────────────────────────────────
