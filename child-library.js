@@ -58,7 +58,7 @@
    b.append(art,el('span',t.label,'folder-title'),el('span',stories.length+' סיפורים','folder-count'),dots);grid.append(b);
   }
   const legend=el('section',null,'folder-format-key');legend.setAttribute('aria-label','מפת הצבעים והצורות');const row=el('div',null,'folder-format-legend');
-  for(const f of BookiChoice.formats){const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));row.append(item);}legend.append(row);root.append(legend,grid);
+  for(const f of BookiChoice.formats){const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));row.append(item);}legend.append(row);root.append(legend,hero,grid);
   root.append(button('לְכָל הַסִּפּוּרִים ←',()=>shelf('all'),'cc-secondary all-stories'));
   // Keep existing letter practice available only when the class catalog includes public beginner texts.
   if(items.some(s=>['beginner','reading-stages'].includes(s.libraryId))&&typeof showLettersReading==='function')root.append(button('קוֹרְאִים אוֹתִיּוֹת',()=>showLettersReading(),'cc-secondary all-stories'));
