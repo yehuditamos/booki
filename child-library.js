@@ -50,14 +50,15 @@
    const stories=t.id===teacherTopic.id?teacherStories:items.filter(t.match);if(!stories.length)continue;
    const available=BookiChoice.formats.filter(f=>stories.some(s=>formats.get(s.id)===f.id));
    const b=button('',()=>shelf(t.id),'folder');b.dataset.folder=t.id;
-   b.setAttribute('aria-label',t.label+' · '+stories.length+' סיפורים. בפנים: '+available.map(f=>f.label).join(', '));
+   const isNew=t.newUntil&&Date.now()<=new Date(t.newUntil).getTime();
+   if(isNew)b.append(el('span','חדש','folder-new'));
+   b.setAttribute('aria-label',(isNew?'חדש · ':'')+t.label+' · '+stories.length+' סיפורים. בפנים: '+available.map(f=>f.label).join(', '));
    const art=el('span',t.icon,'folder-art');art.setAttribute('aria-hidden','true');
    const dots=el('span',null,'folder-formats');dots.setAttribute('aria-hidden','true');available.forEach(f=>dots.append(formatDot(f)));
    b.append(art,el('span',t.label,'folder-title'),el('span',stories.length+' סיפורים','folder-count'),dots);grid.append(b);
   }
-  root.append(grid);
-  const legend=el('details',null,'folder-format-key');legend.append(el('summary','מה אומרים הצבעים?'));const row=el('div',null,'folder-format-legend');
-  for(const f of BookiChoice.formats){const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));row.append(item);}legend.append(row);root.append(legend);
+  const legend=el('section',null,'folder-format-key');legend.setAttribute('aria-label','מפת הצבעים והצורות');legend.append(el('h2','הצבעים והצורות שלנו'));const row=el('div',null,'folder-format-legend');
+  for(const f of BookiChoice.formats){const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));row.append(item);}legend.append(row);root.append(legend,grid);
   root.append(button('לְכָל הַסִּפּוּרִים ←',()=>shelf('all'),'cc-secondary all-stories'));
   // Keep existing letter practice available only when the class catalog includes public beginner texts.
   if(items.some(s=>['beginner','reading-stages'].includes(s.libraryId))&&typeof showLettersReading==='function')root.append(button('קוֹרְאִים אוֹתִיּוֹת',()=>showLettersReading(),'cc-secondary all-stories'));
@@ -111,7 +112,8 @@
  function open(){showScreen('screen-library');return pending;}
  function back(){if(activeTopic)folders();else home();}
  const refreshVisible=()=>{if(screen.classList.contains('active')&&canUse())pending=load();else if(loaded!==null&&loaded!==key())clear();};
- window.BookiChildLibrary={canUse,open,folders,back,onScreenChange,version:'20261002-kosher-folder'};
+ window.BookiChildLibrary={canUse,open,folders,back,onScreenChange,version:'20261008-weather-library'};
+ window.addEventListener('booki:holiday-stories-ready',refreshVisible);
  window.addEventListener('storage',e=>{if(!e.key||['booki_active_reader','booki_device_v1'].includes(e.key))refreshVisible();});
  window.addEventListener('pageshow',e=>{if(e.persisted)refreshVisible();});
  if(typeof firebase!=='undefined')firebase.auth().onAuthStateChanged(()=>{if(loaded!==null&&loaded!==key()){clear();if(screen.classList.contains('active')){if(canUse())pending=load();else home();}}});

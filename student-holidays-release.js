@@ -6,7 +6,8 @@
   'use strict';
   if (window.BookiStudentHolidays) return;
   const campaign = 'holidays-library-2026-v1';
-  const campaignEnd = new Date('2026-10-15T23:59:59+03:00').getTime();
+  // Holiday promotion retired after Tishrei; shelf and stories remain available.
+  const campaignEnd = new Date('2026-10-07T23:59:59+03:00').getTime();
   let promoTimer = null, previousFocus = null, lastReader = null;
   const byId = id => document.getElementById(id);
   const pointed = (plain, nk) => {

@@ -82,3 +82,21 @@
 }
 @media(max-width:350px){#booki-child-library{padding-inline:12px}#booki-child-library .folder-title{font-size:16px}#booki-child-library .hero h1{font-size:25px}#booki-child-library .mascot{width:60px}}
 @media(prefers-reduced-motion:reduce){#booki-child-library .folder{transition:none}#booki-child-library .folder:hover{transform:none}}
+
+/* Compact, evenly aligned text choices and a quiet key above topic folders. */
+#booki-child-library .folder-new{position:absolute;top:10px;inset-inline-start:10px;padding:4px 10px;border-radius:20px;background:#477B52;color:white;font-size:13px;font-weight:bold}
+#booki-child-library .folder-format-key{margin:0 0 24px;padding:14px 16px;border-radius:16px}
+#booki-child-library .folder-format-key h2{font-size:16px;margin:0 0 12px}
+#booki-child-library .folder-format-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0}
+#booki-child-library .folder-format-legend-item{font-size:14px;min-width:0;gap:8px}
+#booki-child-library .cc-format-panel{max-width:none;border-radius:16px;padding:16px;background:#f4f2e9;text-align:right;margin:8px 0 20px}
+#booki-child-library .cc-format-panel>h3{font-size:20px;text-align:right}
+#booki-child-library .cc-format-help{font-size:14px;text-align:right;margin:4px 0 12px}
+#booki-child-library .cc-format-chips{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#booki-child-library .shelf-view .cc-chip[data-format]{min-height:48px;padding:8px;gap:8px;border-radius:12px;font-size:14px}
+#booki-child-library .shelf-view .cc-chip[data-format="all"]{grid-column:1/-1;min-height:44px}
+#booki-child-library .shelf-view .cc-chip[data-format="paragraph"]{grid-column:auto;max-width:none}
+#booki-child-library .cc-format-shape,#booki-child-library .cc-chip[data-format="word"] .cc-format-shape{width:26px;height:26px;flex-basis:26px;font-size:24px}
+#booki-child-library .cc-chip[data-format="word"] .cc-format-shape{font-size:0}
+#booki-child-library .cc-chip[data-format="sentence"] .cc-format-shape,#booki-child-library .cc-chip[data-format="several"] .cc-format-shape,#booki-child-library .cc-chip[data-format="paragraph"] .cc-format-shape{font-size:24px}
+@media(max-width:600px){#booki-child-library .folder-format-legend,#booki-child-library .cc-format-chips{grid-template-columns:repeat(2,minmax(0,1fr))}#booki-child-library .folder-format-key{padding:12px}#booki-child-library .folder-format-legend-item{font-size:13px}#booki-child-library .shelf-view .cc-chip[data-format]{font-size:13px;min-height:48px}}
