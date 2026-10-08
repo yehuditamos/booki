@@ -35,9 +35,9 @@
   if(!valid())return open();
   closeChoice();activeTopic=null;root.replaceChildren();header(false);
   const hero=el('div',null,'hero'),copy=el('div'),h=el('h1','עַל מָה בָּא לְךָ לִקְרֹא?');h.tabIndex=-1;
-  copy.append(h,el('p','בוחרים נושא שמסקרן אותך, ומוצאים סיפור בתוכו.'));
+  copy.append(h);
   const mascot=el('img',null,'mascot');mascot.src='assets/booki/core/states/booki-welcome.png';mascot.alt='בוקי מחייך ומנופף';mascot.width=112;mascot.height=130;
-  hero.append(copy,mascot);root.append(hero,el('p','הצבעים שעל התיקייה מראים אילו סוגי טקסט יש בפנים.','folder-format-hint'));
+  hero.append(copy,mascot);root.append(hero);
   if(!items.length){root.append(el('p','המורה מכינה כאן סיפורים לכיתה. אפשר לחזור בהמשך.'),button('רענון הספרייה',open));return;}
   const grid=el('div',null,'folders');
   const formats=new Map(items.map(s=>[s.id,BookiChoice.profile(s).format.id]));
@@ -57,7 +57,7 @@
    const dots=el('span',null,'folder-formats');dots.setAttribute('aria-hidden','true');available.forEach(f=>dots.append(formatDot(f)));
    b.append(art,el('span',t.label,'folder-title'),el('span',stories.length+' סיפורים','folder-count'),dots);grid.append(b);
   }
-  const legend=el('section',null,'folder-format-key');legend.setAttribute('aria-label','מפת הצבעים והצורות');legend.append(el('h2','הצבעים והצורות שלנו'));const row=el('div',null,'folder-format-legend');
+  const legend=el('section',null,'folder-format-key');legend.setAttribute('aria-label','מפת הצבעים והצורות');const row=el('div',null,'folder-format-legend');
   for(const f of BookiChoice.formats){const item=el('span',null,'folder-format-legend-item');item.append(formatDot(f),el('span',f.label));row.append(item);}legend.append(row);root.append(legend,grid);
   root.append(button('לְכָל הַסִּפּוּרִים ←',()=>shelf('all'),'cc-secondary all-stories'));
   // Keep existing letter practice available only when the class catalog includes public beginner texts.
