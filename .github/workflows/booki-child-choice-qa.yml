@@ -1,0 +1,67 @@
+name: Booki Child Choice Safety
+on:
+  push:
+    branches: ['booki/child-choice-safety-20260918']
+  pull_request:
+    paths: ['child-choice*', 'scripts/test-child-choice*', '.github/workflows/booki-child-choice-qa.yml']
+permissions:
+  contents: read
+jobs:
+  child-choice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm production assets and data rules are untouched
+        run: |
+          git diff --exit-code 76360eb14c5fc9ee0f8197dde08c5f8f6f66e58a HEAD -- index.html script.js routing.js private-library.js stories.js story-recommendations.js teacher-workspace.js firebase-messages.js firestore.rules storage.rules content
+      - name: Install isolated QA dependencies
+        run: npm install --no-save --no-package-lock jsdom@26.1.0 puppeteer-core@24
+      - name: Syntax, catalog mapping and component tests
+        run: |
+          node --check child-choice.js
+          node --check child-choice-app.js
+          node --check child-choice-demo.js
+          node build-pilot.cjs
+          node child-choice.test.cjs
+          node --test scripts/test-child-choice-integration.cjs
+      - name: Existing reading and release regressions
+        run: |
+          node scripts/test-reading-safety.js
+          node scripts/test-omri-word-matcher.js
+          node scripts/test-booki-local-listening.js
+          node scripts/test-release-flows.js
+      - name: Real-browser public demo checks (no login or database access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verification
+          python3 -m http.server 8089 --bind 127.0.0.1 >/tmp/booki-choice-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          export BOOKI_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          node scripts/test-child-choice-browser.cjs
+      - name: Verify existing no-login review link
+        run: |
+          curl --fail --silent --show-error --max-time 30 https://yehuditamos.github.io/booki/child-choice-test.html > verification/published-demo.html
+          grep -q 'child-choice-demo.js' verification/published-demo.html
+          echo 'Public no-login demo URL: HTTP success; child-choice entry confirmed'
+      - name: Archive exact tested public source
+        if: always()
+        run: |
+          mkdir -p verification
+          git archive --format=tar HEAD > verification/tested-source.tar
+          git rev-parse HEAD > verification/tested-commit.txt
+      - name: Save review screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: child-choice-review
+          path: verification/
+          retention-days: 3
