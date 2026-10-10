@@ -32,12 +32,6 @@ function showOwnerDashboard(teacher) {
 async function _odLoad() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   set('od-status', 'טוען...');
-  for (const id of ['od-returning-readers', 'od-week-readers', 'od-week-returning', 'od-week-sessions', 'od-week-minutes', 'od-total-students', 'od-total-minutes']) set(id, '—');
-  for (const key of ['readers', 'returning', 'sessions', 'minutes']) set('od-week-' + key + '-change', '');
-  set('od-week-coverage', 'טוען היסטוריית קריאה...');
-  document.getElementById('od-daily-chart')?.replaceChildren(_odNode('div','טוען...','od-empty'));
-  document.getElementById('od-daily-values')?.replaceChildren();
-  set('od-total-teachers', '—');
 
   try {
     const db    = window.db;
@@ -55,9 +49,6 @@ async function _odLoad() {
 
     // ── Render — pure computation, ללא קריאות Firestore נוספות ────────────
     _odRenderTeachers(teachers, clubs);
-    const totals = _odSystemTotals(teachers, clubs);
-    set('od-total-teachers', totals.teachers.toLocaleString('he-IL'));
-    set('od-total-students', totals.students.toLocaleString('he-IL'));
     _odRenderClubs(clubs);
     _odRenderSystemClubs().catch(e => console.warn('[owner-dashboard] system clubs:', e));
 
@@ -65,8 +56,6 @@ async function _odLoad() {
     const g  = gSnap.exists  ? gSnap.data()  : {};
     const ev = evSnap.exists ? evSnap.data() : {};
     const st = stSnap.exists ? stSnap.data() : {};
-    _odRenderDailyWeek(_odDailyActivity(ev));
-    set('od-week-coverage', 'כל סשני הקריאה המתועדים במערכת · ימים לפי UTC');
 
     set('od-dau-today', _fmt(g[`dau_${today}`] ?? 0));
     set('od-wau',       _fmt(last7.reduce((s, d) => s + (g[`dau_${d}`] ?? 0), 0)));
@@ -94,7 +83,7 @@ async function _odLoad() {
         : '<div class="od-empty">אין קריאות עדיין</div>';
     }
 
-    await _odLoadVerifiedReadingPulse(clubs, set, ev);
+    await _odLoadVerifiedReadingPulse(clubs, set);
     _odLoadErrors();
     set('od-status', 'עודכן ' + new Date().toLocaleTimeString('he-IL'));
 
@@ -106,29 +95,25 @@ async function _odLoad() {
 }
 
 
-async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
+async function _odLoadVerifiedReadingPulse(clubs, set) {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = [];
-  let failedClubs = 0;
   let verifiedLifetimeMinutes = 0;
-  const countedMinutes = new Set();
 
   // Owner-only audit source: the same real membership cards used by teachers.
   // This intentionally favors correctness over the old aggregate counter.
   for (const club of clubs) {
-    if (!club?.id) continue;
+    if (!club?.id || club.hidden) continue;
     try {
       const snap = await window.db.collection('clubs').doc(club.id).collection('memberships').get({source:'server'});
       for (const doc of snap.docs) {
         const m = doc.data() || {};
-
+        if (m.status === 'left') continue;
         const name = String(m.name || '').trim();
         if (!name || /^כרטיס פנוי\s+\d+$/.test(name)) continue;
-        const key = m.createdByTeacher ? club.id + "/" + doc.id : "user/" + (m.userId || doc.id);
         const stats = m.cachedStats || {};
         const totalMinutes = Number(stats.totalMinutes);
-        if (Number.isFinite(totalMinutes) && totalMinutes > 0 && !countedMinutes.has(key)) { verifiedLifetimeMinutes += totalMinutes; countedMinutes.add(key); }
-        if (club.hidden || m.status === 'left') continue;
+        if (Number.isFinite(totalMinutes) && totalMinutes > 0) verifiedLifetimeMinutes += totalMinutes;
         const raw = stats.lastReadAt;
         const last = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
         if (!last || Number.isNaN(last.getTime()) || last.getTime() < cutoff) continue;
@@ -143,18 +128,14 @@ async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
         });
       }
     } catch (e) {
-      failedClubs++;
       console.warn('[owner-dashboard] reading pulse', club.id, e);
     }
   }
 
   // A child can only have one active membership card per club; keep newest if legacy duplicates exist.
   const unique = [...new Map(rows.sort((a,b)=>b.last-a.last).map(x=>[x.key,x])).values()];
-  set('od-total-minutes', failedClubs ? '—' : Math.round(verifiedLifetimeMinutes).toLocaleString('he-IL'));
-
+  set('od-total-minutes', _fmt(Math.round(verifiedLifetimeMinutes)));
   set('od-wau', String(unique.length));
-
-
 
   const host = document.getElementById('od-active-readers-7d');
   if (!host) return;
@@ -176,60 +157,13 @@ async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   }
 }
 
-function _odSystemTotals(teachers, clubs) {
-  return {teachers:teachers.length,students:clubs.reduce((sum,c)=>sum+Math.max(0,Number(c.memberCount)||0),0)};
-}
-
-// Global counters cover completed app reads and reported external-book reads,
-// including children whose individual histories cannot be read by the owner.
-// Their historical daily buckets are UTC; keep chart and table on that same basis.
-function _odDailyActivity(events = {}, now = Date.now()) {
-  const today = new Date(now).toISOString().slice(0,10);
-  const calendar = new Date(today + 'T12:00:00Z');
-  calendar.setUTCDate(calendar.getUTCDate() - calendar.getUTCDay());
-  const labels = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const count = value => Math.max(0,Number(value)||0);
-  return labels.map((label,i) => {
-    const d = new Date(calendar);d.setUTCDate(d.getUTCDate()+i);
-    const date = d.toISOString().slice(0,10), key = date.replace(/-/g,'_'), future = date > today;
-    return {date,label,future,today:date===today,
-      sessions:future ? null : count(events['reading_completed_'+key]),
-      opens:future ? null : count(events['app_open_'+key])};
-  });
-}
-function _odRenderDailyWeek(days, unavailable = false) {
-  const host = document.getElementById('od-daily-chart'), body = document.getElementById('od-daily-values');
-  if (!host || !body) return;
-  host.replaceChildren();body.replaceChildren();
-  const bars = _odNode('div',undefined,'od-bars');bars.setAttribute('aria-hidden','true');
-  const max = Math.max(1,...days.map(d=>d.sessions || 0));
-  const number = n => Number(n).toLocaleString('he-IL');
-  for (const d of days) {
-    const missing = unavailable || d.future;
-    const column = _odNode('div',undefined,'od-bar-column' + (d.today?' is-today':'') + (d.future?' is-future':''));
-    column.appendChild(_odNode('span',missing?'—':number(d.sessions),'od-bar-number'));
-    const track = _odNode('div',undefined,'od-bar-track'), bar = _odNode('div',undefined,'od-bar');
-    bar.style.height = missing ? '0px' : (d.sessions ? Math.max(3,Math.round(d.sessions/max*135)) : 0) + 'px';
-    track.appendChild(bar);column.append(track,_odNode('span',d.label,'od-bar-label'));bars.appendChild(column);
-    const tr = _odNode('tr');if(d.today)tr.className='is-today';
-    const label = _odNode('th',d.label);label.scope='row';tr.appendChild(label);
-    tr.append(_odNode('td',missing?'—':number(d.sessions)),_odNode('td',d.future?'—':number(d.opens)));
-    body.appendChild(tr);
-  }
-  host.appendChild(bars);
-  const shortDate = d => d.slice(8,10)+'.'+d.slice(5,7);
-  const period = document.getElementById('od-week-period');if(period)period.textContent=shortDate(days[0].date)+' – '+shortDate(days[6].date);
-  const note = document.getElementById('od-opens-note');
-  if(note)note.hidden=true;
-}
-
 // ─── Teacher List — pure computation ─────────────────────────────────────────
 
 function _odRenderTeachers(teachers, clubs) {
   const set    = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   const listEl = document.getElementById('od-teachers-list');
 
-  set('od-total-teachers', teachers.length.toLocaleString('he-IL'));
+  set('od-total-teachers', String(teachers.length));
 
   if (!teachers.length) {
     if (listEl) listEl.innerHTML = '<div class="od-empty">אין מורות רשומות</div>';
@@ -260,7 +194,7 @@ function _odRenderTeachers(teachers, clubs) {
     </div>`;
   });
 
-  // The top student count is filled from real membership cards after loading.
+  set('od-total-students', String(totalStudents));
   if (listEl) listEl.innerHTML = rows.join('');
 }
 
