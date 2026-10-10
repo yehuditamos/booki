@@ -102,6 +102,26 @@
 #screen-owner-dashboard .od-reader-club{display:block;font-size:.78rem;color:#66806e;margin-top:2px}
 #screen-owner-dashboard .od-reader-meta{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;font-size:.8rem;color:#31553e}
 #screen-owner-dashboard .od-reader-meta span{background:#edf7ef;border:1px solid #c4d8c9;border-radius:999px;padding:5px 8px;white-space:nowrap}
+#screen-owner-dashboard .od-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#screen-owner-dashboard .od-overview .od-metric{padding:16px 8px;min-width:0}
+#screen-owner-dashboard .od-overview .od-val{font-size:clamp(24px,5vw,36px)}
+#screen-owner-dashboard .od-overview .od-lbl{font-size:14px}
+#screen-owner-dashboard .od-overview .od-coverage{font-size:11px}
+#screen-owner-dashboard .od-week-panel{background:#fff;border:1px solid #c4d8c9;border-radius:20px;padding:16px;margin-bottom:20px}
+#screen-owner-dashboard .od-bars{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;height:190px;margin-top:12px;border-bottom:1px solid #b8cdbf;padding:0 4px}
+#screen-owner-dashboard .od-bar-column{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;min-width:0}
+#screen-owner-dashboard .od-bar-track{height:135px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+#screen-owner-dashboard .od-bar{background:#4b8b63;width:70%;max-width:48px;border-radius:7px 7px 0 0}
+#screen-owner-dashboard .od-bar-number{font-weight:bold;font-size:15px;color:#185c3b}
+#screen-owner-dashboard .od-bar-label{font-size:12px;padding-bottom:7px;white-space:nowrap}
+#screen-owner-dashboard .od-bar-column.is-today .od-bar{background:#235d3d}
+#screen-owner-dashboard .od-bar-column.is-today .od-bar-label{font-weight:bold}
+#screen-owner-dashboard .od-bar-column.is-future{opacity:.55}
+#screen-owner-dashboard .od-daily-table{width:100%;border-collapse:collapse;text-align:right;font-size:14px;margin-top:16px}
+#screen-owner-dashboard .od-daily-table caption{text-align:right;font-weight:bold;margin-bottom:8px}
+#screen-owner-dashboard .od-daily-table th,#screen-owner-dashboard .od-daily-table td{padding:10px 4px;border-bottom:1px solid #d7e4d9}
+#screen-owner-dashboard .od-daily-table tr.is-today{background:#edf7ef}
+@media(max-width:400px){#screen-owner-dashboard .od-week-panel{padding:12px 8px}#screen-owner-dashboard .od-bars{gap:4px}#screen-owner-dashboard .od-bar-label{font-size:11px}#screen-owner-dashboard .od-daily-table{font-size:12px}}
 @media(max-width:560px){#screen-owner-dashboard .od-reader-row{display:block}#screen-owner-dashboard .od-reader-meta{justify-content:flex-start;margin-top:8px}}
 </style>
 <link rel="stylesheet" href="story-recommendations.css?v=20260917-recommend">
@@ -1399,7 +1419,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="firebase-messages.js?v=20260917-recommend"></script>
 <script src="story-recommendations.js?v=20260918-library-modes"></script>
 <script src="auth.js?v=7"></script>
-<script src="analytics.js?v=2"></script>
+<script src="analytics.js?v=20261010-israel-opens"></script>
 
 <!-- נתוני ספרייה — חייבים לטעון לפני הסיפורים -->
 <script src="data-libraries.js?v=1"></script>
@@ -1439,7 +1459,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20261008-weekly-returning-readers-2"></script>
+<script src="owner-dashboard.js?v=20261010-daily-week-chart"></script>
 <script src="initial-setup.js?v=save-device-20261006"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1456,37 +1476,24 @@ window.addEventListener('pageshow', function (e) {
   <div class="od-body">
 
     <div class="od-section">
-      <div class="od-section-title">📊 KPI</div>
-      <div class="od-grid">
-        <div class="od-metric"><span class="od-val" id="od-total-teachers">—</span><span class="od-lbl">מורות</span></div>
-        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-clubs">—</span><span class="od-lbl">מועדונים</span></button>
-        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה במועדונים ובתלמידים" style="font:inherit;color:inherit;cursor:pointer"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
+      <div class="od-grid od-overview">
+        <div class="od-metric"><span class="od-val" id="od-active-teachers">—</span><span class="od-lbl">מורות פעילות</span><span class="od-coverage">נכנסו ב־30 הימים האחרונים</span></div>
+        <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה בתלמידים"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
         <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
-        <div class="od-metric"><span class="od-val" id="od-returning-readers">—</span><span class="od-lbl">ילדים שחזרו לקרוא ב־7 ימים</span><span class="od-coverage">קריאה באפליקציה בשני ימים שונים לפחות</span></div>
       </div>
     </div>
 
-    <div class="od-section">
-      <div class="od-section-title">📅 היום</div>
-      <div class="od-grid">
-        <div class="od-metric"><span class="od-val" id="od-opens-today">—</span><span class="od-lbl">פתיחות</span></div>
-        <div class="od-metric"><span class="od-val" id="od-sessions-today">—</span><span class="od-lbl">סשני קריאה</span></div>
-        <div class="od-metric"><span class="od-val" id="od-dau-today">—</span><span class="od-lbl">פעילים היום</span></div>
-        <div class="od-metric"><span class="od-val" id="od-wau">—</span><span class="od-lbl">פעילים 7 ימים</span></div>
-      </div>
-    </div>
-
-    <div class="od-section" aria-labelledby="od-week-title">
-      <div class="od-section-title" id="od-week-title">📅 סיכום שבועי · 7 הימים האחרונים</div>
+    <div class="od-section od-week-panel" aria-labelledby="od-week-title">
+      <div class="od-section-title" id="od-week-title">📅 השבוע בקריאה</div>
       <p class="od-coverage" id="od-week-period"></p>
-      <div class="od-grid">
-        <div class="od-metric"><span class="od-val" id="od-week-readers">—</span><span class="od-lbl">ילדים שקראו באפליקציה</span><span class="od-coverage" id="od-week-readers-change"></span></div>
-        <div class="od-metric"><span class="od-val" id="od-week-returning">—</span><span class="od-lbl">ילדים שחזרו לקרוא</span><span class="od-coverage" id="od-week-returning-change"></span></div>
-        <div class="od-metric"><span class="od-val" id="od-week-sessions">—</span><span class="od-lbl">קריאות באפליקציה</span><span class="od-coverage" id="od-week-sessions-change"></span></div>
-        <div class="od-metric"><span class="od-val" id="od-week-minutes">—</span><span class="od-lbl">דקות קריאה באפליקציה</span><span class="od-coverage" id="od-week-minutes-change"></span></div>
-      </div>
-      <p class="od-coverage">חזרו לקרוא = קראו בשני ימים שונים לפחות בתוך התקופה. ההשוואה היא לשבעת הימים שקדמו לה. דיווחים על ספרים חיצוניים אינם נכללים.</p>
+      <div id="od-daily-chart" aria-label="מספר הילדים שקראו בכל יום"><div class="od-empty">טוען...</div></div>
+      <table class="od-daily-table">
+        <caption>פעילות יומית</caption>
+        <thead><tr><th scope="col">יום</th><th scope="col">ילדים שקראו</th><th scope="col">פתיחות</th><th scope="col">סשני קריאה</th></tr></thead>
+        <tbody id="od-daily-values"></tbody>
+      </table>
       <p class="od-coverage" id="od-week-coverage" role="status">טוען היסטוריית קריאה...</p>
+      <p class="od-coverage" id="od-opens-note" hidden></p>
     </div>
 
     <div class="od-section od-reading-pulse">

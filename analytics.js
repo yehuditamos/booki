@@ -58,6 +58,15 @@ async function track(eventName, props = {}) {
       [`${eventName}_${day}`]: _inc(1),
     }, { merge: true }).catch(() => {});
 
+    // Keep legacy UTC counters, and separately count opens by the Israeli calendar.
+    if (eventName === 'app_open') {
+      const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+      const date = Object.fromEntries(parts.map(p => [p.type,p.value]));
+      db.collection('owner-stats').doc('events').set({
+        [`app_open_il_${date.year}_${date.month}_${date.day}`]: _inc(1),
+      }, {merge:true}).catch(() => {});
+    }
+
     // אגרגציות נוספות לפי סוג אירוע
     switch (eventName) {
 

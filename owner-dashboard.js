@@ -32,9 +32,12 @@ function showOwnerDashboard(teacher) {
 async function _odLoad() {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   set('od-status', 'טוען...');
-  for (const id of ['od-returning-readers', 'od-week-readers', 'od-week-returning', 'od-week-sessions', 'od-week-minutes']) set(id, '—');
+  for (const id of ['od-returning-readers', 'od-week-readers', 'od-week-returning', 'od-week-sessions', 'od-week-minutes', 'od-total-students', 'od-total-minutes']) set(id, '—');
   for (const key of ['readers', 'returning', 'sessions', 'minutes']) set('od-week-' + key + '-change', '');
   set('od-week-coverage', 'טוען היסטוריית קריאה...');
+  document.getElementById('od-daily-chart')?.replaceChildren(_odNode('div','טוען...','od-empty'));
+  document.getElementById('od-daily-values')?.replaceChildren();
+  set('od-active-teachers', '—');
 
   try {
     const db    = window.db;
@@ -52,6 +55,7 @@ async function _odLoad() {
 
     // ── Render — pure computation, ללא קריאות Firestore נוספות ────────────
     _odRenderTeachers(teachers, clubs);
+    set('od-active-teachers', String(_odActiveTeacherCount(teachers)));
     _odRenderClubs(clubs);
     _odRenderSystemClubs().catch(e => console.warn('[owner-dashboard] system clubs:', e));
 
@@ -86,7 +90,7 @@ async function _odLoad() {
         : '<div class="od-empty">אין קריאות עדיין</div>';
     }
 
-    await _odLoadVerifiedReadingPulse(clubs, set);
+    await _odLoadVerifiedReadingPulse(clubs, set, ev);
     _odLoadErrors();
     set('od-status', 'עודכן ' + new Date().toLocaleTimeString('he-IL'));
 
@@ -98,12 +102,13 @@ async function _odLoad() {
 }
 
 
-async function _odLoadVerifiedReadingPulse(clubs, set) {
+async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = [];
   const readerCards = new Map();
   let failedClubs = 0;
   let verifiedLifetimeMinutes = 0;
+  const countedMinutes = new Set();
 
   // Owner-only audit source: the same real membership cards used by teachers.
   // This intentionally favors correctness over the old aggregate counter.
@@ -120,7 +125,7 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
         readerCards.set(key, { key, clubId: club.id, cardId: doc.id, userId: m.userId || doc.id, createdByTeacher: !!m.createdByTeacher });
         const stats = m.cachedStats || {};
         const totalMinutes = Number(stats.totalMinutes);
-        if (Number.isFinite(totalMinutes) && totalMinutes > 0) verifiedLifetimeMinutes += totalMinutes;
+        if (Number.isFinite(totalMinutes) && totalMinutes > 0 && !countedMinutes.has(key)) { verifiedLifetimeMinutes += totalMinutes; countedMinutes.add(key); }
         const raw = stats.lastReadAt;
         const last = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
         if (!last || Number.isNaN(last.getTime()) || last.getTime() < cutoff) continue;
@@ -142,10 +147,11 @@ async function _odLoadVerifiedReadingPulse(clubs, set) {
 
   // A child can only have one active membership card per club; keep newest if legacy duplicates exist.
   const unique = [...new Map(rows.sort((a,b)=>b.last-a.last).map(x=>[x.key,x])).values()];
-  set('od-total-minutes', _fmt(Math.round(verifiedLifetimeMinutes)));
+  set('od-total-minutes', failedClubs ? '—' : Math.round(verifiedLifetimeMinutes).toLocaleString('he-IL'));
+  set('od-total-students', failedClubs ? '—' : readerCards.size.toLocaleString('he-IL'));
   set('od-wau', String(unique.length));
 
-  await _odLoadWeeklyReading([...readerCards.values()], set, failedClubs);
+  await _odLoadWeeklyReading([...readerCards.values()], set, failedClubs, events);
 
   const host = document.getElementById('od-active-readers-7d');
   if (!host) return;
@@ -191,7 +197,7 @@ function _odWeeklyReading(records, now = Date.now()) {
   return buckets.map(b => ({ readers: b.readers.size, returning: [...b.readers.values()].filter(days => days.size >= 2).length, sessions: b.sessions, minutes: Math.round(b.minutes) }));
 }
 
-async function _odLoadWeeklyReading(cards, set, failedClubs = 0) {
+async function _odLoadWeeklyReading(cards, set, failedClubs = 0, events = {}) {
   const now = Date.now();
   const from = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
   const records = [];
@@ -212,20 +218,79 @@ async function _odLoadWeeklyReading(cards, set, failedClubs = 0) {
       }
     }
   }));
-  const [current, previous] = _odWeeklyReading(records, now);
   const partial = failedCards > 0 || failedClubs > 0;
   const unavailable = failedClubs > 0 || (cards.length > 0 && failedCards === cards.length);
-  for (const key of ['readers', 'returning', 'sessions', 'minutes']) {
-    set('od-week-' + key, unavailable ? '—' : _fmt(current[key]));
-    const diff = current[key] - previous[key];
-    set('od-week-' + key + '-change', partial ? 'אין השוואה מלאה' : 'לעומת ' + _fmt(previous[key]) + ' קודם · ' + (diff > 0 ? '+' : '') + _fmt(diff));
-  }
-  set('od-returning-readers', unavailable ? '—' : _fmt(current.returning));
+  _odRenderDailyWeek(_odDailyWeek(records, events, now), unavailable);
   set('od-week-coverage', partial
-    ? 'נתונים חלקיים: לא ניתן לטעון היסטוריה של ' + failedCards + ' כרטיסים ו־' + failedClubs + ' מועדונים. הנתונים הזמינים אינם סיכום מלא.'
-    : 'מבוסס על קריאות מתועדות באפליקציה בכרטיסי הילדים במועדונים הגלויים. כל ילד נספר פעם אחת בכל תקופה; ימים לפי שעון ישראל.');
-  const format = value => new Date(value).toLocaleString('he-IL', {timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short'});
-  set('od-week-period', format(now - 7 * 24 * 60 * 60 * 1000) + ' – ' + format(now));
+    ? 'נתונים חלקיים: חסרה היסטוריית קריאה של ' + failedCards + ' כרטיסים ו־' + failedClubs + ' מועדונים.'
+    : 'כל ילד נספר פעם ביום · קריאות באפליקציה · ימים לפי שעון ישראל');
+}
+
+function _odIsraelDay(value) {
+  const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value));
+  const p = Object.fromEntries(parts.map(x => [x.type,x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+function _odActiveTeacherCount(teachers, now = Date.now()) {
+  const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+  const ids = new Set();
+  for (const t of teachers) {
+    if (t.role !== 'teacher') continue;
+    const value = t.lastLoginAt;
+    const time = value?.toDate ? value.toDate().getTime() : new Date(value).getTime();
+    if (Number.isFinite(time) && time >= cutoff && time <= now) ids.add(t.id);
+  }
+  return ids.size;
+}
+function _odDailyWeek(records, events = {}, now = Date.now()) {
+  const today = _odIsraelDay(now);
+  const calendar = new Date(today + 'T12:00:00Z');
+  calendar.setUTCDate(calendar.getUTCDate() - calendar.getUTCDay());
+  const labels = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const days = labels.map((label,i) => {
+    const d = new Date(calendar);d.setUTCDate(d.getUTCDate()+i);
+    const date = d.toISOString().slice(0,10), future = date > today;
+    const key = date.replace(/-/g,'_'), local = events['app_open_il_' + key];
+    const legacy = !future && local == null && date <= '2026-10-10';
+    return {date,label,future,today:date===today,children:new Set(),readers:0,sessions:0,
+      opens:future ? null : Number(local ?? (legacy ? events['app_open_'+key] : 0) ?? 0),legacyOpens:legacy};
+  });
+  const byDate = new Map(days.map(d=>[d.date,d])), seen = new Set();
+  for (const r of records) {
+    if (!['app','booki'].includes(r.session.type)) continue;
+    const raw = r.session.createdAt;
+    const time = raw?.toDate ? raw.toDate().getTime() : new Date(raw).getTime();
+    if (!Number.isFinite(time) || time > now) continue;
+    const day = byDate.get(_odIsraelDay(time)), id = r.key+'/'+r.id;
+    if (!day || day.future || seen.has(id)) continue;
+    seen.add(id);day.children.add(r.key);day.sessions++;
+  }
+  return days.map(({children,...d})=>({...d,readers:children.size}));
+}
+function _odRenderDailyWeek(days, unavailable = false) {
+  const host = document.getElementById('od-daily-chart'), body = document.getElementById('od-daily-values');
+  if (!host || !body) return;
+  host.replaceChildren();body.replaceChildren();
+  const bars = _odNode('div',undefined,'od-bars');bars.setAttribute('aria-hidden','true');
+  const max = Math.max(1,...days.map(d=>d.readers));
+  const number = n => Number(n).toLocaleString('he-IL');
+  for (const d of days) {
+    const missing = unavailable || d.future;
+    const column = _odNode('div',undefined,'od-bar-column' + (d.today?' is-today':'') + (d.future?' is-future':''));
+    column.appendChild(_odNode('span',missing?'—':number(d.readers),'od-bar-number'));
+    const track = _odNode('div',undefined,'od-bar-track'), bar = _odNode('div',undefined,'od-bar');
+    bar.style.height = missing ? '0px' : (d.readers ? Math.max(3,Math.round(d.readers/max*135)) : 0) + 'px';
+    track.appendChild(bar);column.append(track,_odNode('span',d.label,'od-bar-label'));bars.appendChild(column);
+    const tr = _odNode('tr');if(d.today)tr.className='is-today';
+    const label = _odNode('th',d.label);label.scope='row';tr.appendChild(label);
+    tr.append(_odNode('td',missing?'—':number(d.readers)),_odNode('td',d.future?'—':number(d.opens)+(d.legacyOpens?' *':'')),_odNode('td',missing?'—':number(d.sessions)));
+    body.appendChild(tr);
+  }
+  host.appendChild(bars);
+  const shortDate = d => d.slice(8,10)+'.'+d.slice(5,7);
+  const period = document.getElementById('od-week-period');if(period)period.textContent=shortDate(days[0].date)+' – '+shortDate(days[6].date);
+  const note = document.getElementById('od-opens-note');
+  if(note){note.hidden=!days.some(d=>d.legacyOpens);note.textContent='* פתיחות ישנות לפי UTC; ספירה לפי שעון ישראל החלה ב־10.10 במהלך היום.';}
 }
 
 // ─── Teacher List — pure computation ─────────────────────────────────────────
@@ -265,7 +330,7 @@ function _odRenderTeachers(teachers, clubs) {
     </div>`;
   });
 
-  set('od-total-students', String(totalStudents));
+  // The top student count is filled from real membership cards after loading.
   if (listEl) listEl.innerHTML = rows.join('');
 }
 

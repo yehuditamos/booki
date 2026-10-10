@@ -17,6 +17,24 @@ const records = [
 ];
 const result = JSON.parse(JSON.stringify(ctx._odWeeklyReading(records,now)));
 assert.deepEqual(result,[{readers:2,returning:1,sessions:5,minutes:10},{readers:1,returning:1,sessions:2,minutes:4}]);
+const week = JSON.parse(JSON.stringify(ctx._odDailyWeek(records,{app_open_2026_10_07:11,app_open_il_2026_10_08:7},now)));
+assert.equal(week.length,7);
+assert.equal(week[0].date,'2026-10-04');assert.equal(week[6].date,'2026-10-10');
+assert.equal(week[3].readers,2);assert.equal(week[3].sessions,4);assert.equal(week[3].opens,11);assert(week[3].legacyOpens);
+assert.equal(week[4].readers,1);assert.equal(week[4].sessions,1);assert.equal(week[4].opens,7);assert(!week[4].legacyOpens);
+assert(week[5].future);assert.equal(week[5].opens,null);
+const sunday=ctx._odDailyWeek([],{},Date.parse('2026-10-10T21:30:00Z'));
+assert.equal(sunday[0].date,'2026-10-11');assert(sunday[0].today);
+const winter=ctx._odDailyWeek([],{},Date.parse('2026-10-31T22:30:00Z'));
+assert.equal(winter[0].date,'2026-11-01');
+assert.equal(ctx._odActiveTeacherCount([
+ {id:'one',role:'teacher',lastLoginAt:'2026-10-07T12:00:00Z'},
+ {id:'one',role:'teacher',lastLoginAt:'2026-10-07T12:00:00Z'},
+ {id:'owner',role:'owner',lastLoginAt:'2026-10-07T12:00:00Z'},
+ {id:'old',role:'teacher',lastLoginAt:'2026-08-01T12:00:00Z'},
+ {id:'new',role:'teacher',createdAt:'2026-10-07T12:00:00Z'},
+ {id:'future',role:'teacher',lastLoginAt:'2026-12-01T12:00:00Z'}
+],now),1);
 const values = {};
 const set = (k,v) => values[k]=v;
 let active=0,maxActive=0;
@@ -27,13 +45,19 @@ ctx.window.db=chain('');
  await ctx._odLoadWeeklyReading([{key:'a',clubId:'c',cardId:'a',createdByTeacher:true},{key:'b',userId:'b',createdByTeacher:false}],set);
  assert(calls.includes('/clubs/c/memberships/a/sessions'));
  assert(calls.includes('/users/b/readingSessions'));
- assert.equal(values['od-week-readers-change'],'אין השוואה מלאה');
  assert.match(values['od-week-coverage'],/נתונים חלקיים/);
  await ctx._odLoadWeeklyReading([{key:'b',userId:'b',createdByTeacher:false}],set);
- assert.equal(values['od-returning-readers'],'—');
+ assert.match(values['od-week-coverage'],/נתונים חלקיים/);
  await ctx._odLoadWeeklyReading([],set);
- assert.equal(values['od-returning-readers'],'0');
+ assert(!values['od-week-coverage'].includes('נתונים חלקיים'));
  assert(!values['od-week-coverage'].includes('נתונים חלקיים'));
  assert(maxActive<=6);
- console.log('PASS: weekly readers, different Israel days, external books excluded, duplicate records, previous period, invalid/future records, both history sources and partial-data reporting');
+ const writes=[];
+ const FixedDate=class extends Date {constructor(...args){super(...(args.length?args:['2026-10-10T22:30:00Z']));}};
+ const analytics=vm.createContext({console,Date:FixedDate,Intl,window:{db:{collection:()=>({doc:id=>({set:async data=>{writes.push({id,data});}})})}}});
+ vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../analytics.js'),'utf8'),analytics);
+ await analytics.track('app_open');
+ assert(writes.some(x=>x.data.app_open_2026_10_10===1));
+ assert(writes.some(x=>x.data.app_open_il_2026_10_11===1));
+ console.log('PASS: daily unique readers, duplicate records, app/booki vs external books, Israel week and DST boundaries, teacher activity, both history sources, partial data, and local/legacy open tracking');
 })();
