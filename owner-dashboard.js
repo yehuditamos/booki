@@ -37,7 +37,7 @@ async function _odLoad() {
   set('od-week-coverage', 'טוען היסטוריית קריאה...');
   document.getElementById('od-daily-chart')?.replaceChildren(_odNode('div','טוען...','od-empty'));
   document.getElementById('od-daily-values')?.replaceChildren();
-  set('od-active-teachers', '—');
+  set('od-total-teachers', '—');
 
   try {
     const db    = window.db;
@@ -55,7 +55,9 @@ async function _odLoad() {
 
     // ── Render — pure computation, ללא קריאות Firestore נוספות ────────────
     _odRenderTeachers(teachers, clubs);
-    set('od-active-teachers', String(_odActiveTeacherCount(teachers)));
+    const totals = _odSystemTotals(teachers, clubs);
+    set('od-total-teachers', totals.teachers.toLocaleString('he-IL'));
+    set('od-total-students', totals.students.toLocaleString('he-IL'));
     _odRenderClubs(clubs);
     _odRenderSystemClubs().catch(e => console.warn('[owner-dashboard] system clubs:', e));
 
@@ -63,6 +65,8 @@ async function _odLoad() {
     const g  = gSnap.exists  ? gSnap.data()  : {};
     const ev = evSnap.exists ? evSnap.data() : {};
     const st = stSnap.exists ? stSnap.data() : {};
+    _odRenderDailyWeek(_odDailyActivity(ev));
+    set('od-week-coverage', 'כל סשני הקריאה המתועדים במערכת · ימים לפי UTC');
 
     set('od-dau-today', _fmt(g[`dau_${today}`] ?? 0));
     set('od-wau',       _fmt(last7.reduce((s, d) => s + (g[`dau_${d}`] ?? 0), 0)));
@@ -105,7 +109,6 @@ async function _odLoad() {
 async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = [];
-  const readerCards = new Map();
   let failedClubs = 0;
   let verifiedLifetimeMinutes = 0;
   const countedMinutes = new Set();
@@ -113,19 +116,19 @@ async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   // Owner-only audit source: the same real membership cards used by teachers.
   // This intentionally favors correctness over the old aggregate counter.
   for (const club of clubs) {
-    if (!club?.id || club.hidden) continue;
+    if (!club?.id) continue;
     try {
       const snap = await window.db.collection('clubs').doc(club.id).collection('memberships').get({source:'server'});
       for (const doc of snap.docs) {
         const m = doc.data() || {};
-        if (m.status === 'left') continue;
+
         const name = String(m.name || '').trim();
         if (!name || /^כרטיס פנוי\s+\d+$/.test(name)) continue;
         const key = m.createdByTeacher ? club.id + "/" + doc.id : "user/" + (m.userId || doc.id);
-        readerCards.set(key, { key, clubId: club.id, cardId: doc.id, userId: m.userId || doc.id, createdByTeacher: !!m.createdByTeacher });
         const stats = m.cachedStats || {};
         const totalMinutes = Number(stats.totalMinutes);
         if (Number.isFinite(totalMinutes) && totalMinutes > 0 && !countedMinutes.has(key)) { verifiedLifetimeMinutes += totalMinutes; countedMinutes.add(key); }
+        if (club.hidden || m.status === 'left') continue;
         const raw = stats.lastReadAt;
         const last = raw?.toDate ? raw.toDate() : raw ? new Date(raw) : null;
         if (!last || Number.isNaN(last.getTime()) || last.getTime() < cutoff) continue;
@@ -148,10 +151,10 @@ async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   // A child can only have one active membership card per club; keep newest if legacy duplicates exist.
   const unique = [...new Map(rows.sort((a,b)=>b.last-a.last).map(x=>[x.key,x])).values()];
   set('od-total-minutes', failedClubs ? '—' : Math.round(verifiedLifetimeMinutes).toLocaleString('he-IL'));
-  set('od-total-students', failedClubs ? '—' : readerCards.size.toLocaleString('he-IL'));
+
   set('od-wau', String(unique.length));
 
-  await _odLoadWeeklyReading([...readerCards.values()], set, failedClubs, events);
+
 
   const host = document.getElementById('od-active-readers-7d');
   if (!host) return;
@@ -173,124 +176,51 @@ async function _odLoadVerifiedReadingPulse(clubs, set, events = {}) {
   }
 }
 
-// Count successful app-reading records, not opens, external books, or cached totals.
-function _odWeeklyReading(records, now = Date.now()) {
-  const week = 7 * 24 * 60 * 60 * 1000;
-  const buckets = [0, 1].map(() => ({ readers: new Map(), sessions: 0, minutes: 0 }));
-  const seen = new Set();
-  const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' });
-  for (const r of records) {
-    const s = r.session;
-    if (s.type !== 'app' && s.type !== 'booki') continue;
-    const time = s.createdAt?.toDate ? s.createdAt.toDate().getTime() : new Date(s.createdAt).getTime();
-    if (!Number.isFinite(time) || time > now || time < now - 2 * week) continue;
-    const id = r.key + '/' + r.id;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const b = buckets[time >= now - week ? 0 : 1];
-    if (!b.readers.has(r.key)) b.readers.set(r.key, new Set());
-    b.readers.get(r.key).add(dayFormat.format(new Date(time)));
-    b.sessions++;
-    const minutes = Number(s.minutes);
-    if (Number.isFinite(minutes) && minutes > 0) b.minutes += minutes;
-  }
-  return buckets.map(b => ({ readers: b.readers.size, returning: [...b.readers.values()].filter(days => days.size >= 2).length, sessions: b.sessions, minutes: Math.round(b.minutes) }));
+function _odSystemTotals(teachers, clubs) {
+  return {teachers:teachers.length,students:clubs.reduce((sum,c)=>sum+Math.max(0,Number(c.memberCount)||0),0)};
 }
 
-async function _odLoadWeeklyReading(cards, set, failedClubs = 0, events = {}) {
-  const now = Date.now();
-  const from = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const records = [];
-  let next = 0, failedCards = 0;
-  // Bound simultaneous reads. Existing rules protect all sources; no permission expansion.
-  await Promise.all(Array.from({ length: Math.min(6, cards.length) }, async () => {
-    while (next < cards.length) {
-      const card = cards[next++];
-      try {
-        const source = card.createdByTeacher
-          ? window.db.collection('clubs').doc(card.clubId).collection('memberships').doc(card.cardId).collection('sessions')
-          : window.db.collection('users').doc(card.userId).collection('readingSessions');
-        const snap = await source.where('createdAt', '>=', from).get({source: 'server'});
-        for (const doc of snap.docs) records.push({ key: card.key, id: doc.id, session: doc.data() || {} });
-      } catch (e) {
-        failedCards++;
-        console.warn('[owner-dashboard] weekly reading unavailable', e.code || e.message);
-      }
-    }
-  }));
-  const partial = failedCards > 0 || failedClubs > 0;
-  const unavailable = failedClubs > 0 || (cards.length > 0 && failedCards === cards.length);
-  _odRenderDailyWeek(_odDailyWeek(records, events, now), unavailable);
-  set('od-week-coverage', partial
-    ? 'נתונים חלקיים: חסרה היסטוריית קריאה של ' + failedCards + ' כרטיסים ו־' + failedClubs + ' מועדונים.'
-    : 'כל ילד נספר פעם ביום · קריאות באפליקציה · ימים לפי שעון ישראל');
-}
-
-function _odIsraelDay(value) {
-  const parts = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Jerusalem',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value));
-  const p = Object.fromEntries(parts.map(x => [x.type,x.value]));
-  return `${p.year}-${p.month}-${p.day}`;
-}
-function _odActiveTeacherCount(teachers, now = Date.now()) {
-  const cutoff = now - 30 * 24 * 60 * 60 * 1000;
-  const ids = new Set();
-  for (const t of teachers) {
-    if (t.role !== 'teacher') continue;
-    const value = t.lastLoginAt;
-    const time = value?.toDate ? value.toDate().getTime() : new Date(value).getTime();
-    if (Number.isFinite(time) && time >= cutoff && time <= now) ids.add(t.id);
-  }
-  return ids.size;
-}
-function _odDailyWeek(records, events = {}, now = Date.now()) {
-  const today = _odIsraelDay(now);
+// Global counters cover completed app reads and reported external-book reads,
+// including children whose individual histories cannot be read by the owner.
+// Their historical daily buckets are UTC; keep chart and table on that same basis.
+function _odDailyActivity(events = {}, now = Date.now()) {
+  const today = new Date(now).toISOString().slice(0,10);
   const calendar = new Date(today + 'T12:00:00Z');
   calendar.setUTCDate(calendar.getUTCDate() - calendar.getUTCDay());
   const labels = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const days = labels.map((label,i) => {
+  const count = value => Math.max(0,Number(value)||0);
+  return labels.map((label,i) => {
     const d = new Date(calendar);d.setUTCDate(d.getUTCDate()+i);
-    const date = d.toISOString().slice(0,10), future = date > today;
-    const key = date.replace(/-/g,'_'), local = events['app_open_il_' + key];
-    const legacy = !future && local == null && date <= '2026-10-10';
-    return {date,label,future,today:date===today,children:new Set(),readers:0,sessions:0,
-      opens:future ? null : Number(local ?? (legacy ? events['app_open_'+key] : 0) ?? 0),legacyOpens:legacy};
+    const date = d.toISOString().slice(0,10), key = date.replace(/-/g,'_'), future = date > today;
+    return {date,label,future,today:date===today,
+      sessions:future ? null : count(events['reading_completed_'+key]),
+      opens:future ? null : count(events['app_open_'+key])};
   });
-  const byDate = new Map(days.map(d=>[d.date,d])), seen = new Set();
-  for (const r of records) {
-    if (!['app','booki'].includes(r.session.type)) continue;
-    const raw = r.session.createdAt;
-    const time = raw?.toDate ? raw.toDate().getTime() : new Date(raw).getTime();
-    if (!Number.isFinite(time) || time > now) continue;
-    const day = byDate.get(_odIsraelDay(time)), id = r.key+'/'+r.id;
-    if (!day || day.future || seen.has(id)) continue;
-    seen.add(id);day.children.add(r.key);day.sessions++;
-  }
-  return days.map(({children,...d})=>({...d,readers:children.size}));
 }
 function _odRenderDailyWeek(days, unavailable = false) {
   const host = document.getElementById('od-daily-chart'), body = document.getElementById('od-daily-values');
   if (!host || !body) return;
   host.replaceChildren();body.replaceChildren();
   const bars = _odNode('div',undefined,'od-bars');bars.setAttribute('aria-hidden','true');
-  const max = Math.max(1,...days.map(d=>d.readers));
+  const max = Math.max(1,...days.map(d=>d.sessions || 0));
   const number = n => Number(n).toLocaleString('he-IL');
   for (const d of days) {
     const missing = unavailable || d.future;
     const column = _odNode('div',undefined,'od-bar-column' + (d.today?' is-today':'') + (d.future?' is-future':''));
-    column.appendChild(_odNode('span',missing?'—':number(d.readers),'od-bar-number'));
+    column.appendChild(_odNode('span',missing?'—':number(d.sessions),'od-bar-number'));
     const track = _odNode('div',undefined,'od-bar-track'), bar = _odNode('div',undefined,'od-bar');
-    bar.style.height = missing ? '0px' : (d.readers ? Math.max(3,Math.round(d.readers/max*135)) : 0) + 'px';
+    bar.style.height = missing ? '0px' : (d.sessions ? Math.max(3,Math.round(d.sessions/max*135)) : 0) + 'px';
     track.appendChild(bar);column.append(track,_odNode('span',d.label,'od-bar-label'));bars.appendChild(column);
     const tr = _odNode('tr');if(d.today)tr.className='is-today';
     const label = _odNode('th',d.label);label.scope='row';tr.appendChild(label);
-    tr.append(_odNode('td',missing?'—':number(d.readers)),_odNode('td',d.future?'—':number(d.opens)+(d.legacyOpens?' *':'')),_odNode('td',missing?'—':number(d.sessions)));
+    tr.append(_odNode('td',missing?'—':number(d.sessions)),_odNode('td',d.future?'—':number(d.opens)));
     body.appendChild(tr);
   }
   host.appendChild(bars);
   const shortDate = d => d.slice(8,10)+'.'+d.slice(5,7);
   const period = document.getElementById('od-week-period');if(period)period.textContent=shortDate(days[0].date)+' – '+shortDate(days[6].date);
   const note = document.getElementById('od-opens-note');
-  if(note){note.hidden=!days.some(d=>d.legacyOpens);note.textContent='* פתיחות ישנות לפי UTC; ספירה לפי שעון ישראל החלה ב־10.10 במהלך היום.';}
+  if(note)note.hidden=true;
 }
 
 // ─── Teacher List — pure computation ─────────────────────────────────────────
@@ -299,7 +229,7 @@ function _odRenderTeachers(teachers, clubs) {
   const set    = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   const listEl = document.getElementById('od-teachers-list');
 
-  set('od-total-teachers', String(teachers.length));
+  set('od-total-teachers', teachers.length.toLocaleString('he-IL'));
 
   if (!teachers.length) {
     if (listEl) listEl.innerHTML = '<div class="od-empty">אין מורות רשומות</div>';

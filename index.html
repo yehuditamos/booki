@@ -104,7 +104,7 @@
 #screen-owner-dashboard .od-reader-meta span{background:#edf7ef;border:1px solid #c4d8c9;border-radius:999px;padding:5px 8px;white-space:nowrap}
 #screen-owner-dashboard .od-overview{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 #screen-owner-dashboard .od-overview .od-metric{padding:16px 8px;min-width:0}
-#screen-owner-dashboard .od-overview .od-val{font-size:clamp(24px,5vw,36px)}
+#screen-owner-dashboard .od-overview .od-val{font-size:clamp(28px,6vw,44px);font-weight:800;line-height:1.2;overflow-wrap:anywhere}
 #screen-owner-dashboard .od-overview .od-lbl{font-size:14px}
 #screen-owner-dashboard .od-overview .od-coverage{font-size:11px}
 #screen-owner-dashboard .od-week-panel{background:#fff;border:1px solid #c4d8c9;border-radius:20px;padding:16px;margin-bottom:20px}
@@ -1459,7 +1459,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20261010-daily-week-chart"></script>
+<script src="owner-dashboard.js?v=20261010-global-session-totals"></script>
 <script src="initial-setup.js?v=save-device-20261006"></script>
 <script src="student-profile.js?v=2"></script>
 
@@ -1477,7 +1477,7 @@ window.addEventListener('pageshow', function (e) {
 
     <div class="od-section">
       <div class="od-grid od-overview">
-        <div class="od-metric"><span class="od-val" id="od-active-teachers">—</span><span class="od-lbl">מורות פעילות</span><span class="od-coverage">נכנסו ב־30 הימים האחרונים</span></div>
+        <div class="od-metric"><span class="od-val" id="od-total-teachers">—</span><span class="od-lbl">מורות</span></div>
         <button type="button" class="od-metric" onclick="_odBrowseClubs()" aria-label="צפייה בתלמידים"><span class="od-val" id="od-total-students">—</span><span class="od-lbl">תלמידים</span></button>
         <div class="od-metric"><span class="od-val" id="od-total-minutes">—</span><span class="od-lbl">דקות קריאה</span></div>
       </div>
@@ -1486,10 +1486,10 @@ window.addEventListener('pageshow', function (e) {
     <div class="od-section od-week-panel" aria-labelledby="od-week-title">
       <div class="od-section-title" id="od-week-title">📅 השבוע בקריאה</div>
       <p class="od-coverage" id="od-week-period"></p>
-      <div id="od-daily-chart" aria-label="מספר הילדים שקראו בכל יום"><div class="od-empty">טוען...</div></div>
+      <div id="od-daily-chart" aria-label="מספר סשני הקריאה בכל יום"><div class="od-empty">טוען...</div></div>
       <table class="od-daily-table">
         <caption>פעילות יומית</caption>
-        <thead><tr><th scope="col">יום</th><th scope="col">ילדים שקראו</th><th scope="col">פתיחות</th><th scope="col">סשני קריאה</th></tr></thead>
+        <thead><tr><th scope="col">יום</th><th scope="col">סשני קריאה</th><th scope="col">פתיחות</th></tr></thead>
         <tbody id="od-daily-values"></tbody>
       </table>
       <p class="od-coverage" id="od-week-coverage" role="status">טוען היסטוריית קריאה...</p>
