@@ -121,6 +121,7 @@
 #screen-owner-dashboard .od-daily-table caption{text-align:right;font-weight:bold;margin-bottom:8px}
 #screen-owner-dashboard .od-daily-table th,#screen-owner-dashboard .od-daily-table td{padding:10px 4px;border-bottom:1px solid #d7e4d9}
 #screen-owner-dashboard .od-daily-table tr.is-today{background:#edf7ef}
+@media(max-width:560px){#screen-owner-dashboard .od-overview{grid-template-columns:repeat(2,minmax(0,1fr))}#screen-owner-dashboard .od-overview .od-metric:last-child{grid-column:1/-1}}
 @media(max-width:400px){#screen-owner-dashboard .od-week-panel{padding:12px 8px}#screen-owner-dashboard .od-bars{gap:4px}#screen-owner-dashboard .od-bar-label{font-size:11px}#screen-owner-dashboard .od-daily-table{font-size:12px}}
 @media(max-width:560px){#screen-owner-dashboard .od-reader-row{display:block}#screen-owner-dashboard .od-reader-meta{justify-content:flex-start;margin-top:8px}}
 </style>
@@ -1459,7 +1460,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="booki-home-magic.js?v=11"></script>
 <script src="booki-reading.js?v=9"></script>
 <script src="shop.js?v=20260916-reward-ideas"></script>
-<script src="owner-dashboard.js?v=20261010-global-session-totals"></script>
+<script src="owner-dashboard.js?v=20261010-global-session-totals-2"></script>
 <script src="initial-setup.js?v=save-device-20261006"></script>
 <script src="student-profile.js?v=2"></script>
 
